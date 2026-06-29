@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Stammtisch-Archiv</title>
+<style>
+  :root{
+    --bg:#08100b; --bg-2:#0d1812; --panel-solid:#0f1d14; --line:#1d3325;
+    --green:#4caf6a; --green-dim:#3c8a54; --gold:#f9c74f;
+    --text:#e8f1ea; --muted:#8aa394; --muted-2:#5f7568; --radius:14px; --maxw:1180px;
+    --sp1:#4caf6a; --sp2:#f9c74f; --sp3:#6fa8dc; --sp4:#c98bdb; --sp5:#e0936a;
+  }
+  *{box-sizing:border-box} html,body{margin:0;padding:0}
+  body{background:radial-gradient(1200px 600px at 80% -10%, #102a1b 0%, transparent 55%), var(--bg);
+    color:var(--text);font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;}
+  h1,h2,h3,h4{margin:0;font-weight:650;letter-spacing:-0.01em}
+  button{font-family:inherit;cursor:pointer} ::selection{background:var(--green);color:#04150b}
+  .topbar{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px);
+    background:linear-gradient(180deg, rgba(8,16,11,.92), rgba(8,16,11,.74));border-bottom:1px solid var(--line);}
+  .topbar-in{max-width:var(--maxw);margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:18px;}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .brand-mark{width:34px;height:34px;border-radius:9px;flex:none;background:radial-gradient(circle at 30% 25%, var(--green), #154a2b 70%);
+    display:grid;place-items:center;color:#04150b;font-weight:800;font-size:18px;box-shadow:0 0 0 1px #2a5238 inset;}
+  .brand-txt b{font-size:16px;letter-spacing:.2px}
+  .brand-txt span{display:block;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  .spacer{flex:1}
+  .role{display:flex;background:var(--panel-solid);border:1px solid var(--line);border-radius:999px;padding:3px;}
+  .role button{border:0;background:transparent;color:var(--muted);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;}
+  .role button.active{background:var(--green);color:#04150b}
+  .role button.active.gold{background:var(--gold)}
+  .btn-new{border:1px solid var(--green-dim);background:rgba(76,175,106,.12);color:var(--green);
+    padding:8px 14px;border-radius:10px;font-size:13px;font-weight:650;display:inline-flex;align-items:center;gap:7px;}
+  .btn-new:hover{background:rgba(76,175,106,.2)} .btn-new[hidden]{display:none}
+  .demo-banner{max-width:var(--maxw);margin:14px auto 0;padding:0 22px}
+  .demo-banner div{background:rgba(249,199,79,.08);border:1px solid #4a4222;color:var(--gold);
+    font-size:12.5px;padding:9px 13px;border-radius:10px}
+  .demo-banner[hidden]{display:none}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:22px;display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+  @media(max-width:880px){ .wrap{grid-template-columns:1fr;padding:14px;gap:14px} .rail{position:static!important} }
+  .rail{position:sticky;top:84px}
+  .search{background:var(--panel-solid);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
+  .search-field{display:flex;align-items:center;gap:9px;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  .search-field input{border:0;background:transparent;color:var(--text);font-size:14px;width:100%;outline:none}
+  .search-field svg{flex:none;color:var(--muted)}
+  .filters{margin-top:13px;display:flex;flex-direction:column;gap:11px}
+  .flabel{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted-2);margin-bottom:6px;display:block}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid var(--line);background:var(--bg-2);color:var(--muted);font-size:12px;padding:5px 10px;border-radius:999px;}
+  .chip:hover{border-color:var(--green-dim);color:var(--text)}
+  .chip.on{background:rgba(76,175,106,.16);border-color:var(--green-dim);color:var(--green)}
+  .chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+  .sortrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .sortrow select{background:var(--bg-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:12px;font-family:inherit;}
+  .reset{background:transparent;border:0;color:var(--muted-2);font-size:12px;text-decoration:underline} .reset:hover{color:var(--gold)}
+  .count{font-size:12px;color:var(--muted-2);margin:2px 4px 10px}
+  .list{display:flex;flex-direction:column;gap:10px}
+  .card{width:100%;text-align:left;background:var(--panel-solid);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;transition:border-color .15s,transform .15s;display:block;color:inherit;}
+  .card:hover{border-color:var(--green-dim);transform:translateY(-1px)}
+  .card.active{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
+  .card .date{font-size:11px;color:var(--gold);letter-spacing:.06em;font-weight:600}
+  .card h3{font-size:15px;margin:3px 0 6px;line-height:1.3}
+  .card .meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .card .ic{display:flex;gap:5px;margin-top:9px;font-size:11px;color:var(--muted-2)}
+  .card .ic span{display:inline-flex;align-items:center;gap:3px;background:var(--bg-2);padding:2px 7px;border-radius:6px;border:1px solid var(--line)}
+  .card .ic span.has{color:var(--green);border-color:#23492f}
+  .card .hl,.line .hl{background:rgba(249,199,79,.28);color:#fff;border-radius:3px;padding:0 2px}
+  .detail{background:var(--panel-solid);border:1px solid var(--line);border-radius:var(--radius);min-height:60vh;overflow:hidden}
+  .empty{padding:64px 28px;text-align:center;color:var(--muted)} .empty .em-mark{font-size:40px;margin-bottom:12px;opacity:.5}
+  .dhead{padding:22px 24px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0f1f15,transparent)}
+  .dhead .date{font-size:12px;color:var(--gold);letter-spacing:.06em;font-weight:600}
+  .dhead h2{font-size:22px;margin:6px 0 10px;line-height:1.2}
+  .dhead .sub{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:7px 16px}
+  .dhead .sub b{color:var(--text);font-weight:600}
+  .speakers{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+  .sp-tag{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);display:inline-flex;align-items:center;gap:6px}
+  .sp-tag .dot{width:9px;height:9px;border-radius:50%}
+  .tabs{display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--line);overflow-x:auto}
+  .tabs button{border:0;background:transparent;color:var(--muted);padding:13px 14px;font-size:13px;font-weight:600;border-bottom:2px solid transparent;white-space:nowrap;}
+  .tabs button.active{color:var(--text);border-bottom-color:var(--green)}
+  .tabs button .badge{font-size:10px;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:5px;color:var(--muted-2)}
+  .tabwrap{padding:22px 24px} @media(max-width:880px){ .tabwrap{padding:18px 16px} }
+  .summary p{margin:0 0 12px;font-size:15px;color:#dcebe1} .summary .lead{font-size:16px;color:var(--text)}
+  .keyrow{display:grid;grid-template-columns:1fr;gap:8px;margin-top:6px}
+  .keyrow .kp{display:flex;gap:10px;padding:11px 13px;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;font-size:14px}
+  .keyrow .kp b{color:var(--green);flex:none}
+  .themes{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}
+  .themes .t{font-size:12px;color:var(--gold);background:rgba(249,199,79,.08);border:1px solid #4a4222;padding:4px 10px;border-radius:999px}
+  .tx-tools{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center}
+  .tx-search{flex:1;min-width:180px;display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:9px;padding:7px 11px}
+  .tx-search input{border:0;background:transparent;color:var(--text);width:100%;outline:none;font-size:13px} .tx-search svg{color:var(--muted);flex:none}
+  .tx-filter{display:flex;gap:5px;flex-wrap:wrap}
+  .tx-filter button{font-size:11px;border:1px solid var(--line);background:var(--bg-2);color:var(--muted);border-radius:999px;padding:4px 9px;display:inline-flex;align-items:center;gap:5px}
+  .tx-filter button.on{color:var(--text);border-color:var(--green-dim)} .tx-filter button .dot{width:7px;height:7px;border-radius:50%}
+  .line{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid #142318}
+  .line:hover{background:rgba(76,175,106,.04)}
+  .line .ts{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted-2);background:transparent;border:0;text-align:left;padding-top:2px;font-family:inherit}
+  .line .ts:hover{color:var(--green);text-decoration:underline}
+  .line .body .who{font-size:11px;font-weight:700;letter-spacing:.04em;margin-bottom:1px}
+  .line .body .said{font-size:14px;color:#dcebe1} .line.dim{opacity:.32}
+  .tx-empty,.nodata{color:var(--muted-2);font-size:13px}
+  .nodata{padding:20px;text-align:center;border:1px dashed var(--line);border-radius:10px} .tx-empty{padding:14px 0}
+  .slides-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .slide{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .slide a{color:inherit;text-decoration:none;display:block}
+  .slide .canvas{aspect-ratio:16/10;background:linear-gradient(135deg,#13251a,#0c1610);display:grid;place-items:center;color:var(--muted-2);font-size:11px;padding:10px;text-align:center}
+  .slide .cap{font-size:12px;padding:8px 10px;color:var(--text);border-top:1px solid var(--line)}
+  .slide .cap small{display:block;color:var(--muted-2);font-size:10px;margin-top:1px}
+  .player{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:16px} .player audio{width:100%;margin-top:10px}
+  .player .note{font-size:12px;color:var(--muted-2);margin-top:10px}
+  .form{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px}
+  .form h3{font-size:15px;margin-bottom:4px} .form .hint{font-size:12px;color:var(--muted);margin-bottom:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media(max-width:880px){.grid2{grid-template-columns:1fr}}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted-2);margin-bottom:5px}
+  .field input,.field textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none}
+  .field input[type=file]{padding:8px} .field input:focus,.field textarea:focus{border-color:var(--green-dim)} .field{margin-bottom:12px}
+  .pipeline{font-size:12px;color:var(--muted);background:rgba(76,175,106,.06);border:1px solid #1d3a26;border-radius:9px;padding:11px 13px;margin:14px 0;display:flex;gap:9px} .pipeline b{color:var(--green)}
+  .form-actions{display:flex;gap:10px;margin-top:6px;align-items:center}
+  .form-actions .save{background:var(--green);color:#04150b;border:0;border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px}
+  .form-actions .cancel{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:10px 16px;font-size:13px}
+  .status-pill{font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(249,199,79,.12);color:var(--gold);border:1px solid #4a4222;margin-left:8px}
+  .msg{font-size:12px;margin-left:6px} .msg.ok{color:var(--green)} .msg.err{color:#e0936a}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  :focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><div class="brand-mark">S</div>
+      <div class="brand-txt"><b>Stammtisch-Archiv</b><span>Mariana Cannabis</span></div></div>
+    <div class="spacer"></div>
+    <button class="btn-new" id="btnNew" hidden>＋ Neuer Stammtisch</button>
+    <div class="role" id="role">
+      <button data-role="mitglied" class="active">Mitglied</button>
+      <button data-role="admin">Admin</button>
+    </div>
+  </div>
+</header>
+
+<div class="demo-banner" id="demoBanner" hidden><div></div></div>
+
+<main class="wrap">
+  <aside class="rail">
+    <div class="search">
+      <div class="search-field">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Alles durchsuchen (Transkript, Zusammenfassung …)">
+      </div>
+      <div class="filters">
+        <div><span class="flabel">Sprecher</span><div class="chips" id="fSpeakers"></div></div>
+        <div><span class="flabel">Thema</span><div class="chips" id="fThemes"></div></div>
+        <div class="sortrow">
+          <label class="flabel" style="margin:0">Sortierung
+            <select id="sort"><option value="new">Datum, neu zuerst</option><option value="old">Datum, alt zuerst</option><option value="az">Titel A–Z</option></select>
+          </label>
+          <button class="reset" id="reset">Zurücksetzen</button>
+        </div>
+      </div>
+    </div>
+    <div class="count" id="count"></div>
+    <div class="list" id="list"></div>
+  </aside>
+
+  <section class="detail" id="detail">
+    <div class="empty"><div class="em-mark">📋</div><p>Lade Daten…</p></div>
+  </section>
+</main>
+
+<!-- Supabase JS (nur genutzt, wenn Zugangsdaten gesetzt sind) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   KONFIGURATION  –  hier die zwei Werte aus Supabase eintragen
+   Settings -> Data API -> Project URL  und  anon public key
+   ============================================================ */
+const SUPA_URL  = "https://odggiivgoaficsyekfmd.supabase.co";   // z.B. https://xxxx.supabase.co
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ2dpaXZnb2FmaWNzeWVrZm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NDA5MjQsImV4cCI6MjA5ODMxNjkyNH0.RRla1o7_oXA1emq_dBJoZGwwSg38kitCxmdfeIuANCk";       // anon public key (Lesezugriff ist gewollt)
+
+const CONFIGURED = SUPA_URL.startsWith("https://") && SUPA_ANON.length > 20;
+const supa = (CONFIGURED && window.supabase) ? window.supabase.createClient(SUPA_URL, SUPA_ANON) : null;
+
+/* ---------------- Datenzugriff ---------------- */
+async function loadData(){
+  if(!supa) return DEMO_DATA;
+  const { data, error } = await supa.from("stammtische").select("*").order("datum",{ascending:false});
+  if(error){ console.error(error); return []; }
+  return data.map(r => ({...r, dauer: r.dauer_sek||0, zusammenfassung: r.zusammenfassung||{lead:"",punkte:[]}, transkript: r.transkript||[]}));
+}
+function publicUrl(bucket, path){ return supa ? supa.storage.from(bucket).getPublicUrl(path).data.publicUrl : null; }
+
+/* ---------------- Demo-Daten (anonymisiert, Keno als benannte Ausnahme) ---------------- */
+const DEMO_DATA = [
+  { id:"demo-2026-05-14", datum:"2026-05-14", titel:"Ausgabe-Logistik und Schichtplanung",
+    ort:"Marburg", dauer:6443, sprecher:["Nils (Geschäftsführung)","Andre (CM)","Antonia (Recht)","Keno (Öffentlichkeitsarbeit)","Sprecher A"],
+    themen:["Ausgabe","Schichtplan","Mitgliederverwaltung"], status:"fertig",
+    zusammenfassung:{lead:"Schwerpunkt war die Skalierung der Ausgabe auf zwei feste Wochentage und die faire Verteilung des Schichtplans.",
+      punkte:["Ausgabe künftig dienstags und freitags, je zwei Schichten.","Schichtplan gewichtet Verfügbarkeiten und Fairness.","Mengenobergrenzen pro Mitglied bleiben unverändert.","Zweite Ausgabestelle wird weiterverfolgt."]},
+    transkript:[{t:12,sp:0,text:"Willkommen zum Stammtisch. Heute geht es vor allem um die Ausgabe, ein Tag reicht nicht mehr."},
+      {t:48,sp:1,text:"Letzten Freitag waren über hundertzwanzig Mitglieder da, das ist mit einer Schicht nicht sauber zu machen."},
+      {t:121,sp:2,text:"Rechtlich spricht nichts gegen zwei Ausgabetage, solange die Mengenobergrenzen dokumentiert bleiben."},
+      {t:205,sp:0,text:"Dann legen wir Dienstag und Freitag fest, der Schichtplan soll die Last fair verteilen."},
+      {t:330,sp:3,text:"Für die Presse ist wichtig, dass wir die Abläufe transparent und nachvollziehbar darstellen können."},
+      {t:402,sp:4,text:"Als Mitglied fände ich gut, wenn man die freien Schichten online sieht und sich selbst einträgt."}],
+    folien:[{n:1,titel:"Auslastung der Ausgabe",note:"Mitglieder pro Ausgabetag",pfad:null},
+      {n:2,titel:"Vorschlag zwei Ausgabetage",note:"Dienstag und Freitag",pfad:null}] },
+  { id:"demo-2026-03-12", datum:"2026-03-12", titel:"Datenschutz und Mitgliederdaten",
+    ort:"Online", dauer:4380, sprecher:["Antonia (Recht)","Andre (CM)"], themen:["DSGVO","Recht"], status:"fertig",
+    zusammenfassung:{lead:"Erläuterung der Datenschutzanforderungen und der umgesetzten technischen Maßnahmen.",
+      punkte:["Daten verschlüsselt, mit Löschfristen.","Zugriff streng nach Rolle.","Datenschutzerklärung wird ergänzt.","Backend in der EU-Region Frankfurt."]},
+    transkript:[{t:18,sp:0,text:"Wir verarbeiten sensible Daten, wichtig sind Rechtsgrundlage, Löschfristen und Zugriffsschutz."},
+      {t:96,sp:1,text:"Technisch sind die Felder verschlüsselt, jede Rolle sieht nur, was sie braucht."}],
+    folien:null }
+];
+
+/* ---------------- State ---------------- */
+let DATA = [];
+let state = { role:"mitglied", q:"", speakers:new Set(), themes:new Set(), sort:"new",
+  current:null, tab:"summary", txQuery:"", txSpeaker:null, showForm:false };
+let ALL_SPEAKERS=[], ALL_THEMES=[];
+const SPEAKER_VARS=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)"];
+
+/* ---------------- Helpers ---------------- */
+const $ = s => document.querySelector(s);
+function fmt(sec){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
+  const mm=String(m).padStart(h?2:1,"0"),ss=String(s).padStart(2,"0");return h?`${h}:${mm}:${ss}`:`${mm}:${ss}`;}
+function fmtDate(iso){return new Date(iso+"T00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"long",year:"numeric"});}
+function esc(t){return (t||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function highlight(text,q){text=esc(text);if(!q)return text;
+  const re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi");return text.replace(re,'<span class="hl">$1</span>');}
+function spColor(i){return SPEAKER_VARS[i%SPEAKER_VARS.length];}
+function entryText(e){return [e.titel,e.ort,e.zusammenfassung.lead,(e.zusammenfassung.punkte||[]).join(" "),
+  (e.sprecher||[]).join(" "),(e.themen||[]).join(" "),(e.transkript||[]).map(l=>l.text).join(" ")].join(" ").toLowerCase();}
+function buildFacets(){ALL_SPEAKERS=[...new Set(DATA.flatMap(d=>d.sprecher||[]))].sort();
+  ALL_THEMES=[...new Set(DATA.flatMap(d=>d.themen||[]))].sort();}
+
+/* ---------------- Filter ---------------- */
+function filtered(){
+  let r = DATA.filter(d=>{
+    if(state.q && !entryText(d).includes(state.q.toLowerCase())) return false;
+    if(state.speakers.size && !(d.sprecher||[]).some(s=>state.speakers.has(s))) return false;
+    if(state.themes.size && !(d.themen||[]).some(t=>state.themes.has(t))) return false;
+    return true; });
+  r.sort((a,b)=> state.sort==="old"?a.datum.localeCompare(b.datum):state.sort==="az"?a.titel.localeCompare(b.titel,"de"):b.datum.localeCompare(a.datum));
+  return r;
+}
+
+/* ---------------- Render: Rail ---------------- */
+function renderFacets(){
+  $("#fSpeakers").innerHTML = ALL_SPEAKERS.map(s=>{const i=ALL_SPEAKERS.indexOf(s),on=state.speakers.has(s);
+    return `<button class="chip ${on?'on':''}" data-sp="${esc(s)}"><span class="dot" style="background:${SPEAKER_VARS[i%5]}"></span>${esc(s)}</button>`;}).join("");
+  $("#fThemes").innerHTML = ALL_THEMES.map(t=>{const on=state.themes.has(t);
+    return `<button class="chip ${on?'on':''}" data-th="${esc(t)}">${esc(t)}</button>`;}).join("");
+}
+function renderList(){
+  const rows=filtered(); $("#count").textContent=`${rows.length} von ${DATA.length} Stammtischen`;
+  $("#list").innerHTML = rows.map(d=>{const q=state.q;
+    return `<button class="card ${state.current===d.id?'active':''}" data-id="${d.id}">
+      <span class="date">${fmtDate(d.datum)}</span><h3>${highlight(d.titel,q)}</h3>
+      <div class="meta"><span>📍 ${highlight(d.ort,q)}</span><span>· ${fmt(d.dauer)}</span><span>· ${(d.sprecher||[]).length} Sprecher</span></div>
+      <div class="ic"><span class="${d.folien&&d.folien.length?'has':''}">📄 Folien</span><span class="has">🎧 Audio</span><span class="has">📝 Transkript</span><span class="has">✨ Zusammenfassung</span></div>
+    </button>`;}).join("") || `<div class="nodata">Kein Stammtisch passt zu Suche und Filtern.</div>`;
+}
+
+/* ---------------- Render: Detail ---------------- */
+function renderDetail(){
+  const d=DATA.find(x=>x.id===state.current), det=$("#detail");
+  if(!d){
+    if(state.role==="admin" && state.showForm){ det.innerHTML=adminPanel(); wirePanel(); return; }
+    det.innerHTML=`<div class="empty"><div class="em-mark">📋</div><p>Wähle links einen Stammtisch, um Zusammenfassung, Transkript, Folien und Audio zu sehen.</p></div>`; return;
+  }
+  det.innerHTML=`
+    <div class="dhead"><span class="date">${fmtDate(d.datum)}</span>
+      <h2>${esc(d.titel)} ${d.status!=='fertig'?`<span class="status-pill">Transkription läuft</span>`:''}</h2>
+      <div class="sub"><span><b>Ort</b> ${esc(d.ort)}</span><span><b>Dauer</b> ${fmt(d.dauer)}</span><span><b>Themen</b> ${(d.themen||[]).join(", ")||"–"}</span></div>
+      <div class="speakers">${(d.sprecher||[]).map((s,i)=>`<span class="sp-tag"><span class="dot" style="background:${spColor(i)}"></span>${esc(s)}</span>`).join("")}</div>
+    </div>
+    <div class="tabs">
+      <button data-tab="summary" class="${state.tab==='summary'?'active':''}">✨ Zusammenfassung</button>
+      <button data-tab="transcript" class="${state.tab==='transcript'?'active':''}">📝 Transkript<span class="badge">${(d.transkript||[]).length}</span></button>
+      <button data-tab="slides" class="${state.tab==='slides'?'active':''}">📄 Folien<span class="badge">${d.folien?d.folien.length:0}</span></button>
+      <button data-tab="audio" class="${state.tab==='audio'?'active':''}">🎧 Audio</button>
+    </div>
+    <div class="tabwrap" id="tabwrap"></div>`;
+  renderTab(d);
+  det.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.txQuery="";state.txSpeaker=null;renderDetail();});
+}
+function renderTab(d){
+  const w=$("#tabwrap");
+  if(state.tab==="summary"){
+    w.innerHTML=`<div class="summary"><p class="lead">${esc(d.zusammenfassung.lead)}</p>
+      <div class="keyrow">${(d.zusammenfassung.punkte||[]).map(p=>`<div class="kp"><b>›</b><span>${esc(p)}</span></div>`).join("")}</div>
+      <div class="themes">${(d.themen||[]).map(t=>`<span class="t">#${esc(t)}</span>`).join("")}</div></div>`;
+  } else if(state.tab==="transcript"){
+    w.innerHTML=`<div class="tx-tools">
+      <div class="tx-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="txq" placeholder="Im Transkript suchen…" value="${esc(state.txQuery)}"></div>
+      <div class="tx-filter" id="txf">${(d.sprecher||[]).map((s,i)=>`<button data-i="${i}" class="${state.txSpeaker===i?'on':''}"><span class="dot" style="background:${spColor(i)}"></span>${esc(s)}</button>`).join("")}</div>
+    </div><div id="txlines"></div>`;
+    renderLines(d);
+    $("#txq").oninput=e=>{state.txQuery=e.target.value;renderLines(d);};
+    $("#txf").querySelectorAll("button").forEach(b=>b.onclick=()=>{const i=+b.dataset.i;state.txSpeaker=state.txSpeaker===i?null:i;renderDetail();});
+  } else if(state.tab==="slides"){
+    w.innerHTML = d.folien&&d.folien.length
+      ? `<div class="slides-grid">${d.folien.map(f=>{const href=f.pfad?publicUrl("folien",f.pfad):null;
+          const inner=`<div class="canvas">${href?'PDF öffnen':'Folie '+f.n}</div><div class="cap">${esc(f.titel)}<small>${esc(f.note)}</small></div>`;
+          return `<div class="slide">${href?`<a href="${href}" target="_blank" rel="noopener">${inner}</a>`:inner}</div>`;}).join("")}</div>`
+      : `<div class="nodata">Für diesen Stammtisch wurden keine Folien hochgeladen.</div>`;
+  } else if(state.tab==="audio"){
+    const src=d.audio_pfad?publicUrl("audio",d.audio_pfad):null;
+    w.innerHTML=`<div class="player"><div style="font-size:14px"><b>${esc(d.titel)}</b> · ${fmt(d.dauer)}</div>
+      <audio id="aud" controls preload="none" ${src?`src="${src}"`:''}></audio>
+      <div class="note">${src?'Klick auf einen Zeitstempel im Transkript springt an die Stelle.':'Kein Audio hinterlegt (Demo). In der Live-Version liegt die Aufnahme im Storage.'}</div></div>`;
+  }
+}
+function renderLines(d){
+  const box=$("#txlines"), q=state.txQuery.trim().toLowerCase();
+  const html=(d.transkript||[]).map(l=>{
+    if(state.txSpeaker!=null && l.sp!==state.txSpeaker) return "";
+    const matchQ=!q||l.text.toLowerCase().includes(q);
+    return `<div class="line ${matchQ?'':'dim'}"><button class="ts" data-t="${l.t}" title="An diese Stelle springen">${fmt(l.t)}</button>
+      <div class="body"><div class="who" style="color:${spColor(l.sp)}">${esc((d.sprecher||[])[l.sp]||"?")}</div>
+      <div class="said">${highlight(l.text,state.txQuery.trim())}</div></div></div>`;}).join("");
+  box.innerHTML=html||`<div class="tx-empty">Keine Zeilen für diese Auswahl.</div>`;
+  box.querySelectorAll(".ts").forEach(b=>b.onclick=()=>{const a=$("#aud");
+    if(a&&a.src){try{a.currentTime=+b.dataset.t;a.play&&a.play().catch(()=>{});}catch(e){}}
+    b.closest(".line").scrollIntoView({behavior:"smooth",block:"center"});});
+}
+
+/* ---------------- Admin-Panel (echter Upload) ---------------- */
+function adminPanel(){
+  if(!supa) return `<div class="tabwrap"><div class="nodata">Supabase ist noch nicht konfiguriert. Trage SUPA_URL und SUPA_ANON oben in der Datei ein, dann ist der Upload aktiv.</div></div>`;
+  return `<div class="tabwrap"><div class="form" id="loginBox">
+      <h3>Admin-Anmeldung</h3><div class="hint">Magic-Link per E-Mail. Nur berechtigte Admins können hochladen.</div>
+      <div class="field"><label>E-Mail</label><input id="loginMail" type="email" placeholder="admin@…"></div>
+      <div class="form-actions"><button class="save" id="loginBtn">Magic-Link senden</button><span class="msg" id="loginMsg"></span></div>
+    </div>
+    <div class="form" id="uploadBox" style="display:none">
+      <h3>Neuer Stammtisch</h3><div class="hint">Funktionsträger werden namentlich genannt (GF, stellv. GF, CM, Öffentlichkeitsarbeit), alle übrigen Teilnehmer anonym. Klarnamen nur bei dokumentierter Einwilligung.</div>
+      <div class="grid2"><div class="field"><label>Datum</label><input id="nfDate" type="date"></div>
+        <div class="field"><label>Ort</label><input id="nfOrt" placeholder="z.B. Marburg"></div></div>
+      <div class="field"><label>Titel</label><input id="nfTitel" placeholder="Worum ging es?"></div>
+      <div class="grid2"><div class="field"><label>Themen (Komma)</label><input id="nfThemen" placeholder="Ausgabe, Recht"></div>
+        <div class="field"><label>Dauer in Sekunden</label><input id="nfDauer" type="number" placeholder="6443"></div></div>
+      <div class="grid2"><div class="field"><label>Audiodatei</label><input id="nfAudio" type="file" accept="audio/*"></div>
+        <div class="field"><label>Folien-PDF (optional)</label><input id="nfFolien" type="file" accept="application/pdf"></div></div>
+      <div class="grid2"><div class="field"><label>transkript.json</label><input id="nfTx" type="file" accept=".json,application/json"></div>
+        <div class="field"><label>summary.json (optional)</label><input id="nfSum" type="file" accept=".json,application/json"></div></div>
+      <div class="pipeline"><b>Hinweis</b><span>transkript.json enthält {sprecher, transkript}. Die Sprecher-Labels stammen aus der lokalen Pipeline und sind bereits anonymisiert.</span></div>
+      <div class="form-actions"><button class="save" id="nfSave">Hochladen</button><button class="cancel" id="nfCancel">Abbrechen</button><span class="msg" id="nfMsg"></span></div>
+    </div></div>`;
+}
+async function wirePanel(){
+  if(!supa) return;
+  const { data:{ session } } = await supa.auth.getSession();
+  const loginBox=$("#loginBox"), uploadBox=$("#uploadBox");
+  if(session){ loginBox.style.display="none"; uploadBox.style.display=""; }
+  $("#loginBtn") && ($("#loginBtn").onclick=async()=>{
+    const email=$("#loginMail").value.trim(); if(!email) return;
+    const { error }=await supa.auth.signInWithOtp({ email, options:{ emailRedirectTo:location.href } });
+    $("#loginMsg").textContent = error? "Fehler: "+error.message : "Link gesendet, E-Mail prüfen.";
+    $("#loginMsg").className = "msg "+(error?"err":"ok");
+  });
+  $("#nfCancel") && ($("#nfCancel").onclick=()=>{state.showForm=false;renderDetail();});
+  $("#nfSave") && ($("#nfSave").onclick=async()=>{
+    const msg=$("#nfMsg"); msg.textContent="Lade hoch…"; msg.className="msg";
+    try{
+      const datum=$("#nfDate").value||new Date().toISOString().slice(0,10);
+      const titel=$("#nfTitel").value.trim()||"Unbenannt";
+      const ort=$("#nfOrt").value.trim()||"–";
+      const themen=$("#nfThemen").value.split(",").map(s=>s.trim()).filter(Boolean);
+      const dauer=parseInt($("#nfDauer").value||"0",10);
+      const audioFile=$("#nfAudio").files[0]; const folienFile=$("#nfFolien").files[0];
+      const txFile=$("#nfTx").files[0]; const sumFile=$("#nfSum").files[0];
+      if(!audioFile||!txFile){ throw new Error("Audio und transkript.json sind Pflicht."); }
+      const txObj=JSON.parse(await txFile.text());
+      const sprecher=txObj.sprecher||[]; const transkript=txObj.transkript||[];
+      const summary = sumFile ? JSON.parse(await sumFile.text()) : {lead:"",punkte:[]};
+      const id="st-"+datum+"-"+Math.random().toString(36).slice(2,6);
+      const aExt=(audioFile.name.split(".").pop()||"m4a").toLowerCase();
+      const aPath=`${id}/audio.${aExt}`;
+      let up=await supa.storage.from("audio").upload(aPath,audioFile,{upsert:true}); if(up.error) throw up.error;
+      let folien=null;
+      if(folienFile){ const fPath=`${id}/folien.pdf`; let uf=await supa.storage.from("folien").upload(fPath,folienFile,{upsert:true}); if(uf.error) throw uf.error;
+        folien=[{n:1,titel:"Foliensatz",note:titel,pfad:fPath}]; }
+      const volltext=[titel,ort,summary.lead,(summary.punkte||[]).join(" "),sprecher.join(" "),themen.join(" "),transkript.map(l=>l.text).join(" ")].join(" ");
+      let ins=await supa.from("stammtische").insert({id,datum,titel,ort,dauer_sek:dauer,sprecher,themen,status:"fertig",
+        zusammenfassung:summary,transkript,folien,audio_pfad:aPath,volltext}); if(ins.error) throw ins.error;
+      msg.textContent="Hochgeladen."; msg.className="msg ok";
+      DATA=await loadData(); buildFacets(); state.showForm=false; state.current=id; state.tab="summary";
+      renderFacets(); renderList(); renderDetail();
+    }catch(e){ msg.textContent="Fehler: "+(e.message||e); msg.className="msg err"; }
+  });
+}
+
+/* ---------------- Events ---------------- */
+$("#q").oninput=e=>{state.q=e.target.value;renderList();};
+$("#sort").onchange=e=>{state.sort=e.target.value;renderList();};
+$("#reset").onclick=()=>{state.q="";state.speakers.clear();state.themes.clear();state.sort="new";$("#q").value="";$("#sort").value="new";renderFacets();renderList();};
+$("#fSpeakers").onclick=e=>{const b=e.target.closest("[data-sp]");if(!b)return;const s=b.dataset.sp;state.speakers.has(s)?state.speakers.delete(s):state.speakers.add(s);renderFacets();renderList();};
+$("#fThemes").onclick=e=>{const b=e.target.closest("[data-th]");if(!b)return;const t=b.dataset.th;state.themes.has(t)?state.themes.delete(t):state.themes.add(t);renderFacets();renderList();};
+$("#list").onclick=e=>{const b=e.target.closest("[data-id]");if(!b)return;state.current=b.dataset.id;state.tab="summary";state.showForm=false;state.txQuery="";state.txSpeaker=null;renderList();renderDetail();if(window.innerWidth<=880)$("#detail").scrollIntoView({behavior:"smooth"});};
+$("#role").onclick=e=>{const b=e.target.closest("[data-role]");if(!b)return;state.role=b.dataset.role;
+  document.querySelectorAll("#role button").forEach(x=>{x.classList.toggle("active",x.dataset.role===state.role);x.classList.toggle("gold",state.role==="admin"&&x.dataset.role==="admin");});
+  $("#btnNew").hidden=state.role!=="admin"; if(state.role!=="admin"){state.showForm=false;if(!DATA.find(d=>d.id===state.current))renderDetail();}};
+$("#btnNew").onclick=()=>{state.showForm=true;state.current=null;renderDetail();};
+
+/* ---------------- Init ---------------- */
+(async function boot(){
+  if(!CONFIGURED){ const b=$("#demoBanner"); b.hidden=false; b.querySelector("div").textContent="Demo-Modus: Supabase noch nicht verbunden. Trage SUPA_URL und SUPA_ANON in der Datei ein, dann werden die echten Stammtische geladen."; }
+  DATA=await loadData(); buildFacets(); renderFacets(); renderList(); renderDetail();
+})();
+</script>
+</body>
+</html>
