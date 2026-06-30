@@ -501,18 +501,27 @@ function updateCardProgress(){const d=(LIVE_STATUS&&LIVE_STATUS.detail)||{};cons
     if(curId&&id===curId&&d.cur_progress!=null){el.innerHTML=`<div class="cp-bar"><div style="width:${d.cur_progress}%"></div></div><span class="cp-txt">wird transkribiert · ${d.cur_progress}%${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</span>`;}
     else{el.innerHTML=`<span class="cp-txt">in der Warteschlange</span>`;}});}
 async function openQueue(){openModal($("#ovQueue"));await renderStatusPanel();await loadQueue();}
-async function renderStatusPanel(){const s=await getStatus();const p=$("#statusPanel");
-  if(!s||!(s.active||s.total||s.scope==="ingest")){p.innerHTML=`<div class="msg info">Kein aktiver Verarbeitungs-Status gemeldet.</div>`;return;}
-  const d=s.detail||{};const pct=s.total?Math.round((s.done||0)/s.total*100):0;const cp=d.cur_progress;
-  let h=`<div class="sec-h">Aktuelle Datei</div>`;
-  h+=`<div style="font-size:14px;margin-bottom:4px"><b>${esc(s.current_titel||"–")}</b>${s.current_datum?(" · "+fmtDate(s.current_datum)):""}</div>`;
-  h+=`<div class="msg info">Phase: ${esc(d.phase||s.phase||"–")}${s.scope==="ingest"?" · Einzelverarbeitung":""}</div>`;
-  if(cp!=null){h+=`<div class="progress"><div style="width:${cp}%"></div></div><div class="msg info">${cp}% · ${esc(d.cur_elapsed||"?")} von geschätzt ${esc(d.cur_len||"?")} · ${esc(d.cur_remaining||"")}${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</div>`;}
-  else{h+=`<div class="msg info">${esc(d.cur_len?("Länge "+d.cur_len):"")} ${esc(d.cur_elapsed?("· läuft seit "+d.cur_elapsed):"")}</div>`;}
-  if(d.rtf)h+=`<div class="msg info">Tempo: ${esc(d.rtf)}</div>`;
-  if(s.scope!=="ingest"){h+=`<div class="sec-h" style="margin-top:16px">Gesamter Batch</div><div><b>${s.active?"läuft":"pausiert"}</b> · ${s.done||0} von ${s.total||0} fertig${s.eta?(" · voraussichtlich fertig "+esc(s.eta)):""}</div><div class="progress"><div style="width:${pct}%"></div></div>`;}
-  if(d.fehler&&d.fehler.length){h+=`<div class="sec-h" style="margin-top:16px;color:var(--red)">Fehlgeschlagen (${d.fehler.length})</div>`+d.fehler.map(f=>`<div class="qrow"><div><b>${esc(f.titel||f.id)}</b><div class="msg err">${esc(f.msg||"Fehler")}</div></div><span class="qstatus error">fehler</span></div>`).join("");}
-  h+=`<div class="msg info" style="margin-top:8px">Stand: ${s.updated_at?new Date(s.updated_at).toLocaleString("de-DE"):"–"}${s.message?(" · "+esc(s.message)):""}</div>`;
+async function getWatchdog(){if(!supa)return null;try{const {data}=await supa.from("processing_status").select("*").eq("id","watchdog").maybeSingle();return data;}catch(e){return null;}}
+async function renderStatusPanel(){const s=await getStatus();const wd=await getWatchdog();const p=$("#statusPanel");
+  let h="";
+  if(s&&(s.active||s.total||s.scope==="ingest")){const d=s.detail||{};const pct=s.total?Math.round((s.done||0)/s.total*100):0;const cp=d.cur_progress;
+    h+=`<div class="sec-h">Aktuelle Datei</div>`;
+    h+=`<div style="font-size:14px;margin-bottom:4px"><b>${esc(s.current_titel||"–")}</b>${s.current_datum?(" · "+fmtDate(s.current_datum)):""}</div>`;
+    h+=`<div class="msg info">Phase: ${esc(d.phase||s.phase||"–")}${s.scope==="ingest"?" · Einzelverarbeitung":""}</div>`;
+    if(cp!=null){h+=`<div class="progress"><div style="width:${cp}%"></div></div><div class="msg info">${cp}% · ${esc(d.cur_elapsed||"?")} von geschätzt ${esc(d.cur_len||"?")} · ${esc(d.cur_remaining||"")}${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</div>`;}
+    else{h+=`<div class="msg info">${esc(d.cur_len?("Länge "+d.cur_len):"")} ${esc(d.cur_elapsed?("· läuft seit "+d.cur_elapsed):"")}</div>`;}
+    if(d.rtf)h+=`<div class="msg info">Tempo: ${esc(d.rtf)}</div>`;
+    if(s.scope!=="ingest"){h+=`<div class="sec-h" style="margin-top:16px">Gesamter Batch</div><div><b>${s.active?"läuft":"pausiert"}</b> · ${s.done||0} von ${s.total||0} fertig${s.eta?(" · voraussichtlich fertig "+esc(s.eta)):""}</div><div class="progress"><div style="width:${pct}%"></div></div>`;}
+    if(d.fehler&&d.fehler.length){h+=`<div class="sec-h" style="margin-top:16px;color:var(--red)">Fehlgeschlagen (${d.fehler.length})</div>`+d.fehler.map(f=>`<div class="qrow"><div><b>${esc(f.titel||f.id)}</b><div class="msg err">${esc(f.msg||"Fehler")}</div></div><span class="qstatus error">fehler</span></div>`).join("");}
+    h+=`<div class="msg info" style="margin-top:8px">Stand: ${s.updated_at?new Date(s.updated_at).toLocaleString("de-DE"):"–"}${s.message?(" · "+esc(s.message)):""}</div>`;
+  } else {h+=`<div class="msg info">Gerade läuft keine Verarbeitung.</div>`;}
+  // Dienste-Ueberwachung (Wachhund)
+  h+=`<div class="sec-h" style="margin-top:18px">Dienste-Überwachung</div>`;
+  if(wd&&wd.detail&&wd.detail.services){const wdage=wd.updated_at?Math.round((Date.now()-new Date(wd.updated_at).getTime())/60000):null;
+    h+=wd.detail.services.map(sv=>`<div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0"><span style="width:9px;height:9px;border-radius:50%;background:${sv.ok?'var(--green)':'var(--red)'}"></span>${esc(sv.name)} <span class="msg info" style="margin-left:auto">${sv.ok?'läuft':'war ausgefallen'}</span></div>`).join("");
+    if((wd.detail.events||[]).length)h+=`<div class="msg info" style="margin-top:8px">Letzte Ereignisse:</div>`+wd.detail.events.slice().reverse().map(ev=>`<div class="msg info">· ${esc(ev.t)} ${esc(ev.text)}</div>`).join("");
+    h+=`<div class="msg info" style="margin-top:8px">Letzte Prüfung: ${esc((wd.detail.checked_at)||"–")}${wdage!=null&&wdage>15?` · Achtung: Wachhund meldet seit ${wdage} min nichts`:""}</div>`;}
+  else{h+=`<div class="msg info">Noch keine Meldung vom Wachhund. Läuft die Aufgabe StammtischArchivWatchdog?</div>`;}
   p.innerHTML=h;}
 async function loadQueue(){const box=$("#queueList");box.innerHTML='<div class="msg info">Lade…</div>';
   try{const {data,error}=await supa.from("ingest").select("*").order("created",{ascending:false});if(error)throw error;
