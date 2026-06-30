@@ -128,6 +128,18 @@
   body.tx-large .line .said{font-size:17px;line-height:1.6}
   .tot{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 18px}.tot th{text-align:center;color:var(--muted-2);font-weight:600;padding:4px 6px;font-size:11px}.tot td{text-align:center;padding:3px 4px}.tot .tot-name{text-align:left;color:var(--text);white-space:nowrap;padding-right:10px}
   .tot .tot-cell{display:inline-block;min-width:24px;padding:3px 0;border-radius:5px;background:var(--green);color:#06120b;font-weight:700}
+  .folientext{margin-top:14px;border:1px solid var(--line);border-radius:8px;background:var(--bg-2)}
+  .folientext summary{cursor:pointer;padding:10px 12px;color:var(--green);font-weight:600;font-size:13px}
+  .folientext .ftxt{padding:0 14px 14px;max-height:420px;overflow:auto;font-size:13.5px;line-height:1.55;color:var(--text)}
+  .listbanner{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:13px;color:var(--muted)}
+  .lntools{display:flex;gap:4px;align-self:flex-start;opacity:.6}.line:hover .lntools{opacity:1}.lntools button{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:2px 6px;cursor:pointer;font-size:12px}.lntools button:hover{color:var(--text);border-color:var(--green-dim)}
+  .line.red .said{opacity:.55}.redbadge{font-size:10px;background:var(--red);color:#fff;border-radius:4px;padding:1px 5px;margin-left:6px}
+  .lnedit{width:100%;min-height:54px;background:var(--bg);border:1px solid var(--green-dim);color:var(--text);border-radius:7px;padding:7px 9px;font-size:14px}.lnedit-act{display:flex;gap:6px;margin-top:6px}
+  abbr.gl{text-decoration:underline dotted var(--green-dim);text-underline-offset:2px;cursor:help}
+  .nv-badge{font-size:10px;border-radius:5px;padding:1px 7px;margin-left:4px}.nv-offen{background:#3a2a1a;color:var(--amber)}.nv-laeuft{background:#1a2f3a;color:#6fb6d9}.nv-umgesetzt{background:#16331f;color:var(--green)}
+  .hitgrp{border-bottom:1px solid var(--line);padding:8px 0}.hitgrp-h{font-weight:600;margin-bottom:4px}
+  .hitline{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 9px;margin:3px 0;color:var(--text);font-size:12.5px;cursor:pointer}.hitline:hover{border-color:var(--green-dim)}
+  .fld{display:block;margin:8px 0;font-size:12px;color:var(--muted)}.fld textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:14px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -213,8 +225,17 @@
     <p class="msg info">Sucht Audio- und Folien-Dateien im Speicher, zu denen es keinen Eintrag mehr gibt.</p>
     <button class="btn" id="vScan">Verwaiste Dateien suchen</button>
     <div id="vOrphans" style="margin-top:10px"></div>
+    <div class="sec-h" style="margin-top:18px">Speicher und Kosten</div>
+    <p class="msg info">Berechnet die Belegung der Buckets audio und folien (kann einen Moment dauern).</p>
+    <button class="btn" id="vStorage">Speicher berechnen</button>
+    <div id="vStorageOut" style="margin-top:10px"></div>
   </div>
   <div class="modal-foot"><span class="msg" id="vMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovHits" hidden role="dialog" aria-modal="true" aria-label="Fundstellen"><div class="modal">
+  <div class="modal-head"><h3>Fundstellen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body" id="hitsBody"></div>
+  <div class="modal-foot"><span class="msg info" id="hitsMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
 
 <div class="overlay" id="ovProtokoll" hidden role="dialog" aria-modal="true" aria-label="Protokoll"><div class="modal">
   <div class="modal-head"><h3>Protokoll über alle Stammtische</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -238,7 +259,7 @@ const supa=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_ANON):null
 const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var(--sp6)"];
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
-let state={authed:false,q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null};
+let state={authed:false,q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false};
 let wz={step:1,files:[],folien:null,ort:""};
 let editObj=null,pendingDelete=null,statusTimer=null,LIVE_STATUS=null;
 
@@ -269,6 +290,10 @@ function fmt(s){s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math
 function fmtDate(iso){return iso?new Date(iso+"T00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"long",year:"numeric"}):"–";}
 function esc(t){return (t==null?"":String(t)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 function hl(t,q,cur){t=esc(t);if(!q)return t;const re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi");return t.replace(re,`<span class="hl${cur?' cur':''}">$1</span>`);}
+const GLOSSAR={"CanG":"Cannabisgesetz","KCanG":"Konsumcannabisgesetz","CSC":"Cannabis Social Club","THC":"Tetrahydrocannabinol","CBD":"Cannabidiol","Terptrain":"interne Vereinsplattform","DSGVO":"Datenschutz-Grundverordnung","Anbauvereinigung":"Verein zum gemeinschaftlichen Eigenanbau","BtMG":"Betäubungsmittelgesetz"};
+function glossaryWrap(html){if(!gp("st_glossar"))return html;const terms=Object.keys(GLOSSAR).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));const re=new RegExp("(?<![\\wäöüß])("+terms.join("|")+")(?![\\wäöüß])","g");
+  return html.split(/(<[^>]+>)/).map(seg=>seg.startsWith("<")?seg:seg.replace(re,m=>`<abbr class="gl" title="${esc(GLOSSAR[m]||m)}">${m}</abbr>`)).join("");}
+function txHtml(t,q,cur){return glossaryWrap(hl(t,q,cur));}
 function spc(i){return SPV[i%SPV.length];}
 function isNew(d){if(!d.erstellt_am)return false;return (Date.now()-new Date(d.erstellt_am).getTime())<NEU_TAGE*864e5;}
 function dateFromName(n){
@@ -278,14 +303,14 @@ function dateFromName(n){
   m=n.match(/(?<!\d)(\d{2})(\d{2})(\d{2})(?!\d)/);if(m){let r=mk(m[1],m[2],m[3]);if(r)return r;}              // YYMMDD
   return "";}
 function pubUrl(b,p){return supa?supa.storage.from(b).getPublicUrl(p).data.publicUrl:null;}
-function entryText(e){return [e.titel,e.ort,e.zusammenfassung&&e.zusammenfassung.lead,(e.zusammenfassung&&e.zusammenfassung.punkte||[]).join(" "),(e.sprecher||[]).join(" "),(e.themen||[]).join(" "),(e.transkript||[]).map(l=>l.text).join(" ")].join(" ").toLowerCase();}
-function volltext(e){return [e.titel,e.ort,e.zusammenfassung.lead,(e.zusammenfassung.punkte||[]).join(" "),(e.sprecher||[]).join(" "),(e.themen||[]).join(" "),(e.transkript||[]).map(l=>l.text).join(" ")].join(" ");}
+function entryText(e){return [e.titel,e.ort,e.zusammenfassung&&e.zusammenfassung.lead,(e.zusammenfassung&&e.zusammenfassung.punkte||[]).join(" "),(e.sprecher||[]).join(" "),(e.themen||[]).join(" "),(e.transkript||[]).filter(l=>!l.red).map(l=>l.text).join(" "),e.folientext||""].join(" ").toLowerCase();}
+function volltext(e){return [e.titel,e.ort,e.zusammenfassung.lead,(e.zusammenfassung.punkte||[]).join(" "),(e.sprecher||[]).join(" "),(e.themen||[]).join(" "),(e.transkript||[]).filter(l=>!l.red).map(l=>l.text).join(" ")].join(" ");}
 function download(name,text,mime){const b=new Blob([text],{type:mime||"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}
 function audioDuration(file){return new Promise((res,rej)=>{const a=document.createElement("audio");a.preload="metadata";a.onloadedmetadata=()=>{const d=a.duration;URL.revokeObjectURL(a.src);res(isFinite(d)?d:0);};a.onerror=()=>{URL.revokeObjectURL(a.src);rej(new Error("keine Metadaten"));};a.src=URL.createObjectURL(file);});}
 
 /* ---- data ---- */
 async function loadData(){if(!supa)return [];const {data,error}=await supa.from("stammtische").select("*").order("datum",{ascending:false});if(error){console.error(error);return [];}
-  return data.map(r=>({...r,dauer:r.dauer_sek||0,verarbeitung:r.verarbeitung||"fertig",zusammenfassung:r.zusammenfassung||{lead:"",punkte:[]},transkript:r.transkript||[],sprecher:r.sprecher||[],themen:r.themen||[],kapitel:r.kapitel||[]}));}
+  return data.map(r=>({...r,dauer:r.dauer_sek||0,verarbeitung:r.verarbeitung||"fertig",zusammenfassung:r.zusammenfassung||{lead:"",punkte:[]},transkript:r.transkript||[],sprecher:r.sprecher||[],themen:r.themen||[],kapitel:r.kapitel||[],folientext:r.folientext||""}));}
 function buildFacets(){ALL_YEARS=[...new Set(DATA.map(d=>(d.datum||"").slice(0,4)).filter(Boolean))].sort().reverse();ALL_SPK=[...new Set(DATA.flatMap(d=>d.sprecher||[]))].sort();ALL_TH=[...new Set(DATA.flatMap(d=>d.themen||[]))].sort();}
 function filtered(){let r=DATA.filter(d=>{if(state.q&&!entryText(d).includes(state.q.toLowerCase()))return false;if(state.years.size&&!state.years.has((d.datum||"").slice(0,4)))return false;if(state.speakers.size&&!(d.sprecher||[]).some(s=>state.speakers.has(s)))return false;if(state.themes.size&&!(d.themen||[]).some(t=>state.themes.has(t)))return false;if(state.onlySlides&&!(d.folien&&d.folien.length))return false;if(state.onlyBookmarks&&!isBookmarked(d.id))return false;return true;});
   r.sort((a,b)=>{switch(state.sort){case"old":return a.datum.localeCompare(b.datum);case"added":return new Date(b.erstellt_am||0)-new Date(a.erstellt_am||0);case"az":return a.titel.localeCompare(b.titel,"de");case"dur":return (b.dauer||0)-(a.dauer||0);case"spk":return (b.sprecher||[]).length-(a.sprecher||[]).length;case"played":return ((PLAYED[b.id]||{}).at||0)-((PLAYED[a.id]||{}).at||0);default:return b.datum.localeCompare(a.datum);}});return r;}
@@ -296,7 +321,7 @@ function renderFacets(){$("#fYears").innerHTML=ALL_YEARS.map(y=>chip(y,state.yea
   $("#fSpeakers").innerHTML=ALL_SPK.map((s,i)=>`<button class="chip ${state.speakers.has(s)?'on':''}" data-sp="${esc(s)}" aria-pressed="${state.speakers.has(s)}"><span class="dot" style="background:${SPV[i%SPV.length]}"></span>${esc(s)}</button>`).join("")||'<span class="msg info">–</span>';
   $("#fThemes").innerHTML=ALL_TH.map(t=>chip(t,state.themes.has(t),`data-th="${esc(t)}"`)).join("")||'<span class="msg info">–</span>';}
 function snippetFor(d){const q=(state.q||"").trim().toLowerCase();if(!q||!(d.transkript||[]).length)return "";
-  const idx=d.transkript.findIndex(l=>l.text.toLowerCase().includes(q));if(idx<0)return "";
+  const idx=d.transkript.findIndex(l=>!l.red&&l.text.toLowerCase().includes(q));if(idx<0)return "";
   let t=d.transkript[idx].text;const pos=t.toLowerCase().indexOf(q);const from=Math.max(0,pos-50);
   let frag=(from>0?"… ":"")+t.slice(from,pos+q.length+60)+(pos+q.length+60<t.length?" …":"");
   return `<div class="snippet" data-hit="${idx}">📝 ${hl(frag,state.q)} <span class="snip-go">→ ins Transkript</span></div>`;}
@@ -317,13 +342,17 @@ function renderYearBody(g){
   return months.map(mo=>{const open=searchingActive()||!state.collapsedYears.has(mo.key);
     return `<div class="mgrp"><button class="mgrp-head" data-yeartoggle="${esc(mo.key)}" aria-expanded="${open}"><span class="chev">${open?'▾':'▸'}</span><span>${esc(MONTHS[(+mo.mm)-1]||mo.mm)}</span><span class="grp-count">${mo.items.length}</span></button><div class="grp-body" ${open?'':'hidden'}>${mo.items.map(cardHtml).join("")}</div></div>`;}).join("");}
 function renderList(ann){const rows=filtered();$("#count").textContent=`${rows.length} von ${DATA.length} Stammtischen`;
-  if(!rows.length){$("#list").innerHTML=`<div class="nodata">Kein Stammtisch passt zu Suche und Filtern.</div>`;if(ann)announce("Keine Treffer.");return;}
+  let banner="";
+  if(state.sinceCount>0&&!state.sinceDismissed)banner+=`<div class="listbanner" id="sinceBanner">✨ ${state.sinceCount} neue${state.sinceCount===1?'r':''} Eintrag${state.sinceCount===1?'':'e'} seit deinem letzten Besuch (${state.sinceLabel}). <button class="reset" id="sinceClose">ausblenden</button></div>`;
+  if(state.q.trim())banner+=`<div class="listbanner">🔎 Suche „${esc(state.q.trim())}" · <button class="reset" id="showHits">Alle Fundstellen anzeigen</button></div>`;
+  if(!rows.length){$("#list").innerHTML=banner+`<div class="nodata">Kein Stammtisch passt zu Suche und Filtern.</div>`;wireListBanner();if(ann)announce("Keine Treffer.");return;}
   const groups=[],gi={};rows.forEach(d=>{const y=(d.datum||"").slice(0,4)||"ohne Datum";if(gi[y]==null){gi[y]=groups.length;groups.push({y,items:[]});}groups[gi[y]].items.push(d);});
   const searching=searchingActive();
-  $("#list").innerHTML=groups.map(g=>{const open=searching||!state.collapsedYears.has(g.y);
+  $("#list").innerHTML=banner+groups.map(g=>{const open=searching||!state.collapsedYears.has(g.y);
     return `<div class="grp"><button class="grp-head" data-yeartoggle="${esc(g.y)}" aria-expanded="${open}"><span class="chev">${open?'▾':'▸'}</span><span>${esc(g.y)}</span><span class="grp-count">${g.items.length}</span></button><div class="grp-body" ${open?'':'hidden'}>${renderYearBody(g)}</div></div>`;}).join("");
-  updateCardProgress();
+  updateCardProgress();wireListBanner();
   if(ann)announce(`${rows.length} Stammtische gefunden.`);}
+function wireListBanner(){const c=$("#sinceClose");if(c)c.onclick=()=>{state.sinceDismissed=true;renderList();};const sh=$("#showHits");if(sh)sh.onclick=openHits;}
 $("#list").addEventListener("keydown",e=>{if(e.key!=="ArrowDown"&&e.key!=="ArrowUp")return;const c=[...$("#list").querySelectorAll(".card")].filter(el=>el.offsetParent!==null);if(!c.length)return;let i=c.indexOf(document.activeElement);e.preventDefault();i=e.key==="ArrowDown"?Math.min(c.length-1,i+1):Math.max(0,i-1);c[i].focus();});
 
 /* ---- detail (mit persistentem Player) ---- */
@@ -336,12 +365,12 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
     <div class="sub"><span><b>Ort</b> ${esc(d.ort)}</span><span><b>Dauer</b> ${fmt(d.dauer)}</span><span><b>Themen</b> ${(d.themen||[]).join(", ")||"–"}</span></div>
     <div class="speakers">${(d.sprecher||[]).map((s,i)=>`<span class="sp-tag"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</span>`).join("")}</div>
     ${d.verarbeitung==="offen"?'<div class="msg info" style="margin-top:10px;color:var(--gold)">Audio und Folien sind bereits verfügbar. Transkript und Zusammenfassung werden noch erstellt und erscheinen automatisch.</div>':''}
-    <div class="personal"><button class="btn small" id="dBook">${isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen'}</button><button class="btn small" id="dNoteToggle">✎ Notiz${(NOTES[d.id]&&NOTES[d.id].trim())?' (vorhanden)':''}</button>${(PLAYED[d.id]&&PLAYED[d.id].pos>15)?`<button class="btn small" id="dResume">▶ Fortsetzen bei ${fmt(PLAYED[d.id].pos)}</button>`:''}</div>
+    <div class="personal"><button class="btn small" id="dBook">${isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen'}</button><button class="btn small" id="dNoteToggle">✎ Notiz${(NOTES[d.id]&&NOTES[d.id].trim())?' (vorhanden)':''}</button><button class="btn small" id="dShare">🔗 Teilen</button>${(PLAYED[d.id]&&PLAYED[d.id].pos>15)?`<button class="btn small" id="dResume">▶ Fortsetzen bei ${fmt(PLAYED[d.id].pos)}</button>`:''}</div>
     <div id="noteBox" hidden style="margin-top:8px"><textarea id="dNote" placeholder="Persönliche Notiz (nur auf diesem Gerät gespeichert)" style="width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px">${esc(NOTES[d.id]||"")}</textarea></div>
     ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button><button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
     ${src?`<div class="miniplayer"><audio id="aud" controls preload="none" src="${src}" ${noDL}></audio>
       <div class="mp-row"><label>Tempo <select id="spd"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>1.75</option><option>2</option></select></label>
-      <span id="curChap"></span>${state.authed?`<a class="btn small" href="${src}" download>Audio herunterladen</a>`:""}</div>
+      <span id="curChap"></span><button class="btn small ghost" id="shareAt">🔗 Stelle teilen</button>${state.authed?`<a class="btn small" href="${src}" download>Audio herunterladen</a>`:""}</div>
       <div class="chapters" id="chapters"></div></div>`:`<div class="miniplayer"><div class="msg info">Kein Audio vorhanden.</div></div>`}
     <div class="tabs" role="tablist" id="tabs">
       <button role="tab" data-tab="summary">✨ Zusammenfassung</button>
@@ -353,6 +382,8 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   $("#dNoteToggle").onclick=()=>{const nb=$("#noteBox");nb.hidden=!nb.hidden;if(!nb.hidden)$("#dNote").focus();};
   $("#dNote").oninput=e=>{NOTES[d.id]=e.target.value;lsSet("st_notes",NOTES);};
   if($("#dResume"))$("#dResume").onclick=()=>seekAudio(PLAYED[d.id].pos);
+  if($("#dShare"))$("#dShare").onclick=()=>shareLink(d.id);
+  if($("#shareAt"))$("#shareAt").onclick=()=>{const a=$("#aud");shareLink(d.id,a?Math.floor(a.currentTime):0);};
   if(state.authed){$("#dEdit").onclick=()=>openEdit(d);$("#dExport").onclick=()=>exportEntry(d);$("#dPrint").onclick=()=>printEntries([d]);$("#dDel").onclick=()=>askDelete(d,false);$("#dResum").onclick=()=>reprocess(d,"resummarize");$("#dRetr").onclick=()=>reprocess(d,"retranscribe");}
   if(focusIt){det.focus();announce(`${d.titel} geöffnet.`);}}
 function renderTabBar(){$("#tabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.tab===state.tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.onclick=()=>{state.tab=b.dataset.tab;state.txQ="";state.txSp=null;state.hits=[];state.hit=-1;renderTabBar();renderTab(DATA.find(x=>x.id===state.current));};});}
@@ -369,25 +400,37 @@ function setupPlayer(d){const a=$("#aud");if(!a)return;
       $("#curChap").textContent=cur>=0?("Kapitel: "+chaps[cur].titel):"";}};
   a.onended=()=>{if(PLAYED[d.id]){PLAYED[d.id].pos=0;lsSet("st_played",PLAYED);}};}
 function seekAudio(t){const a=$("#aud");if(a){try{a.currentTime=t;a.play&&a.play().catch(()=>{});}catch(e){}}}
+function shareLink(id,t){let url=location.origin+location.pathname+"#e="+encodeURIComponent(id);if(t)url+="&t="+t;
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(()=>announce("Teilen-Link kopiert."),()=>window.prompt("Link kopieren:",url));
+  else window.prompt("Link kopieren:",url);}
+function parseHash(){const h=location.hash.replace(/^#/,"");if(!h)return false;const p=new URLSearchParams(h);const e=p.get("e");if(!e)return false;
+  const t=parseInt(p.get("t")||"0");const d=DATA.find(x=>x.id===e);if(!d)return false;
+  state.current=e;state.tab="summary";state.txQ="";state.autohit=null;renderList();renderDetail(true);
+  if(t>0)setTimeout(()=>seekAudio(t),700);return true;}
 function renderTab(d){const w=$("#tabwrap");
   if(state.tab==="summary"){
     if(d.verarbeitung==="offen"){w.innerHTML=`<div class="nodata">Die Zusammenfassung wird noch erstellt. Audio und Folien sind bereits verfügbar.</div>`;return;}
     const z=d.zusammenfassung||{};const sec=(t,arr,r)=>arr&&arr.length?`<div class="sec-h" style="margin-top:16px">${t}</div><div class="keyrow">${arr.map(r).join("")}</div>`:"";
-    w.innerHTML=`<div class="summary"><p class="lead">${esc(z.lead)}</p>
-      <div class="keyrow">${(z.punkte||[]).map(p=>`<div class="kp"><b>›</b><span>${esc(p)}</span></div>`).join("")}</div>
+    w.innerHTML=`<div class="summary">${state.authed?`<div style="text-align:right;margin-bottom:6px"><button class="btn small" id="sumEdit">✎ Zusammenfassung bearbeiten</button></div>`:""}
+      <p class="lead">${z.lead?glossaryWrap(esc(z.lead)):'<span class="msg info">Keine Zusammenfassung hinterlegt.</span>'}</p>
+      <div class="keyrow">${(z.punkte||[]).map(p=>`<div class="kp"><b>›</b><span>${glossaryWrap(esc(p))}</span></div>`).join("")}</div>
       ${sec("Beschlüsse",z.beschluesse,b=>`<div class="kp"><b style="color:var(--green)">✓</b><span>${esc(b)}</span></div>`)}
       ${sec("Aufgaben",z.aufgaben,a=>`<div class="kp"><b style="color:var(--gold)">→</b><span>${esc(a&&a.text!=null?a.text:a)}${a&&a.wer?(' <span class="msg info">('+esc(a.wer)+')</span>'):''}</span></div>`)}
       ${sec("Offene Fragen",z.offene_fragen,q=>`<div class="kp"><b style="color:var(--sp3)">?</b><span>${esc(q)}</span></div>`)}
       <div class="themes">${(d.themen||[]).map(t=>`<span class="t">#${esc(t)}</span>`).join("")}</div>
-      <div class="msg info" style="margin-top:14px">Automatisch aus dem Transkript erzeugt, kann Fehler enthalten.</div></div>`;}
+      ${redezeitHtml(d)}
+      <div class="msg info" style="margin-top:14px">Automatisch erzeugt, kann Fehler enthalten.</div></div>`;
+    if(state.authed&&$("#sumEdit"))$("#sumEdit").onclick=()=>editSummary(d);}
   else if(state.tab==="transcript"){
     if(d.verarbeitung==="offen"||!(d.transkript||[]).length){w.innerHTML=`<div class="nodata">Das Transkript wird noch erstellt und erscheint hier automatisch, sobald es fertig ist. Audio und Folien sind bereits verfügbar.</div>`;return;}
     w.innerHTML=`<div style="background:rgba(249,199,79,.08);border:1px solid #4a4222;border-radius:9px;padding:9px 12px;font-size:12.5px;color:#e7d6a3;margin-bottom:14px">Hinweis: Das Transkript wurde automatisch erstellt und kann Fehler enthalten, etwa bei Namen, Fachbegriffen oder undeutlichen Stellen.</div>
       <div class="tx-tools"><div class="tx-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="txq" placeholder="Im Transkript suchen…" aria-label="Im Transkript suchen" value="${esc(state.txQ)}"></div>
       <span class="hitnav" id="hitnav" hidden><button id="hitPrev" aria-label="Vorheriger Treffer">‹</button><span id="hitCount"></span><button id="hitNext" aria-label="Nächster Treffer">›</button><button id="hitAudio" aria-label="An die Stelle im Audio springen">▶ Audio</button></span>
       <div class="tx-filter" id="txf">${(d.sprecher||[]).map((s,i)=>`<button data-i="${i}" class="${state.txSp===i?'on':''}" aria-pressed="${state.txSp===i}"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</button>`).join("")}</div>
-      <button class="btn small ${gp('st_txtsize')?'on':''}" id="txSize" title="Größere Schrift" aria-pressed="${gp('st_txtsize')}">A+</button></div><div id="txlines"></div>`;
+      <button class="btn small ${gp('st_txtsize')?'on':''}" id="txSize" title="Größere Schrift" aria-pressed="${gp('st_txtsize')}">A+</button>
+      <button class="btn small ${gp('st_glossar')?'on':''}" id="txGloss" title="Fachbegriffe hervorheben und erklären" aria-pressed="${gp('st_glossar')}">ⓘ Begriffe</button></div><div id="txlines"></div>`;
     $("#txSize").onclick=()=>{const on=!document.body.classList.contains("tx-large");document.body.classList.toggle("tx-large",on);sp_("st_txtsize",on);$("#txSize").classList.toggle("on",on);$("#txSize").setAttribute("aria-pressed",on);};
+    $("#txGloss").onclick=()=>{const on=!gp("st_glossar");sp_("st_glossar",on);$("#txGloss").classList.toggle("on",on);$("#txGloss").setAttribute("aria-pressed",on);renderLines(d);};
     renderLines(d);
     $("#txq").oninput=e=>{state.txQ=e.target.value;computeHits(d);renderLines(d);};
     $("#txq").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();gotoHit(d,1);}});
@@ -396,18 +439,52 @@ function renderTab(d){const w=$("#tabwrap");
     $("#hitAudio").onclick=()=>{if(state.hit>=0)seekAudio(d.transkript[state.hits[state.hit]].t);};
     computeHits(d);
     if(state.autohit!=null){const pos=state.hits.indexOf(state.autohit);state.autohit=null;if(pos>=0){state.hit=pos-1;gotoHit(d,1);}}}
-  else if(state.tab==="slides"){w.innerHTML=d.folien&&d.folien.length?`<div class="slides-grid">${d.folien.map(f=>{const href=f.pfad&&state.authed?pubUrl("folien",f.pfad):(f.pfad?pubUrl("folien",f.pfad):null);const inner=`<div class="canvas">${href?'PDF öffnen':'Folie '+f.n}</div><div class="cap">${esc(f.titel)}<small>${esc(f.note)}</small></div>`;return `<div class="slide">${href?`<a href="${href}" target="_blank" rel="noopener">${inner}</a>`:inner}</div>`;}).join("")}</div>`:`<div class="nodata">Keine Folien hinterlegt.</div>`;}}
+  else if(state.tab==="slides"){
+    const grid=d.folien&&d.folien.length?`<div class="slides-grid">${d.folien.map(f=>{const href=f.pfad?pubUrl("folien",f.pfad):null;const inner=`<div class="canvas">${href?'PDF öffnen':'Folie '+f.n}</div><div class="cap">${esc(f.titel)}<small>${esc(f.note)}</small></div>`;return `<div class="slide">${href?`<a href="${href}" target="_blank" rel="noopener">${inner}</a>`:inner}</div>`;}).join("")}</div>`:`<div class="nodata">Keine Folien hinterlegt.</div>`;
+    const txt=d.folientext?`<details class="folientext"${state.q?" open":""}><summary>Textinhalt der Folien / PDF (durchsuchbar)</summary><div class="ftxt">${hl(d.folientext,state.q).replace(/\n/g,"<br>")}</div></details>`:"";
+    w.innerHTML=grid+txt;}}
 function computeHits(d){const q=state.txQ.trim().toLowerCase();state.hits=[];state.hit=-1;
-  if(q)(d.transkript||[]).forEach((l,i)=>{if(l.text.toLowerCase().includes(q))state.hits.push(i);});
+  if(q)(d.transkript||[]).forEach((l,i)=>{if(!l.red&&l.text.toLowerCase().includes(q))state.hits.push(i);});
   const nav=$("#hitnav");if(nav){nav.hidden=!q;$("#hitCount").textContent=state.hits.length?`0 / ${state.hits.length}`:"0";}}
 function gotoHit(d,dir){if(!state.hits.length)return;state.hit=(state.hit+dir+state.hits.length)%state.hits.length;$("#hitCount").textContent=`${state.hit+1} / ${state.hits.length}`;renderLines(d);
   const el=$("#txlines").querySelector(".line.curhit");if(el)el.scrollIntoView({behavior:"smooth",block:"center"});announce(`Treffer ${state.hit+1} von ${state.hits.length}`);}
 function renderLines(d){const box=$("#txlines"),q=state.txQ.trim().toLowerCase();const curIdx=state.hit>=0?state.hits[state.hit]:-1;
-  box.innerHTML=(d.transkript||[]).map((l,idx)=>{if(state.txSp!=null&&l.sp!==state.txSp)return "";const m=!q||l.text.toLowerCase().includes(q);
+  box.innerHTML=(d.transkript||[]).map((l,idx)=>{if(state.txSp!=null&&l.sp!==state.txSp)return "";
+    if(l.red&&!state.authed)return `<div class="line redacted"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="said" style="color:var(--muted-2);font-style:italic">[redigiert]</div></div></div>`;
+    const m=!q||l.text.toLowerCase().includes(q);
     const who=esc((d.sprecher||[])[l.sp]||"?");
-    return `<div class="line ${m?'':'dim'} ${idx===curIdx?'curhit':''}"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="who ${state.authed?'editable':''}" style="color:${spc(l.sp)}" ${state.authed?`data-sp="${l.sp}"`:''}>${who}</div><div class="said">${hl(l.text,state.txQ.trim(),idx===curIdx)}</div></div></div>`;}).join("")||`<div class="tx-empty">Keine Zeilen.</div>`;
+    const tools=state.authed?`<div class="lntools"><button data-edit="${idx}" title="Text korrigieren">✎</button><button data-red="${idx}" title="${l.red?'Redaktion aufheben':'Redigieren (Inhalt für Mitglieder ausblenden)'}">${l.red?'⦿':'⊘'}</button></div>`:"";
+    return `<div class="line ${m?'':'dim'} ${idx===curIdx?'curhit':''} ${l.red?'red':''}" data-idx="${idx}"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="who ${state.authed?'editable':''}" style="color:${spc(l.sp)}" ${state.authed?`data-sp="${l.sp}"`:''}>${who}${l.red?' <span class="redbadge">redigiert</span>':''}</div><div class="said" data-said="${idx}">${txHtml(l.text,state.txQ.trim(),idx===curIdx)}</div></div>${tools}</div>`;}).join("")||`<div class="tx-empty">Keine Zeilen.</div>`;
   box.querySelectorAll(".ts").forEach(b=>b.onclick=()=>{seekAudio(+b.dataset.t);b.closest(".line").scrollIntoView({behavior:"smooth",block:"center"});});
-  if(state.authed)box.querySelectorAll(".who.editable").forEach(el=>el.onclick=()=>renameSpeaker(d,+el.dataset.sp));}
+  if(state.authed){
+    box.querySelectorAll(".who.editable").forEach(el=>el.onclick=()=>renameSpeaker(d,+el.dataset.sp));
+    box.querySelectorAll("[data-red]").forEach(b=>b.onclick=()=>toggleRedact(d,+b.dataset.red));
+    box.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editLine(d,+b.dataset.edit));
+  }}
+async function saveTranskript(d){try{await supa.from("stammtische").update({transkript:d.transkript,volltext:volltext(d)}).eq("id",d.id);}catch(e){alert("Speichern fehlgeschlagen: "+(e.message||e));}}
+function editLine(d,idx){const said=$(`[data-said="${idx}"]`);if(!said)return;const cur=d.transkript[idx].text;
+  said.innerHTML=`<textarea class="lnedit">${esc(cur)}</textarea><div class="lnedit-act"><button class="btn small" data-ok>Speichern</button><button class="btn small ghost" data-cancel>Abbrechen</button></div>`;
+  const ta=said.querySelector("textarea");ta.focus();
+  said.querySelector("[data-cancel]").onclick=()=>renderLines(d);
+  said.querySelector("[data-ok]").onclick=async()=>{d.transkript[idx].text=ta.value.trim();await saveTranskript(d);computeHits(d);renderLines(d);announce("Zeile gespeichert.");};}
+async function toggleRedact(d,idx){d.transkript[idx].red=!d.transkript[idx].red;await saveTranskript(d);computeHits(d);renderLines(d);announce(d.transkript[idx].red?"Zeile redigiert, für Mitglieder ausgeblendet.":"Redaktion aufgehoben.");}
+function redezeitHtml(d){const tx=(d.transkript||[]).filter(l=>!l.red);if(tx.length<3)return "";
+  const by={};for(let i=0;i<tx.length;i++){const t0=tx[i].t||0;const t1=i+1<tx.length?(tx[i+1].t||t0):t0+30;const dur=Math.max(0,Math.min(600,t1-t0));const name=(d.sprecher||[])[tx[i].sp]||"?";by[name]=(by[name]||0)+dur;}
+  const named=Object.entries(by).filter(([n])=>!/^Sprecher\s+[A-Z]$/.test(n));if(!named.length)return "";
+  const anon=Object.entries(by).filter(([n])=>/^Sprecher\s+[A-Z]$/.test(n)).reduce((s,[,v])=>s+v,0);
+  const rows=named.slice().sort((a,b)=>b[1]-a[1]);if(anon>0)rows.push(["Übrige (anonym)",anon]);
+  const max=Math.max(...rows.map(r=>r[1]));
+  return `<div class="sec-h" style="margin-top:18px">Redezeit (geschätzt)</div><div class="bars">${rows.map(([n,v])=>`<div class="bar"><span>${esc(n)}</span><span class="track"><span class="fill" style="width:${Math.round(v/max*100)}%"></span></span><span class="val">${fmt(Math.round(v))}</span></div>`).join("")}</div><div class="msg info">Aus den Sprecherwechseln im Transkript geschätzt, nur benannte Personen einzeln ausgewiesen.</div>`;}
+function editSummary(d){const w=$("#tabwrap");const z=d.zusammenfassung||{};
+  w.innerHTML=`<div class="summary"><div class="sec-h">Zusammenfassung bearbeiten</div>
+    <label class="fld">Einleitung<textarea id="esLead" style="min-height:70px">${esc(z.lead||"")}</textarea></label>
+    <label class="fld">Kernpunkte (eine Zeile je Punkt)<textarea id="esPunkte" style="min-height:120px">${esc((z.punkte||[]).join("\n"))}</textarea></label>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="esSave">Speichern</button><button class="btn ghost" id="esCancel">Abbrechen</button><span class="msg" id="esMsg"></span></div></div>`;
+  $("#esCancel").onclick=()=>renderTab(d);
+  $("#esSave").onclick=async()=>{const lead=$("#esLead").value.trim();const punkte=$("#esPunkte").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    d.zusammenfassung=Object.assign({},z,{lead,punkte});
+    try{await supa.from("stammtische").update({zusammenfassung:d.zusammenfassung,volltext:volltext(d)}).eq("id",d.id);announce("Zusammenfassung gespeichert.");renderTab(d);}
+    catch(e){$("#esMsg").className="msg err";$("#esMsg").textContent="Fehler: "+(e.message||e);}};}
 
 /* ---- inline Sprecher benennen (admin) ---- */
 async function renameSpeaker(d,i){const cur=(d.sprecher||[])[i]||"";const neu=window.prompt("Sprecher benennen (gilt für das ganze Transkript):",cur);
@@ -450,6 +527,28 @@ $("#vScan").onclick=async()=>{const box=$("#vOrphans");box.innerHTML='<div class
     box.querySelectorAll("[data-orph]").forEach(btn=>btn.onclick=async()=>{const o=orphans[+btn.dataset.orph];if(!confirm(`${o.bucket}/${o.folder} endgültig löschen?`))return;
       try{const {data}=await supa.storage.from(o.bucket).list(o.folder,{limit:1000});const paths=(data||[]).map(f=>o.folder+"/"+f.name);if(paths.length)await supa.storage.from(o.bucket).remove(paths);btn.closest(".qrow").remove();$("#vMsg").className="msg ok";$("#vMsg").textContent="Gelöscht: "+o.bucket+"/"+o.folder;}catch(e){$("#vMsg").className="msg err";$("#vMsg").textContent="Fehler: "+(e.message||e);}});
   }catch(e){box.innerHTML='<div class="msg err">Fehler: '+esc(e.message||e)+'</div>';}};
+$("#vStorage").onclick=async()=>{const out=$("#vStorageOut");out.innerHTML='<div class="msg info">Berechne…</div>';
+  try{const tot={audio:{n:0,b:0},folien:{n:0,b:0}};
+    for(const d of DATA){for(const bucket of ["audio","folien"]){let data;try{({data}=await supa.storage.from(bucket).list(d.id,{limit:200}));}catch(e){continue;}(data||[]).forEach(o=>{const sz=(o.metadata&&o.metadata.size)||0;tot[bucket].n++;tot[bucket].b+=sz;});}}
+    const mb=x=>(x/1048576).toFixed(1);const ges=tot.audio.b+tot.folien.b;
+    out.innerHTML=`<div class="stat-grid"><div class="stat"><div class="v">${mb(tot.audio.b)} MB</div><div class="l">Audio (${tot.audio.n})</div></div><div class="stat"><div class="v">${mb(tot.folien.b)} MB</div><div class="l">Folien (${tot.folien.n})</div></div><div class="stat"><div class="v">${mb(ges)} MB</div><div class="l">gesamt</div></div></div><div class="msg info">Pro-Plan enthält großzügigen Speicher, das hier dient der Übersicht.</div>`;
+  }catch(e){out.innerHTML='<div class="msg err">Fehler: '+esc(e.message||e)+'</div>';}};
+
+/* ---- globale Fundstellen ---- */
+function snip(text,q){const pos=text.toLowerCase().indexOf(q);if(pos<0)return text.slice(0,100);const from=Math.max(0,pos-40);return (from>0?"… ":"")+text.slice(from,pos+q.length+60)+(pos+q.length+60<text.length?" …":"");}
+function openHits(){const q=state.q.trim().toLowerCase();if(!q)return;const out=[];
+  filtered().forEach(d=>{const lines=[];(d.transkript||[]).forEach((l,i)=>{if(!l.red&&l.text.toLowerCase().includes(q))lines.push({t:l.t,text:l.text,i});});
+    const folienHit=!!(d.folientext&&d.folientext.toLowerCase().includes(q));
+    const meta=[];if((d.titel||"").toLowerCase().includes(q))meta.push("Titel");if(((d.zusammenfassung&&d.zusammenfassung.lead)||"").toLowerCase().includes(q))meta.push("Zusammenfassung");
+    if(lines.length||folienHit||meta.length)out.push({d,lines:lines.slice(0,5),more:Math.max(0,lines.length-5),folienHit,meta});});
+  $("#hitsMsg").textContent=`${out.length} Eintrag(e) mit Treffer`;
+  $("#hitsBody").innerHTML=out.map(o=>`<div class="hitgrp"><div class="hitgrp-h"><button class="reset" data-open="${esc(o.d.id)}">${fmtDate(o.d.datum)} · ${esc(o.d.titel)}</button>${o.meta.length?` <span class="msg info">(${o.meta.join(", ")})</span>`:""}</div>${o.lines.map(l=>`<button class="hitline" data-open="${esc(o.d.id)}" data-hit="${l.i}">${fmt(l.t)} · ${hl(snip(l.text,q),state.q.trim())}</button>`).join("")}${o.more?`<div class="msg info">und ${o.more} weitere Stelle(n)</div>`:""}${o.folienHit?`<button class="hitline" data-open="${esc(o.d.id)}" data-folien="1">📄 Treffer im Folientext</button>`:""}</div>`).join("")||'<div class="msg info">Keine Fundstellen.</div>';
+  $("#hitsBody").querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{state.current=b.dataset.open;state.txSp=null;state.hits=[];state.hit=-1;
+    if(b.dataset.hit!=null){state.tab="transcript";state.txQ=state.q;state.autohit=parseInt(b.dataset.hit);}
+    else if(b.dataset.folien){state.tab="slides";state.txQ="";state.autohit=null;}
+    else{state.tab="summary";state.txQ="";state.autohit=null;}
+    closeModal($("#ovHits"));renderList();renderDetail(true);});
+  openModal($("#ovHits"));}
 
 /* ---- reprocess (admin) ---- */
 async function reprocess(d,mode){const txt=mode==="retranscribe"?"komplett neu transkribieren (dauert lange)":"neu zusammenfassen";
@@ -642,8 +741,11 @@ function openProtokoll(){state.protTab=state.protTab||"aufgaben";$("#protMsg").t
 function renderProtTabs(){$("#protTabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.pt===state.protTab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.onclick=()=>{state.protTab=b.dataset.pt;renderProtTabs();renderProt();};});}
 function protJump(id){closeModal($("#ovProtokoll"));state.current=id;state.tab="summary";renderList();renderDetail(true);}
 function renderProt(){const box=$("#protBody");const ent=[...DATA].sort((a,b)=>b.datum.localeCompare(a.datum));const today=new Date().toISOString().slice(0,10);
-  if(state.protTab==="beschluesse"){const rows=[];ent.forEach(d=>((d.zusammenfassung||{}).beschluesse||[]).forEach(b=>rows.push({d,b})));
-    box.innerHTML=rows.length?rows.map(({d,b})=>`<div class="qrow"><div><b style="color:var(--green)">✓ ${esc(b)}</b><div class="msg info">${fmtDate(d.datum)} · <button class="reset" data-go="${esc(d.id)}">${esc(d.titel)}</button></div></div></div>`).join(""):'<div class="nodata">Noch keine Beschlüsse erfasst. Sie werden bei neu verarbeiteten Stammtischen automatisch extrahiert.</div>';}
+  if(state.protTab==="beschluesse"){const rows=[];ent.forEach(d=>((d.zusammenfassung||{}).beschluesse||[]).forEach((b,bi)=>rows.push({d,b,bi})));
+    box.innerHTML=rows.length?rows.map(({d,b,bi})=>{const nv=(d.nachverfolgung||{})[bi]||{};const st=nv.status||"offen";
+      const badge=`<span class="nv-badge nv-${st}">${st==="umgesetzt"?"umgesetzt":st==="laeuft"?"in Umsetzung":"offen"}</span>`;
+      const info=(nv.note||nv.geprueft_am)?`<div class="msg info">Nachverfolgung: ${esc(nv.note||"")}${nv.geprueft_am?` (geprüft ${fmtDate(nv.geprueft_am)})`:""}</div>`:"";
+      return `<div class="qrow"><div><b style="color:var(--green)">✓ ${esc(b)}</b> ${badge}<div class="msg info">${fmtDate(d.datum)} · <button class="reset" data-go="${esc(d.id)}">${esc(d.titel)}</button></div>${info}</div>${state.authed?`<div style="display:flex;gap:6px"><button class="btn small" data-nv="${esc(d.id)}" data-bi="${bi}">Nachverfolgen</button></div>`:""}</div>`;}).join(""):'<div class="nodata">Noch keine Beschlüsse erfasst. Sie werden bei neu verarbeiteten Stammtischen automatisch extrahiert.</div>';}
   else{let rows=[];ent.forEach(d=>((d.zusammenfassung||{}).aufgaben||[]).forEach((a,i)=>{const text=(a&&a.text!=null)?a.text:a;const erl=a&&a.erledigt;if(!erl)rows.push({d,i,text,wer:a&&a.wer,frist:a&&a.frist});}));
     if(!rows.length){box.innerHTML='<div class="nodata">Keine offenen Aufgaben.</div>';}
     else{const wk=new Date(Date.now()+7*864e5).toISOString().slice(0,10);
@@ -656,7 +758,16 @@ function renderProt(){const box=$("#protBody");const ent=[...DATA].sort((a,b)=>b
       box.innerHTML=grp("Überfällig",buckets.over,"var(--red)")+grp("Diese Woche",buckets.week,"var(--gold)")+grp("Später",buckets.later)+grp("Ohne Frist",buckets.none);}}
   box.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>protJump(b.dataset.go));
   if(state.authed){box.querySelectorAll("[data-done]").forEach(b=>b.onclick=()=>markTaskDone(b.dataset.done,+b.dataset.i));
-    box.querySelectorAll("[data-frist]").forEach(b=>b.onclick=()=>setTaskFrist(b.dataset.frist,+b.dataset.i));}}
+    box.querySelectorAll("[data-frist]").forEach(b=>b.onclick=()=>setTaskFrist(b.dataset.frist,+b.dataset.i));
+    box.querySelectorAll("[data-nv]").forEach(b=>b.onclick=()=>setNachverfolgung(b.dataset.nv,+b.dataset.bi));}}
+async function setNachverfolgung(id,bi){const d=DATA.find(x=>x.id===id);if(!d)return;const nvAll=d.nachverfolgung||{};const nv=nvAll[bi]||{};
+  const st=window.prompt("Status: offen / laeuft / umgesetzt",nv.status||"offen");if(st==null)return;
+  const s=({"offen":"offen","laeuft":"laeuft","läuft":"laeuft","umgesetzt":"umgesetzt"})[st.trim().toLowerCase()]||"offen";
+  const note=window.prompt("Notiz zur Nachverfolgung (optional), z. B. umgesetzt im Stammtisch Mai:",nv.note||"");if(note==null)return;
+  const dt=window.prompt("Geprüft am, JJJJ-MM-TT (optional):",nv.geprueft_am||"");if(dt==null)return;
+  const v=dt.trim();if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v)){$("#protMsg").textContent="Datum bitte JJJJ-MM-TT.";return;}
+  nvAll[bi]={status:s,note:note.trim(),geprueft_am:v||""};d.nachverfolgung=nvAll;
+  try{await supa.from("stammtische").update({nachverfolgung:nvAll}).eq("id",id);$("#protMsg").textContent="Nachverfolgung gespeichert.";renderProt();}catch(e){$("#protMsg").textContent="Fehler: "+(e.message||e);}}
 async function markTaskDone(id,i){const d=DATA.find(x=>x.id===id);if(!d)return;const z=d.zusammenfassung||{};const a=(z.aufgaben||[])[i];if(a==null)return;if(typeof a==="string")z.aufgaben[i]={text:a,erledigt:true};else a.erledigt=true;
   try{await supa.from("stammtische").update({zusammenfassung:z}).eq("id",id);$("#protMsg").textContent="Als erledigt markiert.";renderProt();}catch(e){$("#protMsg").textContent="Fehler: "+(e.message||e);}}
 async function setTaskFrist(id,i){const d=DATA.find(x=>x.id===id);if(!d)return;const z=d.zusammenfassung||{};let a=(z.aufgaben||[])[i];if(a==null)return;if(typeof a==="string"){a={text:a};z.aufgaben[i]=a;}
@@ -688,8 +799,13 @@ function initCollapse(){if(!DATA.length)return;const newest=[...DATA].sort((a,b)
   new Set(DATA.map(d=>(d.datum||"").slice(0,4)||"ohne Datum")).forEach(y=>{if(y!==ny)set.add(y);});
   DATA.filter(d=>(d.datum||"").slice(0,4)===ny).forEach(d=>{const mk=(d.datum||"").slice(0,7);if(mk!==nmKey)set.add(mk);});
   state.collapsedYears=set;}
+function computeSince(){const last=lsGet("st_lastvisit",null);
+  if(last){const lt=new Date(last).getTime();state.sinceCount=DATA.filter(d=>d.erstellt_am&&new Date(d.erstellt_am).getTime()>lt).length;state.sinceLabel=new Date(last).toLocaleDateString("de-DE");}
+  lsSet("st_lastvisit",new Date().toISOString());}
 (async function boot(){applyMobile(gp("st_mobile"));applySr(gp("st_sr"));if(gp("st_txtsize"))document.body.classList.add("tx-large");await refreshAuth();
-  DATA=await loadData();buildFacets();initCollapse();renderFacets();renderList();renderDetail();
+  DATA=await loadData();buildFacets();initCollapse();computeSince();renderFacets();renderList();
+  if(!parseHash())renderDetail();
+  window.addEventListener("hashchange",parseHash);
   refreshBanner();statusTimer=setInterval(()=>{refreshBanner();if(!$("#ovQueue").hidden)renderStatusPanel();},20000);})();
 </script>
 </body>
