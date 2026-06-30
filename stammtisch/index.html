@@ -223,7 +223,12 @@ function esc(t){return (t==null?"":String(t)).replace(/[&<>]/g,c=>({"&":"&amp;",
 function hl(t,q,cur){t=esc(t);if(!q)return t;const re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi");return t.replace(re,`<span class="hl${cur?' cur':''}">$1</span>`);}
 function spc(i){return SPV[i%SPV.length];}
 function isNew(d){if(!d.erstellt_am)return false;return (Date.now()-new Date(d.erstellt_am).getTime())<NEU_TAGE*864e5;}
-function dateFromName(n){let m=n.match(/(20\d{2})[-_.](\d{1,2})[-_.](\d{1,2})/);if(m)return `${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`;m=n.match(/(\d{1,2})[-_.](\d{1,2})[-_.](\d{2,4})/);if(m){let y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`;}return "";}
+function dateFromName(n){
+  function mk(y,a,b){y=+y;if(y<100)y=2000+y;let mo=+a,d=+b;if(!(mo>=1&&mo<=12&&d>=1&&d<=31)){[mo,d]=[d,mo];}if(mo>=1&&mo<=12&&d>=1&&d<=31)return `${String(y).padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;return "";}
+  let m=n.match(/(20\d{2})[-_.](\d{1,2})[-_.](\d{1,2})/);if(m){let r=mk(m[1],m[2],m[3]);if(r)return r;}      // YYYY.MM.DD oder YYYY.DD.MM
+  m=n.match(/(\d{1,2})[-_.](\d{1,2})[-_.](\d{2,4})/);if(m){let r=mk(m[3],m[2],m[1]);if(r)return r;}          // DD.MM.YYYY / DD.MM.YY
+  m=n.match(/(?<!\d)(\d{2})(\d{2})(\d{2})(?!\d)/);if(m){let r=mk(m[1],m[2],m[3]);if(r)return r;}              // YYMMDD
+  return "";}
 function pubUrl(b,p){return supa?supa.storage.from(b).getPublicUrl(p).data.publicUrl:null;}
 function entryText(e){return [e.titel,e.ort,e.zusammenfassung&&e.zusammenfassung.lead,(e.zusammenfassung&&e.zusammenfassung.punkte||[]).join(" "),(e.sprecher||[]).join(" "),(e.themen||[]).join(" "),(e.transkript||[]).map(l=>l.text).join(" ")].join(" ").toLowerCase();}
 function volltext(e){return [e.titel,e.ort,e.zusammenfassung.lead,(e.zusammenfassung.punkte||[]).join(" "),(e.sprecher||[]).join(" "),(e.themen||[]).join(" "),(e.transkript||[]).map(l=>l.text).join(" ")].join(" ");}
@@ -394,11 +399,11 @@ $("#delGo").onclick=async()=>{if(!pendingDelete)return;const msg=$("#delMsg");ms
 /* ---- wizard ---- */
 function openWizard(){wz={step:1,audio:null,folien:null,datum:"",titel:"",ort:""};$("#wzMsg").textContent="";renderWizard();openModal($("#ovWizard"));}
 function renderWizard(){["stp1","stp2","stp3"].forEach((id,i)=>$("#"+id).className=wz.step>=i+1?"on":"");const b=$("#wzBody");
-  if(wz.step===1){b.innerHTML=`<div class="field"><label>Audiodatei</label><input id="wzAudio" type="file" accept="audio/*"></div><div class="field"><label>Folien (optional, PDF)</label><input id="wzFolien" type="file" accept="application/pdf"></div><div class="msg info">${wz.audio?("Gewählt: "+esc(wz.audio.name)):"Wähle die Aufnahme aus."}</div>`;
-    $("#wzAudio").onchange=e=>{wz.audio=e.target.files[0];if(wz.audio&&!wz.datum)wz.datum=dateFromName(wz.audio.name);renderWizard();};$("#wzFolien").onchange=e=>{wz.folien=e.target.files[0];};}
-  else if(wz.step===2){b.innerHTML=`<div class="grid2"><div class="field"><label>Datum</label><input id="wzDatum" type="date" value="${esc(wz.datum)}"></div><div class="field"><label>Ort</label><input id="wzOrt" value="${esc(wz.ort)}" placeholder="z.B. Marburg"></div></div><div class="field"><label>Titel (optional)</label><input id="wzTitel" value="${esc(wz.titel)}"></div>`;
-    $("#wzDatum").onchange=e=>wz.datum=e.target.value;$("#wzOrt").oninput=e=>wz.ort=e.target.value;$("#wzTitel").oninput=e=>wz.titel=e.target.value;}
-  else{b.innerHTML=`<div class="msg info">Zusammenfassung:</div><div class="keyrow" style="margin-top:10px"><div class="kp"><b>Audio</b><span>${esc(wz.audio?wz.audio.name:"–")}</span></div><div class="kp"><b>Folien</b><span>${esc(wz.folien?wz.folien.name:"keine")}</span></div><div class="kp"><b>Datum</b><span>${esc(wz.datum||"–")}</span></div><div class="kp"><b>Ort</b><span>${esc(wz.ort||"–")}</span></div><div class="kp"><b>Titel</b><span>${esc(wz.titel||"wird erzeugt")}</span></div></div><div class="msg info" style="margin-top:12px">Nach dem Hochladen verarbeitet der lokale Verarbeiter automatisch und veröffentlicht.</div>`;}
+  if(wz.step===1){const det=wz.audio?dateFromName(wz.audio.name):"";b.innerHTML=`<div class="field"><label>Audiodatei</label><input id="wzAudio" type="file" accept="audio/*"></div><div class="field"><label>Folien (optional, PDF)</label><input id="wzFolien" type="file" accept="application/pdf"></div><div class="msg ${wz.audio?(det?'ok':'err'):'info'}">${wz.audio?("Gewählt: "+esc(wz.audio.name)+(det?(" · erkanntes Datum: "+esc(det)):" · kein Datum im Namen erkannt, bitte im nächsten Schritt eingeben")):"Wähle die Aufnahme aus. Das Datum wird, wenn möglich, automatisch erkannt."}</div>`;
+    $("#wzAudio").onchange=e=>{wz.audio=e.target.files[0];if(wz.audio)wz.datum=dateFromName(wz.audio.name)||wz.datum;renderWizard();};$("#wzFolien").onchange=e=>{wz.folien=e.target.files[0];};}
+  else if(wz.step===2){b.innerHTML=`<div class="grid2"><div class="field"><label>Datum (Pflicht)</label><input id="wzDatum" type="date" value="${esc(wz.datum)}"></div><div class="field"><label>Ort</label><input id="wzOrt" value="${esc(wz.ort)}" placeholder="z.B. Marburg"></div></div><div class="field"><label>Titel (optional)</label><input id="wzTitel" value="${esc(wz.titel)}"></div><div class="msg info">Gespeichert und veröffentlicht wird einheitlich als <b>st_${esc(wz.datum||"JJJJ-MM-TT")}</b>. Der ursprüngliche Dateiname spielt keine Rolle.</div>`;
+    $("#wzDatum").onchange=e=>{wz.datum=e.target.value;renderWizard();};$("#wzOrt").oninput=e=>wz.ort=e.target.value;$("#wzTitel").oninput=e=>wz.titel=e.target.value;}
+  else{b.innerHTML=`<div class="msg info">Zusammenfassung:</div><div class="keyrow" style="margin-top:10px"><div class="kp"><b>Datei</b><span>${esc(wz.audio?wz.audio.name:"–")}</span></div><div class="kp"><b>Wird gespeichert als</b><span>st_${esc(wz.datum||"?")}</span></div><div class="kp"><b>Folien</b><span>${esc(wz.folien?wz.folien.name:"keine")}</span></div><div class="kp"><b>Datum</b><span>${esc(wz.datum?fmtDate(wz.datum):"–")}</span></div><div class="kp"><b>Ort</b><span>${esc(wz.ort||"–")}</span></div><div class="kp"><b>Titel</b><span>${esc(wz.titel||"wird automatisch erzeugt")}</span></div></div><div class="msg info" style="margin-top:12px">Nach dem Hochladen verarbeitet der lokale Verarbeiter automatisch und veröffentlicht.</div>`;}
   $("#wzBack").style.visibility=wz.step===1?"hidden":"visible";$("#wzNext").textContent=wz.step===3?"Hochladen & verarbeiten":"Weiter";}
 $("#wzBack").onclick=()=>{if(wz.step>1){wz.step--;renderWizard();}};
 $("#wzNext").onclick=async()=>{if(wz.step===1){if(!wz.audio){$("#wzMsg").textContent="Bitte Audio wählen.";$("#wzMsg").className="msg err";return;}wz.step=2;return renderWizard();}
@@ -414,14 +419,25 @@ $("#wzNext").onclick=async()=>{if(wz.step===1){if(!wz.audio){$("#wzMsg").textCon
 /* ---- status + queue ---- */
 async function getStatus(){if(!supa)return null;try{const {data}=await supa.from("processing_status").select("*").eq("id","batch").maybeSingle();return data;}catch(e){return null;}}
 async function refreshBanner(){const s=await getStatus();const b=$("#statusBanner");
-  if(s&&s.active){b.hidden=false;const titel=s.current_titel||"ein neuer Stammtisch";const datum=s.current_datum?(" vom "+fmtDate(s.current_datum)):"";const eta=s.eta?(" Voraussichtlich online "+s.eta+".") : "";
-    $("#statusBannerText").textContent=state.authed?`Verarbeitung läuft: ${titel}${datum} · ${s.phase||""} · ${s.done||0}/${s.total||0}.${eta}`:`Gerade wird ein neuer Stammtisch verarbeitet (${titel}${datum}).${eta}`;}
+  if(s&&s.active){b.hidden=false;const d=s.detail||{};const titel=s.current_titel||"ein neuer Stammtisch";const datum=s.current_datum?(" vom "+fmtDate(s.current_datum)):"";
+    const bulk=s.scope==="batch"&&(s.total||0)>3;const fin=d.cur_finish?(" Voraussichtlich online gegen "+d.cur_finish+" Uhr."):(s.eta?(" Voraussichtlich fertig "+s.eta+"."):"");
+    if(state.authed){$("#statusBannerText").textContent=`Verarbeitung läuft: ${titel}${datum} · ${d.phase||s.phase||""}${d.cur_progress!=null?(" · "+d.cur_progress+"%"):""} · ${s.done||0}/${s.total||0}.${d.cur_remaining?(" "+d.cur_remaining+"."):""}`;}
+    else if(bulk){$("#statusBannerText").textContent="Es werden gerade ältere Stammtische aufgearbeitet und nach und nach veröffentlicht.";}
+    else{$("#statusBannerText").textContent=`Gerade wird ein neuer Stammtisch verarbeitet (${titel}${datum}).${fin}`;}}
   else b.hidden=true;}
 async function openQueue(){openModal($("#ovQueue"));await renderStatusPanel();await loadQueue();}
 async function renderStatusPanel(){const s=await getStatus();const p=$("#statusPanel");
-  if(s&&(s.active||s.total)){const pct=s.total?Math.round((s.done||0)/s.total*100):0;
-    p.innerHTML=`<div class="sec-h">Verarbeitung (Batch)</div><div><b>${s.active?"läuft":"pausiert"}</b> · Phase: ${esc(s.phase||"–")} · ${s.done||0} von ${s.total||0} fertig ${s.eta?("· voraussichtlich fertig "+esc(s.eta)):""}</div><div class="progress"><div style="width:${pct}%"></div></div><div class="msg info">${esc(s.current_titel||"")} ${s.current_datum?("· "+fmtDate(s.current_datum)):""} ${s.message?("· "+esc(s.message)):""}</div><div class="msg info">Stand: ${s.updated_at?new Date(s.updated_at).toLocaleString("de-DE"):"–"}</div>`;}
-  else p.innerHTML=`<div class="msg info">Kein aktiver Verarbeitungs-Status gemeldet.</div>`;}
+  if(!s||!(s.active||s.total||s.scope==="ingest")){p.innerHTML=`<div class="msg info">Kein aktiver Verarbeitungs-Status gemeldet.</div>`;return;}
+  const d=s.detail||{};const pct=s.total?Math.round((s.done||0)/s.total*100):0;const cp=d.cur_progress;
+  let h=`<div class="sec-h">Aktuelle Datei</div>`;
+  h+=`<div style="font-size:14px;margin-bottom:4px"><b>${esc(s.current_titel||"–")}</b>${s.current_datum?(" · "+fmtDate(s.current_datum)):""}</div>`;
+  h+=`<div class="msg info">Phase: ${esc(d.phase||s.phase||"–")}${s.scope==="ingest"?" · Einzelverarbeitung":""}</div>`;
+  if(cp!=null){h+=`<div class="progress"><div style="width:${cp}%"></div></div><div class="msg info">${cp}% · ${esc(d.cur_elapsed||"?")} von geschätzt ${esc(d.cur_len||"?")} · ${esc(d.cur_remaining||"")}${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</div>`;}
+  else{h+=`<div class="msg info">${esc(d.cur_len?("Länge "+d.cur_len):"")} ${esc(d.cur_elapsed?("· läuft seit "+d.cur_elapsed):"")}</div>`;}
+  if(d.rtf)h+=`<div class="msg info">Tempo: ${esc(d.rtf)}</div>`;
+  if(s.scope!=="ingest"){h+=`<div class="sec-h" style="margin-top:16px">Gesamter Batch</div><div><b>${s.active?"läuft":"pausiert"}</b> · ${s.done||0} von ${s.total||0} fertig${s.eta?(" · voraussichtlich fertig "+esc(s.eta)):""}</div><div class="progress"><div style="width:${pct}%"></div></div>`;}
+  h+=`<div class="msg info" style="margin-top:8px">Stand: ${s.updated_at?new Date(s.updated_at).toLocaleString("de-DE"):"–"}${s.message?(" · "+esc(s.message)):""}</div>`;
+  p.innerHTML=h;}
 async function loadQueue(){const box=$("#queueList");box.innerHTML='<div class="msg info">Lade…</div>';
   try{const {data,error}=await supa.from("ingest").select("*").order("created",{ascending:false});if(error)throw error;
     box.innerHTML=data.length?data.map(q=>`<div class="qrow"><div><b>${esc(q.titel||q.id)}</b><div class="msg info">${esc(q.mode||"new")} · ${esc(q.datum||"")} ${q.message?("· "+esc(q.message)):""}</div></div><span class="qstatus ${q.status}">${q.status}</span></div>`).join(""):'<div class="nodata">Warteschlange leer.</div>';
@@ -456,7 +472,7 @@ $("#list").onclick=e=>{const b=e.target.closest("[data-id]");if(!b)return;state.
 /* ---- init ---- */
 (async function boot(){applyMobile(gp("st_mobile"));applySr(gp("st_sr"));await refreshAuth();
   DATA=await loadData();buildFacets();renderFacets();renderList();renderDetail();
-  refreshBanner();statusTimer=setInterval(refreshBanner,30000);})();
+  refreshBanner();statusTimer=setInterval(()=>{refreshBanner();if(!$("#ovQueue").hidden)renderStatusPanel();},20000);})();
 </script>
 </body>
 </html>
