@@ -31,6 +31,9 @@
   .row .cur.bad{color:var(--amber);border-color:#5a4a1e}
   .row .hint{display:block;margin-top:4px;font-size:12px;color:var(--green)}
   .row .hint button{margin-left:6px}
+  .files{display:flex;flex-wrap:wrap;gap:12px;margin-top:7px}
+  .file{font-size:12px;color:var(--muted)}.file a{color:var(--green);text-decoration:none}.file a:hover{text-decoration:underline}
+  .fstat{font-size:11px;color:var(--muted-2);margin-left:3px}.fstat.ok{color:var(--green)}.fstat.bad{color:var(--red);font-weight:700}
   .datebox{display:flex;flex-direction:column;gap:5px}
   .datebox input{text-align:center;letter-spacing:1px}
   .actions{display:flex;gap:6px;flex-direction:column}
@@ -54,6 +57,8 @@
     <div class="summary" id="summary"></div>
     <div class="toolbar">
       <label><input type="checkbox" id="onlySusp"> nur verdächtige zeigen</label>
+      <button class="btn small" id="btnCheck">Alle Dateien prüfen</button>
+      <span class="msg info" id="filesMsg"></span>
       <span class="msg info" id="saveMsg" style="margin-left:auto"></span>
     </div>
     <div id="list"></div>
@@ -129,6 +134,7 @@ function render(){
         <div class="titel">Originaldatei: ${orig}</div>
         <div class="meta"><span class="cur ${curBad}">aktuell: ${isoToDE(d.datum)||"kein Datum"}</span>${d.erstellt_am?`hochgeladen ${isoToDE(String(d.erstellt_am).slice(0,10))}`:""}${flags.length?` · ${flags.join(" · ")}`:""}</div>
         <div class="meta">Titel: ${esc(d.titel||"(ohne Titel)")}${d.folien?` · Folien vorhanden`:""} · id ${esc(d.id)}</div>
+        ${fileLinks(d)}
         ${hint}
       </div>
       <div class="datebox">
@@ -145,6 +151,41 @@ function render(){
   $("#list").querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>save(b.dataset.save));
 }
 function cssEsc(s){return String(s).replace(/"/g,'\\"');}
+function base(p){return String(p||"").split("/").pop();}
+function pub(bucket,path){try{return supa.storage.from(bucket).getPublicUrl(path).data.publicUrl;}catch(e){return "#";}}
+function fileLinks(d){
+  const items=[];
+  if(d.audio_pfad)items.push({bucket:"audio",path:d.audio_pfad,label:"🎧 "+base(d.audio_pfad)});
+  (d.folien||[]).forEach(f=>{if(f&&f.pfad)items.push({bucket:"folien",path:f.pfad,label:"📄 "+(f.titel||("Folie "+(f.n||"")))});});
+  if(!items.length)return '<div class="files"><span style="color:var(--muted-2);font-size:12px">keine Dateien hinterlegt</span></div>';
+  return '<div class="files">'+items.map(it=>`<span class="file"><a href="${esc(pub(it.bucket,it.path))}" target="_blank" rel="noopener">${esc(it.label)}</a> <span class="fstat" data-fstat="${esc(it.bucket+'|'+it.path)}">?</span></span>`).join("")+'</div>';
+}
+async function checkAllFiles(){
+  const btn=$("#btnCheck");btn.disabled=true;
+  if($("#onlySusp").checked){$("#onlySusp").checked=false;render();}
+  let checked=0,missing=0,extra=0;const missRows=[];
+  for(let i=0;i<DATA.length;i++){
+    const d=DATA[i];btn.textContent=`Prüfe… ${i+1}/${DATA.length}`;
+    const refs={audio:[],folien:[]};
+    if(d.audio_pfad)refs.audio.push(base(d.audio_pfad));
+    (d.folien||[]).forEach(f=>{if(f&&f.pfad)refs.folien.push(base(f.pfad));});
+    let rowMissing=false;
+    for(const bucket of ["audio","folien"]){
+      if(!refs[bucket].length)continue;
+      let names=[];
+      try{const {data}=await supa.storage.from(bucket).list(d.id,{limit:200});names=(data||[]).map(o=>o.name);}catch(e){}
+      refs[bucket].forEach(n=>{const ok=names.includes(n);checked++;if(!ok){missing++;rowMissing=true;}
+        const span=document.querySelector(`[data-fstat="${cssEsc(bucket+'|'+d.id+'/'+n)}"]`);
+        if(span){span.textContent=ok?"vorhanden":"fehlt";span.className="fstat "+(ok?"ok":"bad");}});
+      names.forEach(n=>{if(!refs[bucket].includes(n))extra++;});
+    }
+    if(rowMissing)missRows.push(d.id);
+  }
+  btn.textContent="Alle Dateien prüfen";btn.disabled=false;
+  missRows.forEach(id=>{const r=$(`[data-row="${cssEsc(id)}"]`);if(r){r.classList.add("susp");}});
+  const sm=$("#filesMsg");sm.className="msg "+(missing?"err":"ok");
+  sm.textContent=`${checked} Dateien geprüft, ${missing} fehlen${extra?`, ${extra} zusätzliche Datei(en) im Speicher ohne Eintrag`:""}.`;
+}
 
 async function save(id){
   const d=DATA.find(x=>x.id===id);if(!d)return;
@@ -158,11 +199,15 @@ async function save(id){
   try{
     const {error}=await supa.from("stammtische").update(upd).eq("id",id);
     if(error)throw error;
+    const {data:chk}=await supa.from("stammtische").select("datum,titel").eq("id",id).maybeSingle();
+    const persisted=chk&&chk.datum===iso;
     d.datum=iso;if(upd.titel)d.titel=upd.titel;d._done=true;d._susp=false;
     const rowEl=$(`[data-row="${cssEsc(id)}"]`);if(rowEl){rowEl.classList.remove("susp");rowEl.classList.add("done");}
-    msg.className="msg ok";msg.textContent=`Gespeichert: „${d.titel}" auf ${isoToDE(iso)}.`;
+    msg.className="msg "+(persisted?"ok":"err");
+    msg.textContent=persisted?`Gespeichert und in der Datenbank bestätigt: ${isoToDE(iso)} (${esc(chk.titel||d.titel)}).`:`Update gesendet, aber Rücklesen ergab ${chk?isoToDE(chk.datum):"nichts"}. Bitte erneut prüfen.`;
   }catch(e){msg.className="msg err";msg.textContent="Fehler: "+(e.message||e);}
 }
+$("#btnCheck") && ($("#btnCheck").onclick=checkAllFiles);
 
 $("#onlySusp").addEventListener("change",render);
 
