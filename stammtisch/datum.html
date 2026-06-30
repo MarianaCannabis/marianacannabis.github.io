@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Stammtisch · Datums-Korrektur</title>
+<style>
+  :root{--bg:#08100b;--bg-2:#0d1812;--panel:#102016;--line:#1c3325;--green:#4caf6a;--green-dim:#2f7a48;--gold:#f9c74f;--text:#d7e4da;--muted:#8aa093;--muted-2:#6f8579;--red:#d9694e;--amber:#e0a82e}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
+  header{background:var(--bg-2);border-bottom:1px solid var(--line);padding:16px 20px}
+  header h1{margin:0;font-size:18px}header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .wrap{max-width:960px;margin:0 auto;padding:20px}
+  .btn{background:var(--green-dim);color:#fff;border:1px solid var(--green);border-radius:8px;padding:9px 14px;font-size:13px;cursor:pointer;font-weight:600}
+  .btn:hover{background:var(--green)}.btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}.btn.small{padding:6px 10px;font-size:12px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  input{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px;outline:none}
+  input:focus{border-color:var(--green-dim)}
+  .login{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  .summary{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+  .summary b{color:var(--gold)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0}
+  .toolbar label{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:13px}
+  .row{display:grid;grid-template-columns:1fr 150px auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:9px}
+  .row.susp{border-color:var(--amber);box-shadow:inset 3px 0 0 var(--amber)}
+  .row.done{border-color:var(--green);opacity:.7}
+  .row .titel{font-weight:600}
+  .row .meta{color:var(--muted);font-size:12px;margin-top:3px;word-break:break-all}
+  .row .cur{display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:11px;color:var(--text);margin-right:6px}
+  .row .cur.bad{color:var(--amber);border-color:#5a4a1e}
+  .row .hint{display:block;margin-top:4px;font-size:12px;color:var(--green)}
+  .row .hint button{margin-left:6px}
+  .datebox{display:flex;flex-direction:column;gap:5px}
+  .datebox input{text-align:center;letter-spacing:1px}
+  .actions{display:flex;gap:6px;flex-direction:column}
+  .msg{font-size:13px;margin:10px 0}.msg.err{color:var(--red)}.msg.ok{color:var(--green)}.msg.info{color:var(--muted)}
+  @media(max-width:680px){.row{grid-template-columns:1fr;gap:8px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Stammtisch · Datums-Korrektur</h1>
+  <p>Internes Werkzeug. Prüft die hinterlegten Datumsangaben und erlaubt das händische Korrigieren im Format tt.mm.jj.</p>
+  <div class="login" id="login">
+    <input id="email" type="email" placeholder="Admin-E-Mail" autocomplete="username" style="min-width:220px">
+    <input id="pass" type="password" placeholder="Passwort" autocomplete="current-password">
+    <button class="btn" id="btnLogin">Anmelden</button>
+    <span class="msg" id="loginMsg"></span>
+  </div>
+</header>
+<div class="wrap">
+  <div id="app" hidden>
+    <div class="summary" id="summary"></div>
+    <div class="toolbar">
+      <label><input type="checkbox" id="onlySusp"> nur verdächtige zeigen</label>
+      <span class="msg info" id="saveMsg" style="margin-left:auto"></span>
+    </div>
+    <div id="list"></div>
+  </div>
+  <div class="msg info" id="hint">Bitte zuerst anmelden. Es werden ausschließlich Datumsangaben geändert, nichts anderes.</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ===================== KONFIGURATION ===================== */
+const SUPA_URL  = "https://odggiivgoaficsyekfmd.supabase.co";
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ2dpaXZnb2FmaWNzeWVrZm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NDA5MjQsImV4cCI6MjA5ODMxNjkyNH0.RRla1o7_oXA1emq_dBJoZGwwSg38kitCxmdfeIuANCk";
+const ADMIN_EMAIL = "areiche@cscsdeutschland.de";
+/* ========================================================= */
+
+const $=s=>document.querySelector(s);
+const supa=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_ANON):null;
+let DATA=[];
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);}
+function pad(n){return String(n).padStart(2,"0");}
+
+// ISO (YYYY-MM-DD) -> tt.mm.jj
+function isoToDE(iso){if(!iso||iso.length<10)return "";const[y,m,d]=iso.slice(0,10).split("-");return `${d}.${m}.${y.slice(2)}`;}
+// tt.mm.jj oder tt.mm.jjjj -> ISO, sonst null
+function deToIso(str){const m=String(str||"").trim().match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2}|\d{4})$/);if(!m)return null;
+  let d=+m[1],mo=+m[2],y=+m[3];
+  if(m[3].length===2){const cur=new Date().getFullYear();y=2000+y;if(y>cur+1)y-=100;}   // 2-stellig: 20xx, nur falls in Zukunft -> 19xx
+  if(mo<1||mo>12||d<1||d>31)return null;
+  const iso=`${y}-${pad(mo)}-${pad(d)}`;const chk=new Date(iso+"T12:00:00");
+  if(isNaN(chk)||chk.getDate()!==d)return null;
+  return iso;}
+// Datum irgendwo im Text finden (z. B. im Titel) -> ISO oder null
+function findDateInText(t){const m=String(t||"").match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);if(!m)return null;return deToIso(`${m[1]}.${m[2]}.${m[3]}`);}
+function fileFromPath(p){if(!p)return "";const parts=p.split("/");return parts[parts.length-1];}
+
+async function load(){
+  const {data,error}=await supa.from("stammtische").select("id,datum,titel,ort,audio_pfad,folien,erstellt_am").order("datum",{ascending:true});
+  if(error){$("#hint").className="msg err";$("#hint").textContent="Laden fehlgeschlagen: "+error.message;return;}
+  DATA=data||[];
+  // Häufungen erkennen: Datumswerte, die sich >=3 Einträge teilen
+  const cnt={};DATA.forEach(d=>{if(d.datum)cnt[d.datum]=(cnt[d.datum]||0)+1;});
+  DATA.forEach(d=>{
+    const sameAsUpload=d.erstellt_am&&d.datum&&d.datum===String(d.erstellt_am).slice(0,10);
+    const cluster=d.datum&&cnt[d.datum]>=3;
+    const titelDate=findDateInText(d.titel);
+    const titelMismatch=titelDate&&titelDate!==d.datum;
+    d._cluster=cluster;d._sameUpload=sameAsUpload;d._titelDate=titelDate;d._susp=cluster||sameAsUpload||titelMismatch;d._done=false;
+  });
+  renderSummary(cnt);render();
+}
+
+function renderSummary(cnt){
+  const total=DATA.length;const oldest=DATA[0]?isoToDE(DATA[0].datum):"–";const newest=DATA.length?isoToDE(DATA[DATA.length-1].datum):"–";
+  const clusters=Object.entries(cnt).filter(([k,v])=>v>=3).sort((a,b)=>b[1]-a[1]);
+  const suspCount=DATA.filter(d=>d._susp).length;
+  let h=`<b>${total}</b> Einträge. Ältestes Datum <b>${oldest}</b>, neuestes <b>${newest}</b>. `;
+  h+=`<b>${suspCount}</b> auffällige Einträge.`;
+  if(clusters.length){h+=`<div class="msg info" style="margin-top:8px">Diese Datumswerte teilen sich auffällig viele Einträge (wahrscheinlich falsch geparst): `+clusters.map(([k,v])=>`${isoToDE(k)} (${v}×)`).join(", ")+`</div>`;}
+  $("#summary").innerHTML=h;
+}
+
+function render(){
+  const onlySusp=$("#onlySusp").checked;
+  const rows=DATA.filter(d=>!onlySusp||d._susp);
+  $("#list").innerHTML=rows.map(d=>{
+    const curBad=d._susp?"bad":"";
+    const hint=d._titelDate&&d._titelDate!==d.datum?`<span class="hint">Im Titel gefunden: ${isoToDE(d._titelDate)} <button class="btn small ghost" data-fill="${esc(d.id)}" data-iso="${d._titelDate}">übernehmen</button></span>`:"";
+    const flags=[];if(d._cluster)flags.push("Häufung");if(d._sameUpload)flags.push("= Upload-Datum");if(d._titelDate&&d._titelDate!==d.datum)flags.push("Titel weicht ab");
+    return `<div class="row ${d._susp?'susp':''}" data-row="${esc(d.id)}">
+      <div>
+        <div class="titel">${esc(d.titel||"(ohne Titel)")}</div>
+        <div class="meta"><span class="cur ${curBad}">aktuell: ${isoToDE(d.datum)||"kein Datum"}</span>${d.erstellt_am?`hochgeladen ${isoToDE(String(d.erstellt_am).slice(0,10))}`:""}${flags.length?` · ${flags.join(" · ")}`:""}</div>
+        <div class="meta">Audio: ${esc(fileFromPath(d.audio_pfad))||"–"}${d.folien?` · Folien vorhanden`:""} · id ${esc(d.id)}</div>
+        ${hint}
+      </div>
+      <div class="datebox">
+        <input data-date="${esc(d.id)}" value="${isoToDE(d.datum)}" placeholder="tt.mm.jj" inputmode="numeric">
+      </div>
+      <div class="actions">
+        <button class="btn small" data-save="${esc(d.id)}">Speichern</button>
+        <label style="font-size:11px;color:var(--muted)"><input type="checkbox" data-titel="${esc(d.id)}"> Titel mit</label>
+      </div>
+    </div>`;
+  }).join("")||'<div class="msg info">Keine Einträge.</div>';
+
+  $("#list").querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>{const inp=$(`[data-date="${cssEsc(b.dataset.fill)}"]`);if(inp)inp.value=isoToDE(b.dataset.iso);});
+  $("#list").querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>save(b.dataset.save));
+}
+function cssEsc(s){return String(s).replace(/"/g,'\\"');}
+
+async function save(id){
+  const d=DATA.find(x=>x.id===id);if(!d)return;
+  const val=$(`[data-date="${cssEsc(id)}"]`).value;
+  const iso=deToIso(val);
+  const msg=$("#saveMsg");
+  if(!iso){msg.className="msg err";msg.textContent=`Ungültiges Datum bei „${d.titel}". Bitte tt.mm.jj eingeben.`;return;}
+  const upd={datum:iso};
+  const alsoTitel=$(`[data-titel="${cssEsc(id)}"]`)&&$(`[data-titel="${cssEsc(id)}"]`).checked;
+  if(alsoTitel&&/^Stammtisch\s+\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}\s*$/.test(d.titel||"")){upd.titel=`Stammtisch ${isoToDE(iso)}`;}
+  try{
+    const {error}=await supa.from("stammtische").update(upd).eq("id",id);
+    if(error)throw error;
+    d.datum=iso;if(upd.titel)d.titel=upd.titel;d._done=true;d._susp=false;
+    const rowEl=$(`[data-row="${cssEsc(id)}"]`);if(rowEl){rowEl.classList.remove("susp");rowEl.classList.add("done");}
+    msg.className="msg ok";msg.textContent=`Gespeichert: „${d.titel}" auf ${isoToDE(iso)}.`;
+  }catch(e){msg.className="msg err";msg.textContent="Fehler: "+(e.message||e);}
+}
+
+$("#onlySusp").addEventListener("change",render);
+
+$("#btnLogin").onclick=async()=>{
+  const email=$("#email").value.trim()||ADMIN_EMAIL,pass=$("#pass").value;const m=$("#loginMsg");
+  if(!supa){m.className="msg err";m.textContent="Verbindung nicht verfügbar.";return;}
+  m.className="msg info";m.textContent="Anmelden…";
+  try{const {error}=await supa.auth.signInWithPassword({email,password:pass});if(error)throw error;
+    $("#login").hidden=true;$("#hint").hidden=true;$("#app").hidden=false;await load();
+  }catch(e){m.className="msg err";m.textContent="Anmeldung fehlgeschlagen: "+(e.message||e);}
+};
+$("#pass").addEventListener("keydown",e=>{if(e.key==="Enter")$("#btnLogin").click();});
+$("#email").value=ADMIN_EMAIL;
+</script>
+</body>
+</html>
