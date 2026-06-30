@@ -468,8 +468,9 @@ function parseHash(){const h=location.hash.replace(/^#/,"");if(!h)return false;
   if(t>0)setTimeout(()=>seekAudio(t),700);return true;}
 function renderTab(d){const w=$("#tabwrap");
   if(state.tab==="summary"){
-    if(d.verarbeitung==="offen"){w.innerHTML=`<div class="nodata">Die Zusammenfassung wird noch erstellt. Audio und Folien sind bereits verfügbar.</div>`;return;}
     const z=d.zusammenfassung||{};
+    const hasSummary=z.lead||(z.sachstand&&z.sachstand.length)||(z.punkte&&z.punkte.length)||(z.fragen&&z.fragen.length);
+    if(d.verarbeitung==="offen"&&!hasSummary){w.innerHTML=`<div class="nodata">Die Zusammenfassung wird noch erstellt. Audio und Folien sind bereits verfügbar.</div>`;return;}
     const sachstand=(z.sachstand&&z.sachstand.length?z.sachstand:(z.punkte||[]));
     const block=(t,arr,r)=>arr&&arr.length?`<div class="sec-h" style="margin-top:18px">${t}</div><div class="keyrow">${arr.map(r).join("")}</div>`:"";
     let h=`<div class="summary">${state.authed?`<div style="text-align:right;margin-bottom:6px"><button class="btn small" id="sumEdit">✎ Zusammenfassung bearbeiten</button></div>`:""}`;
