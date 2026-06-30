@@ -120,6 +120,7 @@
     <div class="brand"><div class="brand-mark" aria-hidden="true">S</div><div class="brand-txt"><b>Stammtisch-Archiv</b><span>Mariana Cannabis</span></div></div>
     <div class="spacer"></div>
     <button class="btn" id="btnStats">Statistik</button>
+    <button class="btn" id="btnProtokoll">Protokoll</button>
     <button class="btn icon" id="btnMobile" aria-pressed="false" title="Handy-Ansicht" aria-label="Handy-Ansicht umschalten">📱</button>
     <button class="btn icon" id="btnSr" aria-pressed="false" title="Screenreader-Modus" aria-label="Screenreader-Modus umschalten">♿</button>
     <button class="btn primary" id="btnWizard" hidden>＋ Hochladen</button>
@@ -178,7 +179,12 @@
   <div class="modal-body" id="statsBody"></div>
   <div class="modal-foot"><span></span><button class="btn" data-close>Schließen</button></div></div></div>
 
-<div class="overlay" id="ovEdit" hidden role="dialog" aria-modal="true" aria-label="Stammtisch bearbeiten"><div class="modal">
+<div class="overlay" id="ovProtokoll" hidden role="dialog" aria-modal="true" aria-label="Protokoll"><div class="modal">
+  <div class="modal-head"><h3>Protokoll über alle Stammtische</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="tabs" role="tablist" id="protTabs"><button role="tab" data-pt="aufgaben">Offene Aufgaben</button><button role="tab" data-pt="beschluesse">Beschlüsse</button></div>
+  <div class="modal-body" id="protBody"></div>
+  <div class="modal-foot"><span class="msg info" id="protMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
+
   <div class="modal-head"><h3>Stammtisch bearbeiten</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body" id="editBody"></div>
   <div class="modal-foot"><button class="btn danger" id="editDelete">Löschen</button><span class="msg" id="editMsg"></span><button class="btn primary" id="editSave">Speichern</button></div></div></div>
@@ -233,10 +239,11 @@ function pubUrl(b,p){return supa?supa.storage.from(b).getPublicUrl(p).data.publi
 function entryText(e){return [e.titel,e.ort,e.zusammenfassung&&e.zusammenfassung.lead,(e.zusammenfassung&&e.zusammenfassung.punkte||[]).join(" "),(e.sprecher||[]).join(" "),(e.themen||[]).join(" "),(e.transkript||[]).map(l=>l.text).join(" ")].join(" ").toLowerCase();}
 function volltext(e){return [e.titel,e.ort,e.zusammenfassung.lead,(e.zusammenfassung.punkte||[]).join(" "),(e.sprecher||[]).join(" "),(e.themen||[]).join(" "),(e.transkript||[]).map(l=>l.text).join(" ")].join(" ");}
 function download(name,text,mime){const b=new Blob([text],{type:mime||"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}
+function audioDuration(file){return new Promise((res,rej)=>{const a=document.createElement("audio");a.preload="metadata";a.onloadedmetadata=()=>{const d=a.duration;URL.revokeObjectURL(a.src);res(isFinite(d)?d:0);};a.onerror=()=>{URL.revokeObjectURL(a.src);rej(new Error("keine Metadaten"));};a.src=URL.createObjectURL(file);});}
 
 /* ---- data ---- */
 async function loadData(){if(!supa)return [];const {data,error}=await supa.from("stammtische").select("*").order("datum",{ascending:false});if(error){console.error(error);return [];}
-  return data.map(r=>({...r,dauer:r.dauer_sek||0,zusammenfassung:r.zusammenfassung||{lead:"",punkte:[]},transkript:r.transkript||[],sprecher:r.sprecher||[],themen:r.themen||[],kapitel:r.kapitel||[]}));}
+  return data.map(r=>({...r,dauer:r.dauer_sek||0,verarbeitung:r.verarbeitung||"fertig",zusammenfassung:r.zusammenfassung||{lead:"",punkte:[]},transkript:r.transkript||[],sprecher:r.sprecher||[],themen:r.themen||[],kapitel:r.kapitel||[]}));}
 function buildFacets(){ALL_YEARS=[...new Set(DATA.map(d=>(d.datum||"").slice(0,4)).filter(Boolean))].sort().reverse();ALL_SPK=[...new Set(DATA.flatMap(d=>d.sprecher||[]))].sort();ALL_TH=[...new Set(DATA.flatMap(d=>d.themen||[]))].sort();}
 function filtered(){let r=DATA.filter(d=>{if(state.q&&!entryText(d).includes(state.q.toLowerCase()))return false;if(state.years.size&&!state.years.has((d.datum||"").slice(0,4)))return false;if(state.speakers.size&&!(d.sprecher||[]).some(s=>state.speakers.has(s)))return false;if(state.themes.size&&!(d.themen||[]).some(t=>state.themes.has(t)))return false;if(state.onlySlides&&!(d.folien&&d.folien.length))return false;return true;});
   r.sort((a,b)=>{switch(state.sort){case"old":return a.datum.localeCompare(b.datum);case"added":return new Date(b.erstellt_am||0)-new Date(a.erstellt_am||0);case"az":return a.titel.localeCompare(b.titel,"de");case"dur":return (b.dauer||0)-(a.dauer||0);case"spk":return (b.sprecher||[]).length-(a.sprecher||[]).length;default:return b.datum.localeCompare(a.datum);}});return r;}
@@ -247,10 +254,10 @@ function renderFacets(){$("#fYears").innerHTML=ALL_YEARS.map(y=>chip(y,state.yea
   $("#fSpeakers").innerHTML=ALL_SPK.map((s,i)=>`<button class="chip ${state.speakers.has(s)?'on':''}" data-sp="${esc(s)}" aria-pressed="${state.speakers.has(s)}"><span class="dot" style="background:${SPV[i%SPV.length]}"></span>${esc(s)}</button>`).join("")||'<span class="msg info">–</span>';
   $("#fThemes").innerHTML=ALL_TH.map(t=>chip(t,state.themes.has(t),`data-th="${esc(t)}"`)).join("")||'<span class="msg info">–</span>';}
 function renderList(ann){const rows=filtered();$("#count").textContent=`${rows.length} von ${DATA.length} Stammtischen`;
-  $("#list").innerHTML=rows.map(d=>`<button class="card ${state.current===d.id?'active':''}" role="listitem" data-id="${esc(d.id)}" aria-current="${state.current===d.id}" aria-label="${esc(d.titel)}, ${fmtDate(d.datum)}">${isNew(d)?'<span class="newbadge">Neu</span>':''}
+  $("#list").innerHTML=rows.map(d=>{const offen=d.verarbeitung==="offen";return `<button class="card ${state.current===d.id?'active':''}" role="listitem" data-id="${esc(d.id)}" aria-current="${state.current===d.id}" aria-label="${esc(d.titel)}, ${fmtDate(d.datum)}${offen?', Transkript in Arbeit':''}">${offen?'<span class="newbadge" style="background:var(--gold);color:#1c1606">in Arbeit</span>':(isNew(d)?'<span class="newbadge">Neu</span>':'')}
     <span class="date">${fmtDate(d.datum)}</span><h3>${hl(d.titel,state.q)}</h3>
     <div class="meta"><span>📍 ${hl(d.ort,state.q)}</span><span>· ${fmt(d.dauer)}</span><span>· ${(d.sprecher||[]).length} Sprecher</span></div>
-    <div class="ic"><span class="${d.folien&&d.folien.length?'has':''}">📄 Folien</span><span class="has">🎧 Audio</span><span class="has">📝 Transkript</span><span class="has">✨ Zusammenfassung</span></div></button>`).join("")||`<div class="nodata">Kein Stammtisch passt zu Suche und Filtern.</div>`;
+    <div class="ic"><span class="${d.folien&&d.folien.length?'has':''}">📄 Folien</span><span class="has">🎧 Audio</span><span class="${offen?'':'has'}">📝 Transkript${offen?' folgt':''}</span><span class="${offen?'':'has'}">✨ Zusammenfassung${offen?' folgt':''}</span></div></button>`;}).join("")||`<div class="nodata">Kein Stammtisch passt zu Suche und Filtern.</div>`;
   if(ann)announce(`${rows.length} Stammtische gefunden.`);}
 $("#list").addEventListener("keydown",e=>{if(e.key!=="ArrowDown"&&e.key!=="ArrowUp")return;const c=[...$("#list").querySelectorAll(".card")];if(!c.length)return;let i=c.indexOf(document.activeElement);e.preventDefault();i=e.key==="ArrowDown"?Math.min(c.length-1,i+1):Math.max(0,i-1);c[i].focus();});
 
@@ -262,6 +269,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   det.innerHTML=`<div class="dhead"><span class="date">${fmtDate(d.datum)} ${isNew(d)?'· <span style="color:var(--green)">Neu</span>':''}</span><h2>${esc(d.titel)}</h2>
     <div class="sub"><span><b>Ort</b> ${esc(d.ort)}</span><span><b>Dauer</b> ${fmt(d.dauer)}</span><span><b>Themen</b> ${(d.themen||[]).join(", ")||"–"}</span></div>
     <div class="speakers">${(d.sprecher||[]).map((s,i)=>`<span class="sp-tag"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</span>`).join("")}</div>
+    ${d.verarbeitung==="offen"?'<div class="msg info" style="margin-top:10px;color:var(--gold)">Audio und Folien sind bereits verfügbar. Transkript und Zusammenfassung werden noch erstellt und erscheinen automatisch.</div>':''}
     ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
     ${src?`<div class="miniplayer"><audio id="aud" controls preload="none" src="${src}" ${noDL}></audio>
       <div class="mp-row"><label>Tempo <select id="spd"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>1.75</option><option>2</option></select></label>
@@ -286,9 +294,20 @@ function setupPlayer(d){const a=$("#aud");if(!a)return;
     $("#curChap").textContent=cur>=0?("Kapitel: "+chaps[cur].titel):"";};}
 function seekAudio(t){const a=$("#aud");if(a){try{a.currentTime=t;a.play&&a.play().catch(()=>{});}catch(e){}}}
 function renderTab(d){const w=$("#tabwrap");
-  if(state.tab==="summary"){w.innerHTML=`<div class="summary"><p class="lead">${esc(d.zusammenfassung.lead)}</p><div class="keyrow">${(d.zusammenfassung.punkte||[]).map(p=>`<div class="kp"><b>›</b><span>${esc(p)}</span></div>`).join("")}</div><div class="themes">${(d.themen||[]).map(t=>`<span class="t">#${esc(t)}</span>`).join("")}</div></div>`;}
+  if(state.tab==="summary"){
+    if(d.verarbeitung==="offen"){w.innerHTML=`<div class="nodata">Die Zusammenfassung wird noch erstellt. Audio und Folien sind bereits verfügbar.</div>`;return;}
+    const z=d.zusammenfassung||{};const sec=(t,arr,r)=>arr&&arr.length?`<div class="sec-h" style="margin-top:16px">${t}</div><div class="keyrow">${arr.map(r).join("")}</div>`:"";
+    w.innerHTML=`<div class="summary"><p class="lead">${esc(z.lead)}</p>
+      <div class="keyrow">${(z.punkte||[]).map(p=>`<div class="kp"><b>›</b><span>${esc(p)}</span></div>`).join("")}</div>
+      ${sec("Beschlüsse",z.beschluesse,b=>`<div class="kp"><b style="color:var(--green)">✓</b><span>${esc(b)}</span></div>`)}
+      ${sec("Aufgaben",z.aufgaben,a=>`<div class="kp"><b style="color:var(--gold)">→</b><span>${esc(a&&a.text!=null?a.text:a)}${a&&a.wer?(' <span class="msg info">('+esc(a.wer)+')</span>'):''}</span></div>`)}
+      ${sec("Offene Fragen",z.offene_fragen,q=>`<div class="kp"><b style="color:var(--sp3)">?</b><span>${esc(q)}</span></div>`)}
+      <div class="themes">${(d.themen||[]).map(t=>`<span class="t">#${esc(t)}</span>`).join("")}</div>
+      <div class="msg info" style="margin-top:14px">Automatisch aus dem Transkript erzeugt, kann Fehler enthalten.</div></div>`;}
   else if(state.tab==="transcript"){
-    w.innerHTML=`<div class="tx-tools"><div class="tx-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="txq" placeholder="Im Transkript suchen…" aria-label="Im Transkript suchen" value="${esc(state.txQ)}"></div>
+    if(d.verarbeitung==="offen"||!(d.transkript||[]).length){w.innerHTML=`<div class="nodata">Das Transkript wird noch erstellt und erscheint hier automatisch, sobald es fertig ist. Audio und Folien sind bereits verfügbar.</div>`;return;}
+    w.innerHTML=`<div style="background:rgba(249,199,79,.08);border:1px solid #4a4222;border-radius:9px;padding:9px 12px;font-size:12.5px;color:#e7d6a3;margin-bottom:14px">Hinweis: Das Transkript wurde automatisch erstellt und kann Fehler enthalten, etwa bei Namen, Fachbegriffen oder undeutlichen Stellen.</div>
+      <div class="tx-tools"><div class="tx-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="txq" placeholder="Im Transkript suchen…" aria-label="Im Transkript suchen" value="${esc(state.txQ)}"></div>
       <span class="hitnav" id="hitnav" hidden><button id="hitPrev" aria-label="Vorheriger Treffer">‹</button><span id="hitCount"></span><button id="hitNext" aria-label="Nächster Treffer">›</button><button id="hitAudio" aria-label="An die Stelle im Audio springen">▶ Audio</button></span>
       <div class="tx-filter" id="txf">${(d.sprecher||[]).map((s,i)=>`<button data-i="${i}" class="${state.txSp===i?'on':''}" aria-pressed="${state.txSp===i}"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</button>`).join("")}</div></div><div id="txlines"></div>`;
     renderLines(d);
@@ -409,11 +428,18 @@ $("#wzBack").onclick=()=>{if(wz.step>1){wz.step--;renderWizard();}};
 $("#wzNext").onclick=async()=>{if(wz.step===1){if(!wz.audio){$("#wzMsg").textContent="Bitte Audio wählen.";$("#wzMsg").className="msg err";return;}wz.step=2;return renderWizard();}
   if(wz.step===2){if(!wz.datum){$("#wzMsg").textContent="Bitte Datum angeben.";$("#wzMsg").className="msg err";return;}wz.step=3;return renderWizard();}
   const msg=$("#wzMsg");msg.textContent="Lade hoch…";msg.className="msg info";
-  try{const id="ing_"+wz.datum+"_"+Math.random().toString(36).slice(2,6);const aExt=(wz.audio.name.split(".").pop()||"m4a").toLowerCase();const aPath=`${id}/audio.${aExt}`;
-    let u=await supa.storage.from("ingest").upload(aPath,wz.audio,{upsert:true});if(u.error)throw u.error;
-    let fPath=null;if(wz.folien){fPath=`${id}/folien.pdf`;let uf=await supa.storage.from("ingest").upload(fPath,wz.folien,{upsert:true});if(uf.error)throw uf.error;}
-    const {error}=await supa.from("ingest").insert({id,status:"queued",mode:"new",datum:wz.datum,titel:wz.titel||null,ort:wz.ort||null,audio_pfad:aPath,folien_pfad:fPath});if(error)throw error;
-    msg.textContent="Hochgeladen, in der Warteschlange.";msg.className="msg ok";announce("Hochgeladen.");setTimeout(()=>{closeModal($("#ovWizard"));openQueue();},900);
+  try{const sid="st_"+wz.datum+"_"+Math.random().toString(36).slice(2,6);const aExt=(wz.audio.name.split(".").pop()||"m4a").toLowerCase();const aPath=`${sid}/audio.${aExt}`;
+    let dur=0;try{dur=await audioDuration(wz.audio);}catch(e){}
+    msg.textContent="Lade Audio hoch…";
+    let u=await supa.storage.from("audio").upload(aPath,wz.audio,{upsert:true});if(u.error)throw u.error;
+    let folien=null;if(wz.folien){const fPath=`${sid}/folien.pdf`;msg.textContent="Lade Folien hoch…";let uf=await supa.storage.from("folien").upload(fPath,wz.folien,{upsert:true});if(uf.error)throw uf.error;folien=[{n:1,titel:"Foliensatz",note:wz.titel||("Stammtisch "+wz.datum),pfad:fPath}];}
+    const titel=wz.titel||("Stammtisch "+fmtDate(wz.datum));
+    const row={id:sid,datum:wz.datum,titel,ort:wz.ort||"",audio_pfad:aPath,folien,dauer_sek:Math.round(dur),sprecher:[],themen:[],zusammenfassung:{lead:"",punkte:[]},transkript:[],kapitel:[],verarbeitung:"offen",volltext:titel+" "+(wz.ort||"")};
+    let ins=await supa.from("stammtische").insert(row);if(ins.error)throw ins.error;
+    await supa.from("ingest").insert({id:"fill_"+sid,status:"queued",mode:"fill",stammtisch_id:sid,datum:wz.datum,titel});
+    msg.textContent="Veröffentlicht. Audio und Folien sind sofort verfügbar, Transkript und Zusammenfassung folgen.";msg.className="msg ok";announce("Veröffentlicht.");
+    DATA=await loadData();buildFacets();renderFacets();renderList();state.current=sid;renderDetail();
+    setTimeout(()=>{closeModal($("#ovWizard"));},1300);
   }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}};
 
 /* ---- status + queue ---- */
@@ -436,6 +462,7 @@ async function renderStatusPanel(){const s=await getStatus();const p=$("#statusP
   else{h+=`<div class="msg info">${esc(d.cur_len?("Länge "+d.cur_len):"")} ${esc(d.cur_elapsed?("· läuft seit "+d.cur_elapsed):"")}</div>`;}
   if(d.rtf)h+=`<div class="msg info">Tempo: ${esc(d.rtf)}</div>`;
   if(s.scope!=="ingest"){h+=`<div class="sec-h" style="margin-top:16px">Gesamter Batch</div><div><b>${s.active?"läuft":"pausiert"}</b> · ${s.done||0} von ${s.total||0} fertig${s.eta?(" · voraussichtlich fertig "+esc(s.eta)):""}</div><div class="progress"><div style="width:${pct}%"></div></div>`;}
+  if(d.fehler&&d.fehler.length){h+=`<div class="sec-h" style="margin-top:16px;color:var(--red)">Fehlgeschlagen (${d.fehler.length})</div>`+d.fehler.map(f=>`<div class="qrow"><div><b>${esc(f.titel||f.id)}</b><div class="msg err">${esc(f.msg||"Fehler")}</div></div><span class="qstatus error">fehler</span></div>`).join("");}
   h+=`<div class="msg info" style="margin-top:8px">Stand: ${s.updated_at?new Date(s.updated_at).toLocaleString("de-DE"):"–"}${s.message?(" · "+esc(s.message)):""}</div>`;
   p.innerHTML=h;}
 async function loadQueue(){const box=$("#queueList");box.innerHTML='<div class="msg info">Lade…</div>';
@@ -458,6 +485,21 @@ $("#btnStats").onclick=()=>{const total=DATA.length,sec=DATA.reduce((s,d)=>s+(d.
   if(state.authed){const noSum=DATA.filter(d=>!d.zusammenfassung.lead).length,noTx=DATA.filter(d=>!(d.transkript||[]).length).length,recent=DATA.filter(isNew).length;
     h+=`<div class="sec-h" style="margin-top:18px">Admin-Details</div><div class="stat-grid"><div class="stat"><div class="v">${recent}</div><div class="l">neu (${NEU_TAGE} Tage)</div></div><div class="stat"><div class="v">${noSum}</div><div class="l">ohne Zusammenfassung</div></div><div class="stat"><div class="v">${noTx}</div><div class="l">ohne Transkript</div></div><div class="stat"><div class="v">${Object.keys(spk).length}</div><div class="l">benannte Personen</div></div></div>`;}
   $("#statsBody").innerHTML=h;openModal($("#ovStats"));};
+
+/* ---- protokoll (sitzungsuebergreifend) ---- */
+function openProtokoll(){state.protTab=state.protTab||"aufgaben";$("#protMsg").textContent="";renderProtTabs();renderProt();openModal($("#ovProtokoll"));}
+function renderProtTabs(){$("#protTabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.pt===state.protTab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.onclick=()=>{state.protTab=b.dataset.pt;renderProtTabs();renderProt();};});}
+function protJump(id){closeModal($("#ovProtokoll"));state.current=id;state.tab="summary";renderList();renderDetail(true);}
+function renderProt(){const box=$("#protBody");const ent=[...DATA].sort((a,b)=>b.datum.localeCompare(a.datum));
+  if(state.protTab==="beschluesse"){const rows=[];ent.forEach(d=>((d.zusammenfassung||{}).beschluesse||[]).forEach(b=>rows.push({d,b})));
+    box.innerHTML=rows.length?rows.map(({d,b})=>`<div class="qrow"><div><b style="color:var(--green)">✓ ${esc(b)}</b><div class="msg info">${fmtDate(d.datum)} · <button class="reset" data-go="${esc(d.id)}">${esc(d.titel)}</button></div></div></div>`).join(""):'<div class="nodata">Noch keine Beschlüsse erfasst. Sie werden bei neu verarbeiteten Stammtischen automatisch extrahiert.</div>';}
+  else{const rows=[];ent.forEach(d=>((d.zusammenfassung||{}).aufgaben||[]).forEach((a,i)=>{const text=(a&&a.text!=null)?a.text:a;const erl=a&&a.erledigt;if(!erl)rows.push({d,i,text,wer:a&&a.wer});}));
+    box.innerHTML=rows.length?rows.map(({d,i,text,wer})=>`<div class="qrow"><div><b style="color:var(--gold)">→ ${esc(text)}</b>${wer?(' <span class="msg info">('+esc(wer)+')</span>'):''}<div class="msg info">${fmtDate(d.datum)} · <button class="reset" data-go="${esc(d.id)}">${esc(d.titel)}</button></div></div>${state.authed?`<button class="btn small" data-done="${esc(d.id)}" data-i="${i}">erledigt</button>`:''}</div>`).join(""):'<div class="nodata">Keine offenen Aufgaben.</div>';}
+  box.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>protJump(b.dataset.go));
+  if(state.authed)box.querySelectorAll("[data-done]").forEach(b=>b.onclick=()=>markTaskDone(b.dataset.done,+b.dataset.i));}
+async function markTaskDone(id,i){const d=DATA.find(x=>x.id===id);if(!d)return;const z=d.zusammenfassung||{};const a=(z.aufgaben||[])[i];if(a==null)return;if(typeof a==="string")z.aufgaben[i]={text:a,erledigt:true};else a.erledigt=true;
+  try{await supa.from("stammtische").update({zusammenfassung:z}).eq("id",id);$("#protMsg").textContent="Als erledigt markiert.";renderProt();}catch(e){$("#protMsg").textContent="Fehler: "+(e.message||e);}}
+$("#btnProtokoll").onclick=openProtokoll;
 
 /* ---- rail events ---- */
 $("#q").oninput=e=>{state.q=e.target.value;renderList(true);};
