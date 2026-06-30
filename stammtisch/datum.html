@@ -91,7 +91,7 @@ function findDateInText(t){const m=String(t||"").match(/(\d{1,2})[.\/-](\d{1,2})
 function fileFromPath(p){if(!p)return "";const parts=p.split("/");return parts[parts.length-1];}
 
 async function load(){
-  const {data,error}=await supa.from("stammtische").select("id,datum,titel,ort,audio_pfad,folien,erstellt_am").order("datum",{ascending:true});
+  const {data,error}=await supa.from("stammtische").select("*").order("datum",{ascending:true});
   if(error){$("#hint").className="msg err";$("#hint").textContent="Laden fehlgeschlagen: "+error.message;return;}
   DATA=data||[];
   // Häufungen erkennen: Datumswerte, die sich >=3 Einträge teilen
@@ -99,9 +99,9 @@ async function load(){
   DATA.forEach(d=>{
     const sameAsUpload=d.erstellt_am&&d.datum&&d.datum===String(d.erstellt_am).slice(0,10);
     const cluster=d.datum&&cnt[d.datum]>=3;
-    const titelDate=findDateInText(d.titel);
-    const titelMismatch=titelDate&&titelDate!==d.datum;
-    d._cluster=cluster;d._sameUpload=sameAsUpload;d._titelDate=titelDate;d._susp=cluster||sameAsUpload||titelMismatch;d._done=false;
+    const srcDate=findDateInText(d.quelldatei)||findDateInText(d.titel);
+    const srcMismatch=srcDate&&srcDate!==d.datum;
+    d._cluster=cluster;d._sameUpload=sameAsUpload;d._srcDate=srcDate;d._susp=cluster||sameAsUpload||srcMismatch;d._done=false;
   });
   renderSummary(cnt);render();
 }
@@ -121,13 +121,14 @@ function render(){
   const rows=DATA.filter(d=>!onlySusp||d._susp);
   $("#list").innerHTML=rows.map(d=>{
     const curBad=d._susp?"bad":"";
-    const hint=d._titelDate&&d._titelDate!==d.datum?`<span class="hint">Im Titel gefunden: ${isoToDE(d._titelDate)} <button class="btn small ghost" data-fill="${esc(d.id)}" data-iso="${d._titelDate}">übernehmen</button></span>`:"";
-    const flags=[];if(d._cluster)flags.push("Häufung");if(d._sameUpload)flags.push("= Upload-Datum");if(d._titelDate&&d._titelDate!==d.datum)flags.push("Titel weicht ab");
+    const hint=d._srcDate&&d._srcDate!==d.datum?`<span class="hint">Im Dateinamen gefunden: ${isoToDE(d._srcDate)} <button class="btn small ghost" data-fill="${esc(d.id)}" data-iso="${d._srcDate}">übernehmen</button></span>`:"";
+    const flags=[];if(d._cluster)flags.push("Häufung");if(d._sameUpload)flags.push("= Upload-Datum");if(d._srcDate&&d._srcDate!==d.datum)flags.push("Dateiname weicht ab");
+    const orig=d.quelldatei?esc(d.quelldatei):'<span style="color:var(--muted-2)">(Originalname nicht hinterlegt)</span>';
     return `<div class="row ${d._susp?'susp':''}" data-row="${esc(d.id)}">
       <div>
-        <div class="titel">${esc(d.titel||"(ohne Titel)")}</div>
+        <div class="titel">Originaldatei: ${orig}</div>
         <div class="meta"><span class="cur ${curBad}">aktuell: ${isoToDE(d.datum)||"kein Datum"}</span>${d.erstellt_am?`hochgeladen ${isoToDE(String(d.erstellt_am).slice(0,10))}`:""}${flags.length?` · ${flags.join(" · ")}`:""}</div>
-        <div class="meta">Audio: ${esc(fileFromPath(d.audio_pfad))||"–"}${d.folien?` · Folien vorhanden`:""} · id ${esc(d.id)}</div>
+        <div class="meta">Titel: ${esc(d.titel||"(ohne Titel)")}${d.folien?` · Folien vorhanden`:""} · id ${esc(d.id)}</div>
         ${hint}
       </div>
       <div class="datebox">
