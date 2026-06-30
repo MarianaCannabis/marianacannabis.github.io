@@ -47,6 +47,10 @@
   .grp-head{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;color:var(--text);font-size:13px;font-weight:700;letter-spacing:.04em}
   .grp-head:hover{border-color:var(--green-dim)}.grp-head .chev{color:var(--green);font-size:11px;width:12px}.grp-head .grp-count{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
   .grp-body{display:flex;flex-direction:column;gap:10px}.grp-body[hidden]{display:none}
+  .mgrp{display:flex;flex-direction:column;gap:10px}
+  .mgrp-head{display:flex;align-items:center;gap:7px;width:100%;text-align:left;background:transparent;border:0;border-left:2px solid var(--line);border-radius:0;padding:3px 10px;color:var(--muted);font-size:12px;font-weight:600}
+  .mgrp-head:hover{color:var(--text);border-left-color:var(--green-dim)}.mgrp-head .chev{color:var(--muted);font-size:10px;width:10px}.mgrp-head .grp-count{margin-left:auto;font-size:10px;color:var(--muted-2);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:0 7px}
+  .cardprog{margin-top:9px}.cardprog .cp-bar{height:5px;background:var(--bg);border:1px solid var(--line);border-radius:4px;overflow:hidden}.cardprog .cp-bar div{height:100%;background:linear-gradient(90deg,var(--gold),var(--green))}.cardprog .cp-txt{display:block;margin-top:3px;font-size:10.5px;color:var(--gold)}
   .ic .pending{color:var(--gold);border-color:#4a4222!important}
   .card{width:100%;text-align:left;background:var(--panel-solid);border:1px solid var(--line);border-radius:var(--radius);padding:14px;transition:border-color .15s,transform .15s;display:block;color:inherit;position:relative}
   .card:hover{border-color:var(--green-dim);transform:translateY(-1px)}.card.active{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
@@ -113,6 +117,9 @@
   .bars{display:flex;flex-direction:column;gap:7px;margin:6px 0 18px}
   .bar{display:grid;grid-template-columns:90px 1fr 46px;gap:9px;align-items:center;font-size:12px}.bar .track{height:14px;background:var(--bg);border:1px solid var(--line);border-radius:5px;overflow:hidden}.bar .fill{height:100%;background:linear-gradient(90deg,var(--green-dim),var(--green))}.bar .val{color:var(--muted);text-align:right}
   .sec-h{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-2);margin:6px 0 10px}
+  .cloud{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px;line-height:1.2}
+  .cloud-t{border:1px solid var(--line);background:var(--bg-2);color:var(--gold);border-radius:999px;padding:4px 12px;font-weight:600}.cloud-t:hover{border-color:var(--gold)}.cloud-t.on{background:rgba(249,199,79,.18);border-color:var(--gold);color:#fff}
+  .frist{display:inline-block;font-size:11px;color:var(--sp3);background:rgba(111,168,220,.12);border:1px solid #2c4a63;border-radius:6px;padding:1px 7px;margin-left:4px}.frist.over{color:var(--red);background:rgba(217,105,78,.12);border-color:#5a2f24}
   :focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}body.sr-mode :focus-visible{outline:3px solid var(--gold);outline-offset:3px}
   @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}body.sr-mode *{transition:none!important}
 </style>
@@ -208,8 +215,8 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let state={authed:false,q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set()};
-let wz={step:1,audio:null,folien:null,datum:"",titel:"",ort:""};
-let editObj=null,pendingDelete=null,statusTimer=null;
+let wz={step:1,files:[],folien:null,ort:""};
+let editObj=null,pendingDelete=null,statusTimer=null,LIVE_STATUS=null;
 
 /* ---- a11y/modal ---- */
 function announce(m){const e=$("#srlive");if(e){e.textContent="";setTimeout(()=>e.textContent=m,30);}}
@@ -266,13 +273,21 @@ function cardHtml(d){const offen=d.verarbeitung==="offen";const tags=[];
   return `<button class="card ${state.current===d.id?'active':''}" role="listitem" data-id="${esc(d.id)}" aria-current="${state.current===d.id}" aria-label="${esc(d.titel)}, ${fmtDate(d.datum)}${offen?', Transkript in Arbeit':''}">${offen?'<span class="newbadge" style="background:var(--gold);color:#1c1606">in Arbeit</span>':(isNew(d)?'<span class="newbadge">Neu</span>':'')}
     <span class="date">${fmtDate(d.datum)}</span><h3>${hl(d.titel,state.q)}</h3>
     <div class="meta"><span>📍 ${hl(d.ort||"–",state.q)}</span><span>· ${fmt(d.dauer)}</span><span>· ${(d.sprecher||[]).length} Sprecher</span></div>
-    <div class="ic">${tags.join("")}</div></button>`;}
+    <div class="ic">${tags.join("")}</div>${offen?`<div class="cardprog" data-prog-id="${esc(d.id)}"></div>`:''}</button>`;}
+const MONTHS=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+function searchingActive(){return !!state.q||state.years.size||state.speakers.size||state.themes.size||state.onlySlides;}
+function renderYearBody(g){
+  if(g.items.length<=8)return g.items.map(cardHtml).join("");
+  const months=[],mi={};g.items.forEach(d=>{const mm=(d.datum||"").slice(5,7)||"00";const key=g.y+"-"+mm;if(mi[key]==null){mi[key]=months.length;months.push({key,mm,items:[]});}months[mi[key]].items.push(d);});
+  return months.map(mo=>{const open=searchingActive()||!state.collapsedYears.has(mo.key);
+    return `<div class="mgrp"><button class="mgrp-head" data-yeartoggle="${esc(mo.key)}" aria-expanded="${open}"><span class="chev">${open?'▾':'▸'}</span><span>${esc(MONTHS[(+mo.mm)-1]||mo.mm)}</span><span class="grp-count">${mo.items.length}</span></button><div class="grp-body" ${open?'':'hidden'}>${mo.items.map(cardHtml).join("")}</div></div>`;}).join("");}
 function renderList(ann){const rows=filtered();$("#count").textContent=`${rows.length} von ${DATA.length} Stammtischen`;
   if(!rows.length){$("#list").innerHTML=`<div class="nodata">Kein Stammtisch passt zu Suche und Filtern.</div>`;if(ann)announce("Keine Treffer.");return;}
   const groups=[],gi={};rows.forEach(d=>{const y=(d.datum||"").slice(0,4)||"ohne Datum";if(gi[y]==null){gi[y]=groups.length;groups.push({y,items:[]});}groups[gi[y]].items.push(d);});
-  const searching=!!state.q||state.years.size||state.speakers.size||state.themes.size||state.onlySlides;
+  const searching=searchingActive();
   $("#list").innerHTML=groups.map(g=>{const open=searching||!state.collapsedYears.has(g.y);
-    return `<div class="grp"><button class="grp-head" data-yeartoggle="${esc(g.y)}" aria-expanded="${open}"><span class="chev">${open?'▾':'▸'}</span><span>${esc(g.y)}</span><span class="grp-count">${g.items.length}</span></button><div class="grp-body" ${open?'':'hidden'}>${g.items.map(cardHtml).join("")}</div></div>`;}).join("");
+    return `<div class="grp"><button class="grp-head" data-yeartoggle="${esc(g.y)}" aria-expanded="${open}"><span class="chev">${open?'▾':'▸'}</span><span>${esc(g.y)}</span><span class="grp-count">${g.items.length}</span></button><div class="grp-body" ${open?'':'hidden'}>${renderYearBody(g)}</div></div>`;}).join("");
+  updateCardProgress();
   if(ann)announce(`${rows.length} Stammtische gefunden.`);}
 $("#list").addEventListener("keydown",e=>{if(e.key!=="ArrowDown"&&e.key!=="ArrowUp")return;const c=[...$("#list").querySelectorAll(".card")].filter(el=>el.offsetParent!==null);if(!c.length)return;let i=c.indexOf(document.activeElement);e.preventDefault();i=e.key==="ArrowDown"?Math.min(c.length-1,i+1):Math.max(0,i-1);c[i].focus();});
 
@@ -431,42 +446,60 @@ $("#delGo").onclick=async()=>{if(!pendingDelete)return;const msg=$("#delMsg");ms
     state.current=null;DATA=await loadData();buildFacets();renderFacets();renderList();renderDetail();announce("Gelöscht.");pendingDelete=null;
   }catch(e){msg.textContent="Löschen fehlgeschlagen: "+(e.message||e);msg.className="msg err";}};
 
-/* ---- wizard ---- */
-function openWizard(){wz={step:1,audio:null,folien:null,datum:"",titel:"",ort:""};$("#wzMsg").textContent="";renderWizard();openModal($("#ovWizard"));}
+/* ---- wizard (mehrfach) ---- */
+function openWizard(){wz={step:1,files:[],folien:null,ort:""};$("#wzMsg").textContent="";renderWizard();openModal($("#ovWizard"));}
 function renderWizard(){["stp1","stp2","stp3"].forEach((id,i)=>$("#"+id).className=wz.step>=i+1?"on":"");const b=$("#wzBody");
-  if(wz.step===1){const det=wz.audio?dateFromName(wz.audio.name):"";b.innerHTML=`<div class="field"><label>Audiodatei</label><input id="wzAudio" type="file" accept="audio/*"></div><div class="field"><label>Folien (optional, PDF)</label><input id="wzFolien" type="file" accept="application/pdf"></div><div class="msg ${wz.audio?(det?'ok':'err'):'info'}">${wz.audio?("Gewählt: "+esc(wz.audio.name)+(det?(" · erkanntes Datum: "+esc(det)):" · kein Datum im Namen erkannt, bitte im nächsten Schritt eingeben")):"Wähle die Aufnahme aus. Das Datum wird, wenn möglich, automatisch erkannt."}</div>`;
-    $("#wzAudio").onchange=e=>{wz.audio=e.target.files[0];if(wz.audio)wz.datum=dateFromName(wz.audio.name)||wz.datum;renderWizard();};$("#wzFolien").onchange=e=>{wz.folien=e.target.files[0];};}
-  else if(wz.step===2){b.innerHTML=`<div class="grid2"><div class="field"><label>Datum (Pflicht)</label><input id="wzDatum" type="date" value="${esc(wz.datum)}"></div><div class="field"><label>Ort</label><input id="wzOrt" value="${esc(wz.ort)}" placeholder="z.B. Marburg"></div></div><div class="field"><label>Titel (optional)</label><input id="wzTitel" value="${esc(wz.titel)}"></div><div class="msg info">Gespeichert und veröffentlicht wird einheitlich als <b>st_${esc(wz.datum||"JJJJ-MM-TT")}</b>. Der ursprüngliche Dateiname spielt keine Rolle.</div>`;
-    $("#wzDatum").onchange=e=>{wz.datum=e.target.value;renderWizard();};$("#wzOrt").oninput=e=>wz.ort=e.target.value;$("#wzTitel").oninput=e=>wz.titel=e.target.value;}
-  else{b.innerHTML=`<div class="msg info">Zusammenfassung:</div><div class="keyrow" style="margin-top:10px"><div class="kp"><b>Datei</b><span>${esc(wz.audio?wz.audio.name:"–")}</span></div><div class="kp"><b>Wird gespeichert als</b><span>st_${esc(wz.datum||"?")}</span></div><div class="kp"><b>Folien</b><span>${esc(wz.folien?wz.folien.name:"keine")}</span></div><div class="kp"><b>Datum</b><span>${esc(wz.datum?fmtDate(wz.datum):"–")}</span></div><div class="kp"><b>Ort</b><span>${esc(wz.ort||"–")}</span></div><div class="kp"><b>Titel</b><span>${esc(wz.titel||"wird automatisch erzeugt")}</span></div></div><div class="msg info" style="margin-top:12px">Nach dem Hochladen verarbeitet der lokale Verarbeiter automatisch und veröffentlicht.</div>`;}
-  $("#wzBack").style.visibility=wz.step===1?"hidden":"visible";$("#wzNext").textContent=wz.step===3?"Hochladen & verarbeiten":"Weiter";}
+  if(wz.step===1){const noDate=wz.files.filter(f=>!f.datum).length;
+    b.innerHTML=`<div class="field"><label>Audiodateien (eine oder mehrere)</label><input id="wzAudio" type="file" accept="audio/*" multiple></div>
+      ${wz.files.length<=1?`<div class="field"><label>Folien (optional, PDF)</label><input id="wzFolien" type="file" accept="application/pdf"></div>`:'<div class="msg info">Bei mehreren Aufnahmen können Folien später je Eintrag über „Bearbeiten" ergänzt werden.</div>'}
+      <div class="msg ${wz.files.length?(noDate?'err':'ok'):'info'}">${wz.files.length?(wz.files.length+" Datei(en) gewählt"+(noDate?(", "+noDate+" ohne erkanntes Datum (im nächsten Schritt ergänzen)"):", Datum je Datei erkannt")):"Wähle eine oder mehrere Aufnahmen. Das Datum wird je Datei aus dem Namen erkannt."}</div>`;
+    $("#wzAudio").onchange=e=>{wz.files=[...e.target.files].map(f=>({file:f,datum:dateFromName(f.name)||"",titel:""}));if(wz.files.length!==1)wz.folien=null;renderWizard();};
+    const wf=$("#wzFolien");if(wf)wf.onchange=e=>{wz.folien=e.target.files[0];};}
+  else if(wz.step===2){const single=wz.files.length===1;
+    b.innerHTML=`<div class="field"><label>Ort (für alle)</label><input id="wzOrt" value="${esc(wz.ort)}" placeholder="z.B. Marburg"></div>
+      ${single?`<div class="field"><label>Titel (optional)</label><input id="wzTitel" value="${esc(wz.files[0].titel)}"></div>`:''}
+      <div class="field"><label>Datum je Datei (Pflicht)</label><div id="wzList"></div></div>
+      <div class="msg info">Veröffentlicht wird je Datei einheitlich als <b>st_&lt;Datum&gt;</b>. Der Dateiname spielt keine Rolle.</div>`;
+    $("#wzOrt").oninput=e=>wz.ort=e.target.value;const t=$("#wzTitel");if(single&&t)t.oninput=e=>wz.files[0].titel=e.target.value;
+    $("#wzList").innerHTML=wz.files.map((f,i)=>`<div class="punkt-row"><span style="flex:1;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.file.name)}</span><input type="date" data-fi="${i}" value="${esc(f.datum)}" style="width:160px;flex:none"></div>`).join("");
+    $("#wzList").querySelectorAll("[data-fi]").forEach(inp=>inp.oninput=e=>{wz.files[+e.target.dataset.fi].datum=e.target.value;});}
+  else{b.innerHTML=`<div class="msg info">${wz.files.length} Aufnahme(n) werden sofort veröffentlicht (Audio${(wz.files.length===1&&wz.folien)?" und Folien":""} verfügbar, Transkript und Zusammenfassung folgen):</div>
+      <div class="keyrow" style="margin-top:10px;max-height:260px;overflow:auto">${wz.files.map(f=>`<div class="kp"><b>st_${esc(f.datum||"?")}</b><span>${esc(f.file.name)}${f.titel?(" · "+esc(f.titel)):""}</span></div>`).join("")}</div>
+      <div class="msg info" style="margin-top:10px">Ort: ${esc(wz.ort||"–")}</div>`;}
+  $("#wzBack").style.visibility=wz.step===1?"hidden":"visible";$("#wzNext").textContent=wz.step===3?("Hochladen & verarbeiten"+(wz.files.length>1?(" ("+wz.files.length+")"):"")):"Weiter";}
 $("#wzBack").onclick=()=>{if(wz.step>1){wz.step--;renderWizard();}};
-$("#wzNext").onclick=async()=>{if(wz.step===1){if(!wz.audio){$("#wzMsg").textContent="Bitte Audio wählen.";$("#wzMsg").className="msg err";return;}wz.step=2;return renderWizard();}
-  if(wz.step===2){if(!wz.datum){$("#wzMsg").textContent="Bitte Datum angeben.";$("#wzMsg").className="msg err";return;}wz.step=3;return renderWizard();}
-  const msg=$("#wzMsg");msg.textContent="Lade hoch…";msg.className="msg info";
-  try{const sid="st_"+wz.datum+"_"+Math.random().toString(36).slice(2,6);const aExt=(wz.audio.name.split(".").pop()||"m4a").toLowerCase();const aPath=`${sid}/audio.${aExt}`;
-    let dur=0;try{dur=await audioDuration(wz.audio);}catch(e){}
-    msg.textContent="Lade Audio hoch…";
-    let u=await supa.storage.from("audio").upload(aPath,wz.audio,{upsert:true});if(u.error)throw u.error;
-    let folien=null;if(wz.folien){const fPath=`${sid}/folien.pdf`;msg.textContent="Lade Folien hoch…";let uf=await supa.storage.from("folien").upload(fPath,wz.folien,{upsert:true});if(uf.error)throw uf.error;folien=[{n:1,titel:"Foliensatz",note:wz.titel||("Stammtisch "+wz.datum),pfad:fPath}];}
-    const titel=wz.titel||("Stammtisch "+fmtDate(wz.datum));
-    const row={id:sid,datum:wz.datum,titel,ort:wz.ort||"",audio_pfad:aPath,folien,dauer_sek:Math.round(dur),sprecher:[],themen:[],zusammenfassung:{lead:"",punkte:[]},transkript:[],kapitel:[],verarbeitung:"offen",volltext:titel+" "+(wz.ort||"")};
-    let ins=await supa.from("stammtische").insert(row);if(ins.error)throw ins.error;
-    await supa.from("ingest").insert({id:"fill_"+sid,status:"queued",mode:"fill",stammtisch_id:sid,datum:wz.datum,titel});
-    msg.textContent="Veröffentlicht. Audio und Folien sind sofort verfügbar, Transkript und Zusammenfassung folgen.";msg.className="msg ok";announce("Veröffentlicht.");
-    DATA=await loadData();buildFacets();renderFacets();renderList();state.current=sid;renderDetail();
-    setTimeout(()=>{closeModal($("#ovWizard"));},1300);
-  }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}};
+$("#wzNext").onclick=async()=>{
+  if(wz.step===1){if(!wz.files.length){$("#wzMsg").textContent="Bitte mindestens eine Aufnahme wählen.";$("#wzMsg").className="msg err";return;}wz.step=2;return renderWizard();}
+  if(wz.step===2){if(wz.files.some(f=>!f.datum)){$("#wzMsg").textContent="Bitte für jede Datei ein Datum angeben.";$("#wzMsg").className="msg err";return;}wz.step=3;return renderWizard();}
+  const msg=$("#wzMsg");let ok=0;const errs=[];
+  for(let k=0;k<wz.files.length;k++){const f=wz.files[k];msg.className="msg info";msg.textContent=`Lade hoch (${k+1}/${wz.files.length}) …`;
+    try{const sid="st_"+f.datum+"_"+Math.random().toString(36).slice(2,6);const aExt=(f.file.name.split(".").pop()||"m4a").toLowerCase();const aPath=`${sid}/audio.${aExt}`;
+      let dur=0;try{dur=await audioDuration(f.file);}catch(e){}
+      let u=await supa.storage.from("audio").upload(aPath,f.file,{upsert:true});if(u.error)throw u.error;
+      let folien=null;if(wz.files.length===1&&wz.folien){const fPath=`${sid}/folien.pdf`;let uf=await supa.storage.from("folien").upload(fPath,wz.folien,{upsert:true});if(uf.error)throw uf.error;folien=[{n:1,titel:"Foliensatz",note:f.titel||("Stammtisch "+f.datum),pfad:fPath}];}
+      const titel=f.titel||("Stammtisch "+fmtDate(f.datum));
+      const row={id:sid,datum:f.datum,titel,ort:wz.ort||"",audio_pfad:aPath,folien,dauer_sek:Math.round(dur),sprecher:[],themen:[],zusammenfassung:{lead:"",punkte:[]},transkript:[],kapitel:[],verarbeitung:"offen",volltext:titel+" "+(wz.ort||"")};
+      let ins=await supa.from("stammtische").insert(row);if(ins.error)throw ins.error;
+      await supa.from("ingest").insert({id:"fill_"+sid,status:"queued",mode:"fill",stammtisch_id:sid,datum:f.datum,titel});ok++;
+    }catch(e){errs.push(f.file.name+": "+(e.message||e));}}
+  DATA=await loadData();buildFacets();renderFacets();renderList();
+  if(errs.length){msg.className="msg err";msg.textContent=`${ok} veröffentlicht, ${errs.length} fehlgeschlagen. ${errs[0]}`;}
+  else{msg.className="msg ok";msg.textContent=`${ok} veröffentlicht. Audio ist sofort verfügbar, Transkript und Zusammenfassung folgen.`;announce("Hochgeladen.");setTimeout(()=>closeModal($("#ovWizard")),1600);}};
 
 /* ---- status + queue ---- */
 async function getStatus(){if(!supa)return null;try{const {data}=await supa.from("processing_status").select("*").eq("id","batch").maybeSingle();return data;}catch(e){return null;}}
-async function refreshBanner(){const s=await getStatus();const b=$("#statusBanner");
+async function refreshBanner(){const s=await getStatus();LIVE_STATUS=s;const b=$("#statusBanner");
   if(s&&s.active){b.hidden=false;const d=s.detail||{};const titel=s.current_titel||"ein neuer Stammtisch";const datum=s.current_datum?(" vom "+fmtDate(s.current_datum)):"";
     const bulk=s.scope==="batch"&&(s.total||0)>3;const fin=d.cur_finish?(" Voraussichtlich online gegen "+d.cur_finish+" Uhr."):(s.eta?(" Voraussichtlich fertig "+s.eta+"."):"");
     if(state.authed){$("#statusBannerText").textContent=`Verarbeitung läuft: ${titel}${datum} · ${d.phase||s.phase||""}${d.cur_progress!=null?(" · "+d.cur_progress+"%"):""} · ${s.done||0}/${s.total||0}.${d.cur_remaining?(" "+d.cur_remaining+"."):""}`;}
     else if(bulk){$("#statusBannerText").textContent="Es werden gerade ältere Stammtische aufgearbeitet und nach und nach veröffentlicht.";}
     else{$("#statusBannerText").textContent=`Gerade wird ein neuer Stammtisch verarbeitet (${titel}${datum}).${fin}`;}}
-  else b.hidden=true;}
+  else b.hidden=true;
+  updateCardProgress();}
+function updateCardProgress(){const d=(LIVE_STATUS&&LIVE_STATUS.detail)||{};const curId=d.cur_id;
+  document.querySelectorAll("[data-prog-id]").forEach(el=>{const id=el.dataset.progId;
+    if(curId&&id===curId&&d.cur_progress!=null){el.innerHTML=`<div class="cp-bar"><div style="width:${d.cur_progress}%"></div></div><span class="cp-txt">wird transkribiert · ${d.cur_progress}%${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</span>`;}
+    else{el.innerHTML=`<span class="cp-txt">in der Warteschlange</span>`;}});}
 async function openQueue(){openModal($("#ovQueue"));await renderStatusPanel();await loadQueue();}
 async function renderStatusPanel(){const s=await getStatus();const p=$("#statusPanel");
   if(!s||!(s.active||s.total||s.scope==="ingest")){p.innerHTML=`<div class="msg info">Kein aktiver Verarbeitungs-Status gemeldet.</div>`;return;}
@@ -491,30 +524,43 @@ $("#btnWizard").onclick=openWizard;$("#btnQueue").onclick=openQueue;
 /* ---- statistik ---- */
 function bars(map,unit){const ent=Object.entries(map).sort((a,b)=>b[1]-a[1]);const max=Math.max(1,...ent.map(e=>e[1]));
   return `<div class="bars">${ent.map(([k,v])=>`<div class="bar"><span>${esc(k)}</span><span class="track"><span class="fill" style="width:${Math.round(v/max*100)}%"></span></span><span class="val">${v}${unit||""}</span></div>`).join("")}</div>`;}
+function themeCloud(themes){const ent=Object.entries(themes).sort((a,b)=>b[1]-a[1]);if(!ent.length)return '<div class="msg info">noch keine</div>';
+  const max=Math.max(...ent.map(e=>e[1])),min=Math.min(...ent.map(e=>e[1]));
+  return `<div class="cloud">${ent.map(([t,v])=>{const sz=(13+(max===min?3:Math.round((v-min)/(max-min)*12))).toFixed(0);const on=state.themes.has(t);return `<button class="cloud-t ${on?'on':''}" data-cloud="${esc(t)}" style="font-size:${sz}px" title="${v}× – zum Filtern">${esc(t)}</button>`;}).join("")}</div>`;}
 $("#btnStats").onclick=()=>{const total=DATA.length,sec=DATA.reduce((s,d)=>s+(d.dauer||0),0),hrs=(sec/3600);
   const perYear={},themes={},spk={};let withSlides=0;
   DATA.forEach(d=>{const y=(d.datum||"").slice(0,4)||"?";perYear[y]=(perYear[y]||0)+1;if(d.folien&&d.folien.length)withSlides++;(d.themen||[]).forEach(t=>themes[t]=(themes[t]||0)+1);(d.sprecher||[]).forEach(s=>{if(!/^Sprecher [A-Z]$/.test(s))spk[s]=(spk[s]||0)+1;});});
   let h=`<div class="stat-grid"><div class="stat"><div class="v">${total}</div><div class="l">Stammtische</div></div><div class="stat"><div class="v">${hrs.toFixed(1)} h</div><div class="l">Gesamtdauer</div></div><div class="stat"><div class="v">${total?fmt(Math.round(sec/total)):"–"}</div><div class="l">Ø Dauer</div></div><div class="stat"><div class="v">${withSlides}</div><div class="l">mit Folien</div></div></div>`;
   h+=`<div class="sec-h">Stammtische pro Jahr</div>${bars(perYear)}`;
-  h+=`<div class="sec-h">Häufigste Themen</div>${Object.keys(themes).length?bars(themes):'<div class="msg info">noch keine</div>'}`;
+  h+=`<div class="sec-h">Themen (zum Filtern anklicken)</div>${themeCloud(themes)}`;
   h+=`<div class="sec-h">Benannte Personen (Funktionsträger)</div>${Object.keys(spk).length?bars(spk,"×"):'<div class="msg info">noch keine</div>'}`;
   if(state.authed){const noSum=DATA.filter(d=>!d.zusammenfassung.lead).length,noTx=DATA.filter(d=>!(d.transkript||[]).length).length,recent=DATA.filter(isNew).length;
     h+=`<div class="sec-h" style="margin-top:18px">Admin-Details</div><div class="stat-grid"><div class="stat"><div class="v">${recent}</div><div class="l">neu (${NEU_TAGE} Tage)</div></div><div class="stat"><div class="v">${noSum}</div><div class="l">ohne Zusammenfassung</div></div><div class="stat"><div class="v">${noTx}</div><div class="l">ohne Transkript</div></div><div class="stat"><div class="v">${Object.keys(spk).length}</div><div class="l">benannte Personen</div></div></div>`;}
-  $("#statsBody").innerHTML=h;openModal($("#ovStats"));};
+  $("#statsBody").innerHTML=h;
+  $("#statsBody").querySelectorAll("[data-cloud]").forEach(b=>b.onclick=()=>{const t=b.dataset.cloud;state.themes.has(t)?state.themes.delete(t):state.themes.add(t);renderFacets();renderList(true);closeModal($("#ovStats"));});
+  openModal($("#ovStats"));};
 
 /* ---- protokoll (sitzungsuebergreifend) ---- */
 function openProtokoll(){state.protTab=state.protTab||"aufgaben";$("#protMsg").textContent="";renderProtTabs();renderProt();openModal($("#ovProtokoll"));}
 function renderProtTabs(){$("#protTabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.pt===state.protTab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.onclick=()=>{state.protTab=b.dataset.pt;renderProtTabs();renderProt();};});}
 function protJump(id){closeModal($("#ovProtokoll"));state.current=id;state.tab="summary";renderList();renderDetail(true);}
-function renderProt(){const box=$("#protBody");const ent=[...DATA].sort((a,b)=>b.datum.localeCompare(a.datum));
+function renderProt(){const box=$("#protBody");const ent=[...DATA].sort((a,b)=>b.datum.localeCompare(a.datum));const today=new Date().toISOString().slice(0,10);
   if(state.protTab==="beschluesse"){const rows=[];ent.forEach(d=>((d.zusammenfassung||{}).beschluesse||[]).forEach(b=>rows.push({d,b})));
     box.innerHTML=rows.length?rows.map(({d,b})=>`<div class="qrow"><div><b style="color:var(--green)">✓ ${esc(b)}</b><div class="msg info">${fmtDate(d.datum)} · <button class="reset" data-go="${esc(d.id)}">${esc(d.titel)}</button></div></div></div>`).join(""):'<div class="nodata">Noch keine Beschlüsse erfasst. Sie werden bei neu verarbeiteten Stammtischen automatisch extrahiert.</div>';}
-  else{const rows=[];ent.forEach(d=>((d.zusammenfassung||{}).aufgaben||[]).forEach((a,i)=>{const text=(a&&a.text!=null)?a.text:a;const erl=a&&a.erledigt;if(!erl)rows.push({d,i,text,wer:a&&a.wer});}));
-    box.innerHTML=rows.length?rows.map(({d,i,text,wer})=>`<div class="qrow"><div><b style="color:var(--gold)">→ ${esc(text)}</b>${wer?(' <span class="msg info">('+esc(wer)+')</span>'):''}<div class="msg info">${fmtDate(d.datum)} · <button class="reset" data-go="${esc(d.id)}">${esc(d.titel)}</button></div></div>${state.authed?`<button class="btn small" data-done="${esc(d.id)}" data-i="${i}">erledigt</button>`:''}</div>`).join(""):'<div class="nodata">Keine offenen Aufgaben.</div>';}
+  else{let rows=[];ent.forEach(d=>((d.zusammenfassung||{}).aufgaben||[]).forEach((a,i)=>{const text=(a&&a.text!=null)?a.text:a;const erl=a&&a.erledigt;if(!erl)rows.push({d,i,text,wer:a&&a.wer,frist:a&&a.frist});}));
+    rows.sort((a,b)=>{if(a.frist&&b.frist)return a.frist.localeCompare(b.frist);if(a.frist)return -1;if(b.frist)return 1;return b.d.datum.localeCompare(a.d.datum);});
+    box.innerHTML=rows.length?rows.map(({d,i,text,wer,frist})=>{const over=frist&&frist<today;const fristTag=frist?`<span class="frist ${over?'over':''}">📅 ${fmtDate(frist)}${over?' überfällig':''}</span>`:'';
+      return `<div class="qrow"><div><b style="color:var(--gold)">→ ${esc(text)}</b>${wer?(' <span class="msg info">('+esc(wer)+')</span>'):''} ${fristTag}<div class="msg info">${fmtDate(d.datum)} · <button class="reset" data-go="${esc(d.id)}">${esc(d.titel)}</button></div></div>${state.authed?`<div style="display:flex;gap:6px"><button class="btn small" data-frist="${esc(d.id)}" data-i="${i}">Frist</button><button class="btn small" data-done="${esc(d.id)}" data-i="${i}">erledigt</button></div>`:''}</div>`;}).join(""):'<div class="nodata">Keine offenen Aufgaben.</div>';}
   box.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>protJump(b.dataset.go));
-  if(state.authed)box.querySelectorAll("[data-done]").forEach(b=>b.onclick=()=>markTaskDone(b.dataset.done,+b.dataset.i));}
+  if(state.authed){box.querySelectorAll("[data-done]").forEach(b=>b.onclick=()=>markTaskDone(b.dataset.done,+b.dataset.i));
+    box.querySelectorAll("[data-frist]").forEach(b=>b.onclick=()=>setTaskFrist(b.dataset.frist,+b.dataset.i));}}
 async function markTaskDone(id,i){const d=DATA.find(x=>x.id===id);if(!d)return;const z=d.zusammenfassung||{};const a=(z.aufgaben||[])[i];if(a==null)return;if(typeof a==="string")z.aufgaben[i]={text:a,erledigt:true};else a.erledigt=true;
   try{await supa.from("stammtische").update({zusammenfassung:z}).eq("id",id);$("#protMsg").textContent="Als erledigt markiert.";renderProt();}catch(e){$("#protMsg").textContent="Fehler: "+(e.message||e);}}
+async function setTaskFrist(id,i){const d=DATA.find(x=>x.id===id);if(!d)return;const z=d.zusammenfassung||{};let a=(z.aufgaben||[])[i];if(a==null)return;if(typeof a==="string"){a={text:a};z.aufgaben[i]=a;}
+  const cur=a.frist||"";const neu=window.prompt("Frist als JJJJ-MM-TT (leer = entfernen):",cur);if(neu==null)return;
+  const v=neu.trim();if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v)){$("#protMsg").textContent="Bitte Format JJJJ-MM-TT.";return;}
+  if(v)a.frist=v;else delete a.frist;
+  try{await supa.from("stammtische").update({zusammenfassung:z}).eq("id",id);$("#protMsg").textContent=v?"Frist gesetzt.":"Frist entfernt.";renderProt();}catch(e){$("#protMsg").textContent="Fehler: "+(e.message||e);}}
 $("#btnProtokoll").onclick=openProtokoll;
 
 /* ---- rail events ---- */
