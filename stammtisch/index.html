@@ -188,6 +188,7 @@
     .dhead{padding:16px 16px 12px}.dhead h2{font-size:19px}
     .miniplayer{padding:12px 16px}
     .doc-item{flex-direction:column}.doc-actions{flex-direction:row}
+    .rech-tools input[type=search]{min-width:0;flex:1 1 100%}.rech-tools .sel{width:100%}
   }
   .menu-item{width:100%;justify-content:flex-start;text-align:left;background:transparent;border-color:transparent}
   .menu-item:hover{background:rgba(255,255,255,.05);border-color:var(--line)}
@@ -202,8 +203,10 @@
   .doc-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
   .doc-tags .tag{font-size:11px;background:rgba(76,175,106,.14);border:1px solid var(--line);border-radius:20px;padding:2px 9px;color:var(--text)}
   .doc-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+  #logBody{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .logtab{width:100%;border-collapse:collapse;font-size:13px}
-  .logtab th,.logtab td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .logtab th,.logtab td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+  .logtab td:last-child{white-space:normal}
   .logtab th{color:var(--muted-2);font-weight:600;font-size:11.5px}
   .line.playing .said{color:#eafff1}
   .lnedit{width:100%;min-height:54px;background:var(--bg);border:1px solid var(--green-dim);color:var(--text);border-radius:7px;padding:7px 9px;font-size:14px}.lnedit-act{display:flex;gap:6px;margin-top:6px}
@@ -987,7 +990,7 @@ async function openLog(){if(!isAdmin())return;openModal($("#ovLog"));$("#logBody
   try{const {data,error}=await supa.from("intern_zugriff_log").select("*").order("ts",{ascending:false}).limit(500);if(error)throw error;
     if(!data||!data.length){$("#logBody").innerHTML='<div class="msg info">Noch keine Zugriffe protokolliert.</div>';return;}
     const label={bereich_geoeffnet:"Bereich geöffnet",sitzung_geoeffnet:"Sitzung geöffnet",audio_gestartet:"Audio gestartet",dokument_geoeffnet:"Dokument geöffnet",dokument_hochgeladen:"Dokument hochgeladen"};
-    $("#logBody").innerHTML='<table class="logtab"><thead><tr><th>Zeitpunkt</th><th>Adresse</th><th>Aktion</th><th>Bezug</th></tr></thead><tbody>'+data.map(r=>`<tr><td>${new Date(r.ts).toLocaleString("de-DE")}</td><td>${esc(r.email)}</td><td>${esc(label[r.aktion]||r.aktion)}</td><td>${esc(r.detail||r.stammtisch_id||"")}</td></tr>`).join("")+'</tbody></table>';
+    $("#logBody").innerHTML='<table class="logtab"><thead><tr><th scope="col">Zeitpunkt</th><th scope="col">Adresse</th><th scope="col">Aktion</th><th scope="col">Bezug</th></tr></thead><tbody>'+data.map(r=>`<tr><td>${new Date(r.ts).toLocaleString("de-DE")}</td><td>${esc(r.email)}</td><td>${esc(label[r.aktion]||r.aktion)}</td><td>${esc(r.detail||r.stammtisch_id||"")}</td></tr>`).join("")+'</tbody></table>';
   }catch(e){$("#logBody").innerHTML='<div class="msg info">Protokoll nicht erreichbar.</div>';}}
 
 /* ---- Gesamtprotokoll (für alle) ---- */
