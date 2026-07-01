@@ -158,6 +158,7 @@
   .rech-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
   .rech-tools input[type=search]{flex:1;min-width:220px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 12px;font-size:14px}
   .rech-scope{margin-bottom:10px}
+  .rech-modes{display:flex;gap:6px;margin-bottom:12px}
   .rech-sess{margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px}
   .rech-sess h4{margin:0 0 6px;font-size:14px}.rech-sess h4 .reset{color:var(--gold);font-size:14px}
   .rech-hit{padding:7px 10px;border:1px solid var(--line);border-radius:8px;margin:5px 0;cursor:pointer;background:rgba(255,255,255,.02)}
@@ -793,12 +794,33 @@ function computeResearch(raw,sort){const tokens=rechTokens(raw);const m=txt=>{if
     if(hits.length)results.push({d,hits});}
   results.sort((a,b)=>sort==="count"?(b.hits.length-a.hits.length)||b.d.datum.localeCompare(a.d.datum):sort==="chrono_asc"?a.d.datum.localeCompare(b.d.datum):b.d.datum.localeCompare(a.d.datum));
   return {results,total:results.reduce((s,r)=>s+r.hits.length,0),tokens};}
+let rechMode="details";
+function rechDetailsHtml(results,raw){return results.map(r=>`<section class="rech-sess"><h4><button class="reset" data-open="${esc(r.d.id)}">${fmtDate(r.d.datum)} · ${esc(r.d.titel)}</button> <span class="msg info">${r.hits.length}×</span></h4>${r.hits.map(h=>`<div class="rech-hit" data-id="${esc(r.d.id)}" data-kind="${esc(h.kind)}"${h.t!=null?` data-t="${h.t}"`:""}${h.idx!=null?` data-idx="${h.idx}"`:""}><span class="rech-kind">${esc(h.kind)}${h.t!=null?(" · "+fmt(h.t)):""}${h.sp!=null?(" · "+esc(spName(r.d,h.sp))):""}</span><span class="rech-snip">${h.snippet}</span></div>`).join("")}</section>`).join("");}
+function rechSummaryHtml(results,raw,total){
+  const chrono=[...results].sort((a,b)=>a.d.datum.localeCompare(b.d.datum));
+  const first=chrono[0].d.datum,last=chrono[chrono.length-1].d.datum;
+  const besch=[],aufg=[],offen=[],spk={};
+  results.forEach(r=>r.hits.forEach(h=>{
+    if(h.kind==="Beschluss")besch.push({d:r.d,t:h.snippet});
+    else if(h.kind==="Aufgabe")aufg.push({d:r.d,t:h.snippet});
+    else if(h.kind==="Offen geblieben")offen.push({d:r.d,t:h.snippet});
+    if(h.kind==="Transkript"&&h.sp!=null){const n=spName(r.d,h.sp);spk[n]=(spk[n]||0)+1;}}));
+  const best=r=>{const p=r.hits.find(h=>["Einleitung","Sachstand","Beschluss"].includes(h.kind))||r.hits[0];return p.snippet;};
+  const grp=(t,arr)=>arr.length?`<div class="sec-h">${t} (${arr.length})</div>`+arr.map(x=>`<div class="rech-hit" data-id="${esc(x.d.id)}" data-kind="Titel"><span class="rech-kind">${fmtDate(x.d.datum)}</span><span class="rech-snip">${x.t}</span></div>`).join(""):"";
+  let h=`<div class="sec-h">Überblick</div><p style="line-height:1.6">Der Begriff „${esc(raw)}" taucht in <b>${results.length}</b> Sitzungen auf, insgesamt <b>${total}</b> Fundstellen, von <b>${fmtDate(first)}</b> bis <b>${fmtDate(last)}</b>.</p>`;
+  h+=`<div class="sec-h">Zeitlicher Verlauf</div>`+chrono.map(r=>`<div class="rech-hit" data-id="${esc(r.d.id)}" data-kind="Titel"><span class="rech-kind">${fmtDate(r.d.datum)} · ${esc(r.d.titel)} · ${r.hits.length}×</span><span class="rech-snip">${best(r)}</span></div>`).join("");
+  h+=grp("Beschlüsse dazu",besch)+grp("Aufgaben dazu",aufg)+grp("Offen geblieben dazu",offen);
+  const sa=Object.entries(spk).sort((a,b)=>b[1]-a[1]);
+  if(sa.length)h+=`<div class="sec-h">Wer sprach dazu</div><div class="keyrow">${sa.map(([n,c])=>`<div class="kp"><b>${c}×</b><span>${esc(n)}</span></div>`).join("")}</div>`;
+  return h;}
 function research(){if(!state.authed)return;const raw=$("#rechQ").value.trim();
   if(!raw){$("#rechBody").innerHTML='<div class="msg info">Gib oben einen Begriff ein…</div>';$("#rechScope").textContent="";return;}
   const {results,total}=computeResearch(raw,$("#rechSort").value);
   $("#rechScope").textContent=`${total} Fundstellen in ${results.length} Sitzungen für „${raw}".`;
   if(!results.length){$("#rechBody").innerHTML='<div class="msg info">Keine Fundstellen.</div>';return;}
-  $("#rechBody").innerHTML=results.map(r=>`<section class="rech-sess"><h4><button class="reset" data-open="${esc(r.d.id)}">${fmtDate(r.d.datum)} · ${esc(r.d.titel)}</button> <span class="msg info">${r.hits.length}×</span></h4>${r.hits.map(h=>`<div class="rech-hit" data-id="${esc(r.d.id)}" data-kind="${esc(h.kind)}"${h.t!=null?` data-t="${h.t}"`:""}${h.idx!=null?` data-idx="${h.idx}"`:""}><span class="rech-kind">${esc(h.kind)}${h.t!=null?(" · "+fmt(h.t)):""}${h.sp!=null?(" · "+esc(spName(r.d,h.sp))):""}</span><span class="rech-snip">${h.snippet}</span></div>`).join("")}</section>`).join("");
+  const modes=`<div class="rech-modes"><button class="btn small ${rechMode==='details'?'on':''}" data-rmode="details">Fundstellen</button><button class="btn small ${rechMode==='summary'?'on':''}" data-rmode="summary">Zusammenfassung</button></div>`;
+  $("#rechBody").innerHTML=modes+(rechMode==="summary"?rechSummaryHtml(results,raw,total):rechDetailsHtml(results,raw));
+  $("#rechBody").querySelectorAll("[data-rmode]").forEach(b=>b.onclick=()=>{rechMode=b.dataset.rmode;research();});
   $("#rechBody").querySelectorAll(".rech-hit").forEach(el=>el.onclick=()=>rechJump(el.dataset,raw));
   $("#rechBody").querySelectorAll("[data-open]").forEach(b=>b.onclick=e=>{e.stopPropagation();rechJump({id:b.dataset.open,kind:"Titel"},raw);});}
 function rechJump(ds,raw){closeModal($("#ovResearch"));state.current=ds.id;state.txSp=null;state.hits=[];state.hit=-1;state.autohit=null;
@@ -809,8 +831,15 @@ function rechJump(ds,raw){closeModal($("#ovResearch"));state.current=ds.id;state
   setTimeout(()=>{if(ds.idx!=null){const el=$("#txlines")&&$("#txlines").querySelector(`.line[data-idx="${ds.idx}"]`);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("playing");}}if(ds.t!=null)seekAudio(parseInt(ds.t));},320);}
 function researchPdf(){if(!state.authed)return;const raw=$("#rechQ").value.trim();if(!raw)return;const {results,total}=computeResearch(raw,$("#rechSort").value);if(!results.length)return;
   const w=window.open("","_blank");if(!w){$("#rechMsg").textContent="Bitte Pop-ups erlauben.";return;}
-  const css="body{font-family:Georgia,serif;color:#111;max-width:820px;margin:24px auto;padding:0 18px;line-height:1.5}h1{font-size:20px}h2{font-size:15px;margin-top:20px;border-bottom:1px solid #ccc}.kind{color:#666;font-size:11px}.snip{margin:2px 0 8px}mark{background:#fde68a}.hl{background:#fde68a}";
-  const body=`<h1>Recherche: „${esc(raw)}"</h1><p class="kind">${total} Fundstellen in ${results.length} Sitzungen · Stand ${fmtDate(new Date().toISOString().slice(0,10))}</p>`+results.map(r=>`<h2>${fmtDate(r.d.datum)} · ${esc(r.d.titel)} (${r.hits.length}×)</h2>`+r.hits.map(h=>`<div><span class="kind">${esc(h.kind)}${h.t!=null?(" · "+fmt(h.t)):""}</span><div class="snip">${h.snippet}</div></div>`).join("")).join("");
+  const css="body{font-family:Georgia,serif;color:#111;max-width:820px;margin:24px auto;padding:0 18px;line-height:1.55}h1{font-size:20px}h2{font-size:15px;margin-top:20px;border-bottom:1px solid #ccc}h3{font-size:13px;margin:16px 0 4px}.kind{color:#666;font-size:11px}.snip{margin:2px 0 8px}.hl{background:#fde68a}p{margin:6px 0}";
+  let body;
+  if(rechMode==="summary"){
+    const chrono=[...results].sort((a,b)=>a.d.datum.localeCompare(b.d.datum));
+    const best=r=>{const p=r.hits.find(h=>["Einleitung","Sachstand","Beschluss"].includes(h.kind))||r.hits[0];return p.snippet;};
+    body=`<h1>Recherche-Zusammenfassung: „${esc(raw)}"</h1><p class="kind">${total} Fundstellen in ${results.length} Sitzungen · ${fmtDate(chrono[0].d.datum)} bis ${fmtDate(chrono[chrono.length-1].d.datum)} · Stand ${fmtDate(new Date().toISOString().slice(0,10))}</p><h2>Zeitlicher Verlauf</h2>`+chrono.map(r=>`<div><span class="kind">${fmtDate(r.d.datum)} · ${esc(r.d.titel)}</span><div class="snip">${best(r)}</div></div>`).join("");
+  }else{
+    body=`<h1>Recherche: „${esc(raw)}"</h1><p class="kind">${total} Fundstellen in ${results.length} Sitzungen · Stand ${fmtDate(new Date().toISOString().slice(0,10))}</p>`+results.map(r=>`<h2>${fmtDate(r.d.datum)} · ${esc(r.d.titel)} (${r.hits.length}×)</h2>`+r.hits.map(h=>`<div><span class="kind">${esc(h.kind)}${h.t!=null?(" · "+fmt(h.t)):""}</span><div class="snip">${h.snippet}</div></div>`).join("")).join("");
+  }
   w.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Recherche ${esc(raw)}</title><style>${css}</style></head><body>${body}<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script></body></html>`);w.document.close();}
 $("#btnResearch").onclick=()=>{openModal($("#ovResearch"));setTimeout(()=>$("#rechQ").focus(),60);};
 $("#rechQ").oninput=research;$("#rechSort").onchange=research;$("#rechPdf").onclick=researchPdf;
