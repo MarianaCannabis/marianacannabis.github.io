@@ -36,6 +36,13 @@
   .filters{margin-top:13px;display:flex;flex-direction:column;gap:12px}
   .flabel{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted-2);margin-bottom:6px;display:block}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .fgroup{margin-bottom:10px}
+  .facet-h{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:4px 0;cursor:pointer;color:inherit;text-align:left}
+  .facet-h .flabel{margin:0}
+  .facet-h .fmeta{font-size:11px;color:var(--muted-2)}
+  .facet-h .fcaret{margin-left:auto;color:var(--muted-2);font-size:11px}
+  .facet-h:hover .flabel{color:var(--text)}
+  .fgroup .chips{margin-top:6px}
   .chip{border:1px solid var(--line);background:var(--bg-2);color:var(--muted);font-size:12px;padding:5px 10px;border-radius:999px}.chip:hover{border-color:var(--green-dim);color:var(--text)}.chip.on{background:rgba(76,175,106,.16);border-color:var(--green-dim);color:var(--green)}.chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
   .row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
   select.sel{background:var(--bg-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:12px}
@@ -152,6 +159,12 @@
   #gpBody .gp-lead{margin:0 0 8px;color:var(--text)}
   #gpBody h4{font-size:12.5px;color:var(--muted);margin:12px 0 4px;text-transform:none}
   #gpBody .gp-ul{margin:0 0 0 18px;padding:0}#gpBody .gp-ul li{margin:4px 0;color:var(--text);font-size:13.5px;line-height:1.5}
+  .steuerrow{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+  .steps{display:flex;flex-direction:column;gap:4px;margin:8px 0 4px}
+  .steps .step{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted-2)}
+  .steps .step .dot2{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;background:rgba(255,255,255,.05);color:var(--muted-2);border:1px solid var(--line);flex:0 0 auto}
+  .steps .step.done{color:var(--muted)}.steps .step.done .dot2{background:rgba(76,175,106,.18);color:var(--green);border-color:transparent}
+  .steps .step.active{color:var(--text);font-weight:600}.steps .step.active .dot2{background:var(--green);color:#08100b;border-color:transparent}
 </style>
 </head>
 <body>
@@ -185,9 +198,9 @@
     <div class="search">
       <div class="search-field"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Alles durchsuchen…" aria-label="Stammtische durchsuchen"></div>
       <div class="filters">
-        <div><span class="flabel" id="lblYear">Jahr</span><div class="chips" id="fYears" role="group" aria-labelledby="lblYear"></div></div>
-        <div><span class="flabel" id="lblSpk">Sprecher</span><div class="chips" id="fSpeakers" role="group" aria-labelledby="lblSpk"></div></div>
-        <div><span class="flabel" id="lblTh">Thema</span><div class="chips" id="fThemes" role="group" aria-labelledby="lblTh"></div></div>
+        <div class="fgroup"><button class="facet-h" data-fg="year" aria-expanded="true"><span class="flabel" id="lblYear">Jahr</span><span class="fmeta" id="metaYear"></span><span class="fcaret">▾</span></button><div class="chips" id="fYears" role="group" aria-labelledby="lblYear"></div></div>
+        <div class="fgroup"><button class="facet-h" data-fg="spk" aria-expanded="false"><span class="flabel" id="lblSpk">Sprecher</span><span class="fmeta" id="metaSpk"></span><span class="fcaret">▾</span></button><div class="chips" id="fSpeakers" role="group" aria-labelledby="lblSpk" hidden></div></div>
+        <div class="fgroup"><button class="facet-h" data-fg="th" aria-expanded="false"><span class="flabel" id="lblTh">Thema</span><span class="fmeta" id="metaTh"></span><span class="fcaret">▾</span></button><div class="chips" id="fThemes" role="group" aria-labelledby="lblTh" hidden></div></div>
         <label class="toggle"><input type="checkbox" id="fSlides"> nur mit Folien</label>
         <label class="toggle"><input type="checkbox" id="fBookmarks"> nur Lesezeichen ★</label>
         <div class="row"><label class="flabel" style="margin:0">Sortierung
@@ -375,9 +388,17 @@ function filtered(){let r=DATA.filter(d=>{if(state.q&&!entryText(d).includes(sta
 /* ---- rail ---- */
 function chip(l,on,a){return `<button class="chip ${on?'on':''}" ${a} aria-pressed="${on}">${esc(l)}</button>`;}
 function facetList(items,limit,open,render){const show=open?items:items.slice(0,limit);let h=show.map(render).join("");if(items.length>limit)h+=`<button class="chip morebtn" data-more="${open?'0':'1'}">${open?'▴ weniger':('▾ alle '+items.length)}</button>`;return h;}
-function renderFacets(){$("#fYears").innerHTML=ALL_YEARS.map(y=>chip(y,state.years.has(y),`data-yr="${y}"`)).join("")||'<span class="msg info">–</span>';
-  $("#fSpeakers").innerHTML=facetList(ALL_SPK,12,state.facetSp,o=>`<button class="chip ${state.speakers.has(o.name)?'on':''}" data-sp="${esc(o.name)}" aria-pressed="${state.speakers.has(o.name)}"><span class="dot" style="background:${o.anon?'var(--muted-2)':'var(--green)'}"></span>${esc(o.name)} <span class="cnt">${o.count}</span></button>`)||'<span class="msg info">–</span>';
-  $("#fThemes").innerHTML=facetList(ALL_TH,16,state.facetTh,o=>`<button class="chip ${state.themes.has(o.key)?'on':''}" data-th="${esc(o.key)}" aria-pressed="${state.themes.has(o.key)}">${esc(o.display)} <span class="cnt">${o.count}</span></button>`)||'<span class="msg info">–</span>';}
+function fgOpen(k){const v=localStorage.getItem("st_fg_"+k);return v==null?(k==="year"):v==="1";}
+function applyFg(){[["year","fYears"],["spk","fSpeakers"],["th","fThemes"]].forEach(([k,id])=>{const open=fgOpen(k);const box=$("#"+id);const btn=document.querySelector(`.facet-h[data-fg="${k}"]`);if(box)box.hidden=!open;if(btn){btn.setAttribute("aria-expanded",open);const c=btn.querySelector(".fcaret");if(c)c.textContent=open?"▾":"▸";}});}
+function renderFacets(){const spk=ALL_SPK.filter(o=>!o.anon);
+  $("#fYears").innerHTML=ALL_YEARS.map(y=>chip(y,state.years.has(y),`data-yr="${y}"`)).join("")||'<span class="msg info">–</span>';
+  $("#fSpeakers").innerHTML=spk.length?facetList(spk,12,state.facetSp,o=>`<button class="chip ${state.speakers.has(o.name)?'on':''}" data-sp="${esc(o.name)}" aria-pressed="${state.speakers.has(o.name)}"><span class="dot" style="background:var(--green)"></span>${esc(o.name)} <span class="cnt">${o.count}</span></button>`):'<span class="msg info">Noch keine benannten Sprecher.</span>';
+  $("#fThemes").innerHTML=ALL_TH.length?facetList(ALL_TH,16,state.facetTh,o=>`<button class="chip ${state.themes.has(o.key)?'on':''}" data-th="${esc(o.key)}" aria-pressed="${state.themes.has(o.key)}">${esc(o.display)} <span class="cnt">${o.count}</span></button>`):'<span class="msg info">–</span>';
+  $("#metaYear").textContent=state.years.size?`${state.years.size} aktiv`:`${ALL_YEARS.length}`;
+  $("#metaSpk").textContent=state.speakers.size?`${state.speakers.size} aktiv`:`${spk.length}`;
+  $("#metaTh").textContent=state.themes.size?`${state.themes.size} aktiv`:`${ALL_TH.length}`;
+  applyFg();
+  document.querySelectorAll(".facet-h").forEach(btn=>btn.onclick=()=>{const k=btn.dataset.fg;localStorage.setItem("st_fg_"+k,fgOpen(k)?"0":"1");applyFg();});}
 function snippetFor(d){const q=(state.q||"").trim().toLowerCase();if(!q||!(d.transkript||[]).length)return "";
   const idx=d.transkript.findIndex(l=>!l.red&&l.text.toLowerCase().includes(q));if(idx<0)return "";
   let t=d.transkript[idx].text;const pos=t.toLowerCase().indexOf(q);const from=Math.max(0,pos-50);
@@ -829,6 +850,7 @@ async function renderStatusPanel(){const s=await getStatus();const wd=await getW
     h+=`<div class="sec-h">Aktuelle Datei</div>`;
     h+=`<div style="font-size:14px;margin-bottom:4px"><b>${esc(s.current_titel||"–")}</b>${s.current_datum?(" · "+fmtDate(s.current_datum)):""}</div>`;
     h+=`<div class="msg info">Phase: ${esc(d.phase||s.phase||"–")}${s.scope==="ingest"?" · Einzelverarbeitung":""}</div>`;
+    h+=phaseStepHtml(d.phase||s.phase);
     if(cp!=null){h+=`<div class="progress"><div style="width:${cp}%"></div></div><div class="msg info">${cp}% · ${esc(d.cur_elapsed||"?")} von geschätzt ${esc(d.cur_len||"?")} · ${esc(d.cur_remaining||"")}${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</div>`;}
     else{h+=`<div class="msg info">${esc(d.cur_len?("Länge "+d.cur_len):"")} ${esc(d.cur_elapsed?("· läuft seit "+d.cur_elapsed):"")}</div>`;}
     const elMin=parseMin(d.cur_elapsed),lenMin=parseMin(d.cur_len);
@@ -838,6 +860,12 @@ async function renderStatusPanel(){const s=await getStatus();const wd=await getW
       if(!s.active)h+=`<div class="msg err" style="margin-top:4px">Der Lauf ist derzeit gestoppt und wird nicht fortgesetzt, bis er wieder gestartet wird.</div>`;}
     if(d.fehler&&d.fehler.length){h+=`<div class="sec-h" style="margin-top:16px;color:var(--red)">Fehlgeschlagen (${d.fehler.length})</div>`+d.fehler.map(f=>`<div class="qrow"><div><b>${esc(f.titel||f.id)}</b><div class="msg err">${esc(f.msg||"Fehler")}</div></div><span class="qstatus error">fehler</span></div>`).join("");}
     h+=`<div class="msg info" style="margin-top:8px">Stand: ${s.updated_at?new Date(s.updated_at).toLocaleString("de-DE"):"–"}${s.message?(" · "+esc(s.message)):""}</div>`;
+    if(state.authed&&s.scope!=="ingest"){h+=`<div class="sec-h" style="margin-top:16px">Steuerung</div>
+      <div class="steuerrow">
+        <button class="btn small" data-steuer="fortsetzen">▶ Lauf fortsetzen</button>
+        <button class="btn small" data-steuer="ueberspringen">⏭ Aktuelle Datei überspringen</button>
+        <button class="btn small" data-steuer="fehler_neu">↻ Fehlversuche zurücksetzen</button>
+      </div><div class="msg info" id="steuerMsg">Der Wachhund führt einen Befehl bei seiner nächsten Prüfung aus (in der Regel innerhalb einer Minute).</div>`;}
   } else {h+=`<div class="msg info">Gerade läuft keine Verarbeitung.</div>`;}
   // Dienste-Ueberwachung (Wachhund)
   h+=`<div class="sec-h" style="margin-top:18px">Dienste-Überwachung</div>`;
@@ -847,7 +875,19 @@ async function renderStatusPanel(){const s=await getStatus();const wd=await getW
     h+=`<div class="msg ${wd.detail.incidents_7d?'':'ok'}" style="margin-top:8px">${esc(wd.detail.summary_7d||"")}</div>`;
     h+=`<div class="msg info">Letzte Prüfung: ${esc((wd.detail.checked_at)||"–")}${wdage!=null&&wdage>15?` · Achtung: Wachhund meldet seit ${wdage} min nichts`:""}</div>`;}
   else{h+=`<div class="msg info">Noch keine Meldung vom Wachhund. Läuft die Aufgabe StammtischArchivWatchdog?</div>`;}
-  p.innerHTML=h;}
+  p.innerHTML=h;
+  p.querySelectorAll("[data-steuer]").forEach(b=>b.onclick=()=>steuerBefehl(b.dataset.steuer));}
+function phaseStepHtml(phase){const p=(phase||"").toLowerCase();let cur=0;
+  if(/upload|hochgel|veröff|veroff/.test(p))cur=3;else if(/zusammen|protokoll/.test(p))cur=2;else if(/transk|ausricht|sprecher|diaris/.test(p))cur=1;else cur=0;
+  const steps=["Audio vorbereiten","Transkription & Sprechertrennung","Zusammenfassung","Veröffentlichen"];
+  return `<div class="steps">${steps.map((s,i)=>`<div class="step ${i<cur?'done':i===cur?'active':'todo'}"><span class="dot2">${i<cur?'✓':i===cur?'●':(i+1)}</span><span>${esc(s)}</span></div>`).join("")}</div>`;}
+async function steuerBefehl(befehl){const m=$("#steuerMsg");const namen={fortsetzen:"Lauf fortsetzen",ueberspringen:"aktuelle Datei überspringen",fehler_neu:"Fehlversuche zurücksetzen"};
+  if(befehl==="ueberspringen"&&!confirm("Die aktuell verarbeitete Datei überspringen und mit der nächsten weitermachen?"))return;
+  if(m){m.className="msg info";m.textContent="Sende Befehl…";}
+  const ziel=(LIVE_STATUS&&LIVE_STATUS.detail&&LIVE_STATUS.detail.cur_id)||null;
+  try{const {error}=await supa.from("steuerung").insert({befehl,ziel,angefordert_am:new Date().toISOString(),erledigt:false});if(error)throw error;
+    if(m){m.className="msg ok";m.textContent=`„${namen[befehl]||befehl}" gesendet. Der Wachhund führt das in Kürze aus.`;}announce("Befehl gesendet.");}
+  catch(e){if(m){m.className="msg err";m.textContent="Steuerung ist noch nicht eingerichtet (Tabelle steuerung fehlt). "+(e.message||e);}}}
 async function loadQueue(){const box=$("#queueList");box.innerHTML='<div class="msg info">Lade…</div>';
   try{const {data,error}=await supa.from("ingest").select("*").order("created",{ascending:false});if(error)throw error;
     box.innerHTML=data.length?data.map(q=>`<div class="qrow"><div><b>${esc(q.titel||q.id)}</b><div class="msg info">${esc(q.mode||"new")} · ${esc(q.datum||"")} ${q.message?("· "+esc(q.message)):""}</div></div><span class="qstatus ${q.status}">${q.status}</span></div>`).join(""):'<div class="nodata">Warteschlange leer.</div>';
