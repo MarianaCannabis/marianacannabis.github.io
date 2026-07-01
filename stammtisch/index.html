@@ -77,8 +77,16 @@
   .dhead .admin-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
   .speakers{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
   .sp-tag{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);display:inline-flex;align-items:center;gap:6px}.sp-tag .dot{width:9px;height:9px;border-radius:50%}
-  .miniplayer{padding:13px 24px;border-bottom:1px solid var(--line);background:var(--bg-2)}
-  .miniplayer audio{width:100%;height:38px}
+  .miniplayer{padding:14px 24px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(76,175,106,.10),var(--bg-2));border-top:2px solid var(--green);position:sticky;top:52px;z-index:6}
+  body.mobile .miniplayer{position:static;top:auto}
+  .miniplayer audio{width:100%;height:44px}
+  .pl-label{font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .pl-label span{font-weight:400;color:var(--muted);font-size:11.5px}
+  .pl-follow{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+  .pl-follow input{accent-color:var(--green)}
+  .wave{width:100%;height:64px;display:block;margin-bottom:9px;border-radius:8px;background:rgba(0,0,0,.18);cursor:pointer}
+  .pl-ablbl{font-size:11px;color:var(--gold);font-variant-numeric:tabular-nums}
+  .btn.small.on{border-color:var(--gold);color:var(--gold)}
   .mp-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:9px;font-size:12px;color:var(--muted)}
   .mp-row select{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:4px 7px;font-size:12px}
   .chapters{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
@@ -141,6 +149,8 @@
   .listbanner{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:13px;color:var(--muted)}
   .lntools{display:flex;gap:4px;align-self:flex-start;opacity:.6}.line:hover .lntools{opacity:1}.lntools button{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:2px 6px;cursor:pointer;font-size:12px}.lntools button:hover{color:var(--text);border-color:var(--green-dim)}
   .line.red .said{opacity:.55}.redbadge{font-size:10px;background:var(--red);color:#fff;border-radius:4px;padding:1px 5px;margin-left:6px}
+  .line.playing{background:rgba(76,175,106,.12);border-radius:8px;box-shadow:-3px 0 0 var(--green)}
+  .line.playing .said{color:#eafff1}
   .lnedit{width:100%;min-height:54px;background:var(--bg);border:1px solid var(--green-dim);color:var(--text);border-radius:7px;padding:7px 9px;font-size:14px}.lnedit-act{display:flex;gap:6px;margin-top:6px}
   abbr.gl{text-decoration:underline dotted var(--green-dim);text-underline-offset:2px;cursor:help}
   .nv-badge{font-size:10px;border-radius:5px;padding:1px 7px;margin-left:4px}.nv-offen{background:#3a2a1a;color:var(--amber)}.nv-laeuft{background:#1a2f3a;color:#6fb6d9}.nv-umgesetzt{background:#16331f;color:var(--green)}
@@ -345,6 +355,12 @@ function closeModal(o){o.hidden=true;if(lastFocus&&lastFocus.focus)try{lastFocus
 function trap(o,e){if(e.key==="Escape"){if(o.classList.contains("noquit")){e.preventDefault();return;}e.preventDefault();closeModal(o);return;}if(e.key!=="Tab")return;const f=[...o.querySelectorAll('button,[href],input:not([type=hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!f.length)return;const a=f[0],b=f[f.length-1];if(e.shiftKey&&document.activeElement===a){e.preventDefault();b.focus();}else if(!e.shiftKey&&document.activeElement===b){e.preventDefault();a.focus();}}
 document.querySelectorAll(".overlay").forEach(o=>{o.addEventListener("keydown",e=>trap(o,e));o.addEventListener("click",e=>{if(e.target===o&&!o.classList.contains("noquit"))closeModal(o);});});
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeModal(b.closest(".overlay")));
+document.addEventListener("keydown",e=>{const a=$("#aud");if(!a)return;const t=e.target;
+  if(t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable))return;
+  if([...document.querySelectorAll(".overlay")].some(o=>!o.hidden))return;
+  if(e.code==="Space"||e.key===" "){e.preventDefault();a.paused?a.play().catch(()=>{}):a.pause();}
+  else if(e.key==="ArrowLeft"){e.preventDefault();a.currentTime=Math.max(0,a.currentTime-5);}
+  else if(e.key==="ArrowRight"){e.preventDefault();a.currentTime=Math.min(a.duration||1e9,a.currentTime+5);}});
 
 /* ---- prefs ---- */
 function gp(k){try{return localStorage.getItem(k)==="1";}catch(e){return false;}}
@@ -457,10 +473,21 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
     <div class="personal"><button class="btn small" id="dBook">${isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen'}</button><button class="btn small" id="dNoteToggle">✎ Notiz${(NOTES[d.id]&&NOTES[d.id].trim())?' (vorhanden)':''}</button>${state.authed?'<button class="btn small" id="dShare">🔗 Teilen</button>':''}${(PLAYED[d.id]&&PLAYED[d.id].pos>15)?`<button class="btn small" id="dResume">▶ Fortsetzen bei ${fmt(PLAYED[d.id].pos)}</button>`:''}</div>
     <div id="noteBox" hidden style="margin-top:8px"><textarea id="dNote" placeholder="Persönliche Notiz (nur auf diesem Gerät gespeichert)" style="width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px">${esc(NOTES[d.id]||"")}</textarea></div>
     ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button><button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
-    ${src?`<div class="miniplayer"><audio id="aud" controls preload="none" src="${src}" ${noDL}></audio>
-      <div class="mp-row"><label>Tempo <select id="spd"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>1.75</option><option>2</option></select></label>
-      <span id="curChap"></span>${state.authed?'<button class="btn small ghost" id="shareAt">🔗 Stelle teilen</button>':''}${state.authed?`<a class="btn small" href="${src}" download>Audio herunterladen</a>`:""}</div>
-      <div class="chapters" id="chapters"></div></div>`:`<div class="miniplayer"><div class="msg info">Kein Audio vorhanden.</div></div>`}
+    ${src?`<div class="miniplayer" id="player">
+      <div class="pl-label">🎧 Original-Aufnahme <span>die verlässliche Quelle. Das Transkript hilft nur beim Finden und Einordnen.</span></div>
+      <canvas id="wave" class="wave" height="64" title="Klicken zum Springen"></canvas>
+      <audio id="aud" controls preload="metadata" src="${src}" ${noDL}></audio>
+      <div class="mp-row">
+        <button class="btn small" id="plBack" title="15 Sekunden zurück">⟲ 15s</button>
+        <button class="btn small" id="plFwd" title="15 Sekunden vor">15s ⟳</button>
+        <label>Tempo <select id="spd"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>1.75</option><option>2</option></select></label>
+        <button class="btn small" id="plAB" title="Passage in Schleife wiederholen">🔁 A setzen</button><span id="plABlbl" class="pl-ablbl"></span>
+        <label class="pl-follow"><input type="checkbox" id="plFollow"> Transkript folgt der Aufnahme</label>
+        <button class="btn small ghost" id="plToLine">↧ Aktuelle Stelle</button>
+        <span id="curChap"></span>
+        ${state.authed?'<button class="btn small ghost" id="shareAt">🔗 Stelle teilen</button>':''}${state.authed?`<a class="btn small" href="${src}" download>Audio herunterladen</a>`:""}
+      </div>
+      <div class="chapters" id="chapters"></div></div>`:`<div class="miniplayer"><div class="msg info">Für diesen Termin liegt keine Aufnahme vor.</div></div>`}
     <div class="tabs" role="tablist" id="tabs">
       <button role="tab" data-tab="summary">✨ Zusammenfassung</button>
       <button role="tab" data-tab="transcript">📝 Transkript${(d.transkript||[]).length?`<span class="badge">${d.transkript.length}</span>`:''}</button>
@@ -478,16 +505,56 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
 function renderTabBar(){$("#tabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.tab===state.tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.onclick=()=>{state.tab=b.dataset.tab;state.txQ="";state.txSp=null;state.hits=[];state.hit=-1;renderTabBar();renderTab(DATA.find(x=>x.id===state.current));};});}
 function setupPlayer(d){const a=$("#aud");if(!a)return;
   $("#spd").onchange=e=>a.playbackRate=parseFloat(e.target.value);
+  const DUR=()=>a.duration||d.dauer||1e9;
+  if($("#plBack"))$("#plBack").onclick=()=>{a.currentTime=Math.max(0,a.currentTime-15);};
+  if($("#plFwd"))$("#plFwd").onclick=()=>{a.currentTime=Math.min(DUR(),a.currentTime+15);};
+  const follow=$("#plFollow");if(follow){follow.checked=gp("st_follow");follow.onchange=()=>{sp_("st_follow",follow.checked);if(follow.checked)scrollToCurrentLine(d,false);};}
+  if($("#plToLine"))$("#plToLine").onclick=()=>scrollToCurrentLine(d,true);
   const chaps=(d.kapitel||[]).slice().sort((x,y)=>x.t-y.t);
   $("#chapters").innerHTML=chaps.map((c,i)=>`<button data-ct="${c.t}" data-ci="${i}">${fmt(c.t)} ${esc(c.titel)}</button>`).join("");
   $("#chapters").querySelectorAll("button").forEach(b=>b.onclick=()=>{a.currentTime=+b.dataset.ct;a.play&&a.play().catch(()=>{});});
-  let lastSave=0;
-  a.ontimeupdate=()=>{
-    const now=Date.now();if(now-lastSave>5000&&a.currentTime>5){lastSave=now;PLAYED[d.id]={pos:Math.floor(a.currentTime),at:now};lsSet("st_played",PLAYED);}
+  /* A-B Schleife */
+  let loopA=null,loopB=null;const abBtn=$("#plAB"),abLbl=$("#plABlbl");
+  function abUpdate(){if(abBtn)abBtn.textContent=loopA==null?"🔁 A setzen":(loopB==null?"🔁 B setzen":"🔁 Schleife aus");if(abBtn)abBtn.classList.toggle("on",loopA!=null&&loopB!=null);if(abLbl)abLbl.textContent=(loopA!=null&&loopB!=null)?`${fmt(loopA)}–${fmt(loopB)}`:(loopA!=null?`A ${fmt(loopA)}`:"");drawWave();}
+  if(abBtn)abBtn.onclick=()=>{if(loopA==null)loopA=a.currentTime;else if(loopB==null){const b=a.currentTime;if(b>loopA+0.5)loopB=b;else loopA=b;}else{loopA=null;loopB=null;}abUpdate();};
+  /* Wellenform */
+  const cv=$("#wave");const rawPeaks=(d.wellenform&&d.wellenform.length)?d.wellenform:null;
+  const pkMax=rawPeaks?(Math.max.apply(null,rawPeaks)||1):1;
+  function drawWave(){if(!cv)return;const dpr=window.devicePixelRatio||1;const W=cv.clientWidth||600,H=cv.clientHeight||64;
+    if(cv._W!==W||cv._dpr!==dpr){cv.width=W*dpr;cv.height=H*dpr;cv._W=W;cv._dpr=dpr;}
+    const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+    const dur=a.duration||d.dauer||0;const prog=dur?a.currentTime/dur:0;const mid=H/2;
+    if(rawPeaks){const n=rawPeaks.length,bw=W/n;for(let i=0;i<n;i++){const v=Math.max(0.02,rawPeaks[i]/pkMax);const bh=v*(H*0.92);const x=i*bw;ctx.fillStyle=(i/n)<=prog?"rgba(76,175,106,.92)":"rgba(150,170,158,.32)";ctx.fillRect(x,mid-bh/2,Math.max(1,bw-0.6),bh);}}
+    else{ctx.strokeStyle="rgba(150,170,158,.28)";ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(W,mid);ctx.stroke();ctx.fillStyle="rgba(76,175,106,.28)";ctx.fillRect(0,mid-2,W*prog,4);}
+    if(dur){(d.kapitel||[]).forEach(c=>{const x=c.t/dur*W;ctx.fillStyle="rgba(255,255,255,.4)";ctx.fillRect(x,0,1,9);});}
+    if(dur&&loopA!=null){const xa=loopA/dur*W;if(loopB!=null){const xb=loopB/dur*W;ctx.fillStyle="rgba(249,199,79,.14)";ctx.fillRect(xa,0,xb-xa,H);ctx.fillStyle="rgba(249,199,79,.95)";ctx.fillRect(xb-1,0,2,H);}ctx.fillStyle="rgba(249,199,79,.95)";ctx.fillRect(xa-1,0,2,H);}
+    if(dur){const px=prog*W;ctx.fillStyle="#eafff1";ctx.fillRect(px-1,0,2,H);}}
+  function seekFromEvent(ev){const dur=a.duration||d.dauer||0;if(!dur||!cv)return;const r=cv.getBoundingClientRect();const x=(ev.clientX-r.left)/r.width;a.currentTime=Math.max(0,Math.min(dur,x*dur));drawWave();}
+  if(cv){cv.style.touchAction="none";
+    cv.onpointerdown=e=>{try{cv.setPointerCapture(e.pointerId);}catch(_){}cv._drag=true;seekFromEvent(e);};
+    cv.onpointermove=e=>{if(cv._drag)seekFromEvent(e);};
+    cv.onpointerup=cv.onpointercancel=e=>{cv._drag=false;try{cv.releasePointerCapture(e.pointerId);}catch(_){}};}
+  let raf=null;const tick=()=>{drawWave();raf=requestAnimationFrame(tick);};
+  a.onplay=()=>{if(!raf)tick();};a.onpause=()=>{if(raf){cancelAnimationFrame(raf);raf=null;}drawWave();};
+  a.onloadedmetadata=drawWave;
+  let lastSave=0,lastFollow=0;
+  a.ontimeupdate=()=>{const now=Date.now();
+    if(loopA!=null&&loopB!=null&&a.currentTime>=loopB)a.currentTime=loopA;
+    if(now-lastSave>5000&&a.currentTime>5){lastSave=now;PLAYED[d.id]={pos:Math.floor(a.currentTime),at:now};lsSet("st_played",PLAYED);}
     if(chaps.length){let cur=-1;for(let i=0;i<chaps.length;i++)if(a.currentTime>=chaps[i].t)cur=i;
       $("#chapters").querySelectorAll("button").forEach((b,i)=>b.classList.toggle("cur",i===cur));
-      $("#curChap").textContent=cur>=0?("Kapitel: "+chaps[cur].titel):"";}};
-  a.onended=()=>{if(PLAYED[d.id]){PLAYED[d.id].pos=0;lsSet("st_played",PLAYED);}};}
+      $("#curChap").textContent=cur>=0?("Kapitel: "+chaps[cur].titel):"";}
+    highlightCurrentLine(d);
+    if(!raf)drawWave();
+    if(follow&&follow.checked&&now-lastFollow>1500){lastFollow=now;scrollToCurrentLine(d,false);}};
+  a.onended=()=>{if(PLAYED[d.id]){PLAYED[d.id].pos=0;lsSet("st_played",PLAYED);}if(raf){cancelAnimationFrame(raf);raf=null;}drawWave();};
+  abUpdate();drawWave();setTimeout(drawWave,60);}
+function currentLineIdx(d){const a=$("#aud");if(!a||!(d.transkript||[]).length)return -1;const t=a.currentTime;let idx=-1;for(let i=0;i<d.transkript.length;i++){if((d.transkript[i].t||0)<=t+0.01)idx=i;else break;}return idx;}
+function highlightCurrentLine(d){const box=$("#txlines");if(!box)return;const idx=currentLineIdx(d);const prev=box.querySelector(".line.playing");if(prev){if(+prev.dataset.idx===idx)return;prev.classList.remove("playing");}if(idx>=0){const el=box.querySelector(`.line[data-idx="${idx}"]`);if(el)el.classList.add("playing");}}
+function scrollToCurrentLine(d,force){const idx=currentLineIdx(d);if(idx<0)return;
+  if(state.tab!=="transcript"){if(!force)return;state.tab="transcript";state.txQ="";renderTabBar();renderTab(d);
+    setTimeout(()=>{const el=$("#txlines")&&$("#txlines").querySelector(`.line[data-idx="${idx}"]`);if(el)el.scrollIntoView({behavior:"smooth",block:"center"});highlightCurrentLine(d);},80);return;}
+  const el=$("#txlines").querySelector(`.line[data-idx="${idx}"]`);if(el)el.scrollIntoView({behavior:"smooth",block:"center"});}
 function seekAudio(t){const a=$("#aud");if(a){try{a.currentTime=t;a.play&&a.play().catch(()=>{});}catch(e){}}}
 function shareLink(id,t){let url=location.origin+location.pathname+"#e="+encodeURIComponent(id);if(t)url+="&t="+t;
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(()=>announce("Teilen-Link kopiert."),()=>window.prompt("Link kopieren:",url));
@@ -565,7 +632,8 @@ function renderLines(d){const box=$("#txlines"),q=state.txQ.trim().toLowerCase()
     box.querySelectorAll(".who.editable").forEach(el=>el.onclick=()=>renameSpeaker(d,+el.dataset.sp));
     box.querySelectorAll("[data-red]").forEach(b=>b.onclick=()=>toggleRedact(d,+b.dataset.red));
     box.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editLine(d,+b.dataset.edit));
-  } else box.querySelectorAll("[data-report]").forEach(b=>b.onclick=()=>reportTypo(d,+b.dataset.report));}
+  } else box.querySelectorAll("[data-report]").forEach(b=>b.onclick=()=>reportTypo(d,+b.dataset.report));
+  highlightCurrentLine(d);}
 async function saveTranskript(d){try{await supa.from("stammtische").update({transkript:d.transkript,volltext:volltext(d)}).eq("id",d.id);}catch(e){alert("Speichern fehlgeschlagen: "+(e.message||e));}}
 function editLine(d,idx){const said=$(`[data-said="${idx}"]`);if(!said)return;const cur=d.transkript[idx].text;
   said.innerHTML=`<textarea class="lnedit">${esc(cur)}</textarea><div class="lnedit-act"><button class="btn small" data-ok>Speichern</button><button class="btn small ghost" data-cancel>Abbrechen</button></div>`;
