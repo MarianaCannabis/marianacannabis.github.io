@@ -171,6 +171,24 @@
   .menu.open .menu-trigger{border-color:var(--green)}
   .menu-panel{position:absolute;top:calc(100% + 6px);right:0;min-width:210px;background:var(--panel-solid);border:1px solid var(--line);border-radius:12px;padding:6px;display:none;flex-direction:column;gap:3px;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.45)}
   .menu.open .menu-panel{display:flex}
+  /* Handy: Menues volle Breite (Akkordeon), groessere Touch-Flaechen, kompaktere Modale */
+  body.mobile .menu,@media(max-width:880px){.menu{display:block;width:100%}}
+  body.mobile .menu-trigger{width:100%;justify-content:space-between}
+  body.mobile .menu-panel{position:static;width:100%;min-width:0;margin-top:6px;box-shadow:none}
+  body.mobile .btn.small{padding:9px 12px;font-size:13px}
+  @media(max-width:880px){
+    .topbar-in{padding:12px 14px;gap:8px}
+    .menu-trigger{width:100%;justify-content:space-between}
+    .menu-panel{position:static;width:100%;min-width:0;margin-top:6px;box-shadow:none}
+    .btn.small{padding:9px 12px;font-size:13px}
+    .steuerrow{gap:8px}
+    .overlay{padding:10px}
+    .modal{max-height:94vh}
+    .modal-head{padding:14px 16px}.modal-body{padding:16px}.modal-foot{padding:12px 16px}
+    .dhead{padding:16px 16px 12px}.dhead h2{font-size:19px}
+    .miniplayer{padding:12px 16px}
+    .doc-item{flex-direction:column}.doc-actions{flex-direction:row}
+  }
   .menu-item{width:100%;justify-content:flex-start;text-align:left;background:transparent;border-color:transparent}
   .menu-item:hover{background:rgba(255,255,255,.05);border-color:var(--line)}
   .menu-item[hidden]{display:none}
@@ -225,24 +243,24 @@
     <button class="btn" id="btnStats">Statistik</button>
     <button class="btn primary" id="btnWizard" hidden>＋ Hochladen</button>
     <div class="menu" id="menuAuswertung" hidden>
-      <button class="btn menu-trigger" aria-haspopup="true" aria-expanded="false">Auswertung <span class="caret">▾</span></button>
-      <div class="menu-panel" role="menu">
+      <button class="btn menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="panelAuswertung">Auswertung <span class="caret" aria-hidden="true">▾</span></button>
+      <div class="menu-panel" id="panelAuswertung" role="group" aria-label="Auswertung">
         <button class="btn menu-item" id="btnGesamt">Gesamtprotokoll</button>
         <button class="btn menu-item" id="btnProtokoll">Beschlüsse &amp; Aufgaben</button>
         <button class="btn menu-item" id="btnResearch">🔎 Recherche</button>
       </div>
     </div>
     <div class="menu" id="menuVerwaltung" hidden>
-      <button class="btn menu-trigger" aria-haspopup="true" aria-expanded="false">Verwaltung <span class="caret">▾</span></button>
-      <div class="menu-panel" role="menu">
+      <button class="btn menu-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="panelVerwaltung">Verwaltung <span class="caret" aria-hidden="true">▾</span></button>
+      <div class="menu-panel" id="panelVerwaltung" role="group" aria-label="Verwaltung">
         <button class="btn menu-item" id="btnQueue">Status &amp; Warteschlange</button>
         <button class="btn menu-item" id="btnPflege">Pflege</button>
         <button class="btn menu-item" id="btnBackup">Sicherung &amp; Export</button>
       </div>
     </div>
     <div class="menu" id="menuVorstand" hidden>
-      <button class="btn menu-trigger gold" aria-haspopup="true" aria-expanded="false">🔒 Vorstand <span class="caret">▾</span></button>
-      <div class="menu-panel" role="menu">
+      <button class="btn menu-trigger gold" aria-haspopup="true" aria-expanded="false" aria-controls="panelVorstand">🔒 Vorstand <span class="caret" aria-hidden="true">▾</span></button>
+      <div class="menu-panel" id="panelVorstand" role="group" aria-label="Vorstand">
         <button class="btn menu-item" id="btnIntern" title="Interner Vorstandsbereich">Vorstandsbereich öffnen</button>
         <button class="btn menu-item" id="btnDocs" hidden>Dokumente</button>
         <button class="btn menu-item" id="btnLog" hidden title="Zugriffsprotokoll (nur Admin)">Zugriffe</button>
@@ -586,8 +604,8 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
     ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button><button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
     ${src?`<div class="miniplayer" id="player">
       <div class="pl-label">🎧 Original-Aufnahme <span>die verlässliche Quelle. Das Transkript hilft nur beim Finden und Einordnen.</span></div>
-      <canvas id="wave" class="wave" height="64" title="Klicken zum Springen"></canvas>
-      <audio id="aud" controls preload="metadata" src="${src}" ${noDL}></audio>
+      <canvas id="wave" class="wave" height="64" title="Klicken zum Springen" aria-hidden="true"></canvas>
+      <audio id="aud" controls preload="metadata" src="${src}" aria-label="Audioaufnahme des Stammtischs" ${noDL}></audio>
       <div class="mp-row">
         <button class="btn small" id="plBack" title="15 Sekunden zurück">⟲ 15s</button>
         <button class="btn small" id="plFwd" title="15 Sekunden vor">15s ⟳</button>
@@ -1076,11 +1094,11 @@ $("#loginGo").onclick=async()=>{const pw=$("#loginPw").value,msg=$("#loginMsg");
 $("#loginPw").addEventListener("keydown",e=>{if(e.key==="Enter")$("#loginGo").click();});
 
 /* ---- Kopfleisten-Menues (gruppiert) ---- */
-function closeMenus(except){document.querySelectorAll(".menu.open").forEach(m=>{if(m!==except){m.classList.remove("open");const t=m.querySelector(".menu-trigger");if(t)t.setAttribute("aria-expanded","false");}});}
-document.querySelectorAll(".menu .menu-trigger").forEach(tr=>{tr.onclick=e=>{e.stopPropagation();const m=tr.parentElement,open=m.classList.contains("open");closeMenus();if(!open){m.classList.add("open");tr.setAttribute("aria-expanded","true");}};});
+function closeMenus(except,restoreFocus){document.querySelectorAll(".menu.open").forEach(m=>{if(m!==except){m.classList.remove("open");const t=m.querySelector(".menu-trigger");if(t){t.setAttribute("aria-expanded","false");if(restoreFocus)try{t.focus();}catch(e){}}}});}
+document.querySelectorAll(".menu .menu-trigger").forEach(tr=>{tr.onclick=e=>{e.stopPropagation();const m=tr.parentElement,open=m.classList.contains("open");closeMenus();if(!open){m.classList.add("open");tr.setAttribute("aria-expanded","true");const first=m.querySelector(".menu-item:not([hidden])");if(first)setTimeout(()=>{try{first.focus();}catch(e){}},30);}};});
 document.querySelectorAll(".menu-panel .menu-item").forEach(b=>b.addEventListener("click",()=>closeMenus()));
 document.addEventListener("click",e=>{if(!e.target.closest(".menu"))closeMenus();});
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMenus();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.querySelector(".menu.open"))closeMenus(null,true);});
 function internBanner(show){let b=$("#internBanner");
   if(show){if(!b){b=document.createElement("div");b.id="internBanner";b.className="intern-banner";document.querySelector(".wrap").before(b);}b.innerHTML='🔒 Interner Vorstandsbereich · Inhalte sind nur für Vorstand und Admin sichtbar. <button class="btn small" id="internBack">Zurück zum öffentlichen Archiv</button>';$("#internBack").onclick=()=>setMode("pub");}
   else if(b){b.remove();}}
@@ -1095,6 +1113,7 @@ async function setMode(m){if(m==="int"){
   }else{DATA=DATA_PUB;state.mode="pub";$("#btnDocs").hidden=true;$("#btnLog").hidden=true;$("#btnIntern").textContent="Vorstandsbereich öffnen";internBanner(false);}
   state.current=null;state.q="";$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
   buildFacets();computeSince();renderFacets();renderList();renderDetail();
+  announce(state.mode==="int"?"Interner Vorstandsbereich aktiv. Inhalte nur für Vorstand und Admin.":"Öffentliches Archiv.");
   document.querySelector(".wrap").scrollIntoView({block:"start"});}
 $("#btnIntern").onclick=()=>setMode(state.mode==="int"?"pub":"int");
 function logIntern(aktion,sid,detail){if(!supa||!state.email)return;
