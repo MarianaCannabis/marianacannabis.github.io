@@ -158,7 +158,9 @@
   .rech-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
   .rech-tools input[type=search]{flex:1;min-width:220px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 12px;font-size:14px}
   .rech-scope{margin-bottom:10px}
-  .rech-modes{display:flex;gap:6px;margin-bottom:12px}
+  .rech-modes{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .ki-note{font-size:12px;color:var(--gold);background:rgba(249,199,79,.10);border:1px solid var(--line);border-radius:8px;padding:8px 11px;margin-bottom:12px}
+  .ki-prose{line-height:1.65;font-size:14px;color:var(--text);margin-bottom:12px}
   .rech-sess{margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px}
   .rech-sess h4{margin:0 0 6px;font-size:14px}.rech-sess h4 .reset{color:var(--gold);font-size:14px}
   .rech-hit{padding:7px 10px;border:1px solid var(--line);border-radius:8px;margin:5px 0;cursor:pointer;background:rgba(255,255,255,.02)}
@@ -922,17 +924,50 @@ function research(){if(!state.authed)return;const raw=$("#rechQ").value.trim();
   const {results,total}=computeResearch(raw,$("#rechSort").value);
   $("#rechScope").textContent=`${total} Fundstellen in ${results.length} Sitzungen für „${raw}".`;
   if(!results.length){$("#rechBody").innerHTML='<div class="msg info">Keine Fundstellen.</div>';return;}
-  const modes=`<div class="rech-modes"><button class="btn small ${rechMode==='details'?'on':''}" data-rmode="details">Fundstellen</button><button class="btn small ${rechMode==='summary'?'on':''}" data-rmode="summary">Zusammenfassung</button></div>`;
-  $("#rechBody").innerHTML=modes+(rechMode==="summary"?rechSummaryHtml(results,raw,total):rechDetailsHtml(results,raw));
+  const modes=`<div class="rech-modes"><button class="btn small ${rechMode==='details'?'on':''}" data-rmode="details">Fundstellen</button><button class="btn small ${rechMode==='summary'?'on':''}" data-rmode="summary">Zusammenfassung</button><button class="btn small ${rechMode==='ki'?'on':''}" data-rmode="ki">🧠 KI-Zusammenfassung</button></div>`;
+  $("#rechBody").innerHTML=modes+(rechMode==="summary"?rechSummaryHtml(results,raw,total):rechMode==="ki"?kiPanelHtml(raw,results,total):rechDetailsHtml(results,raw));
   $("#rechBody").querySelectorAll("[data-rmode]").forEach(b=>b.onclick=()=>{rechMode=b.dataset.rmode;research();});
   $("#rechBody").querySelectorAll(".rech-hit").forEach(el=>el.onclick=()=>rechJump(el.dataset,raw));
-  $("#rechBody").querySelectorAll("[data-open]").forEach(b=>b.onclick=e=>{e.stopPropagation();rechJump({id:b.dataset.open,kind:"Titel"},raw);});}
+  $("#rechBody").querySelectorAll("[data-open]").forEach(b=>b.onclick=e=>{e.stopPropagation();rechJump({id:b.dataset.open,kind:"Titel"},raw);});
+  const kb=$("#kiStart");if(kb)kb.onclick=()=>startKiJob(raw,results);
+  const kr=$("#kiRedo");if(kr)kr.onclick=()=>{kiState.status=null;startKiJob(raw,results);};}
 function rechJump(ds,raw){closeModal($("#ovResearch"));state.current=ds.id;state.txSp=null;state.hits=[];state.hit=-1;state.autohit=null;
   if(ds.kind==="Transkript"){state.tab="transcript";state.txQ=raw||"";}
   else if(ds.kind==="Folientext"){state.tab="slides";state.txQ=raw||"";}
   else{state.tab="summary";state.txQ="";}
   renderList();renderDetail(true);
   setTimeout(()=>{if(ds.idx!=null){const el=$("#txlines")&&$("#txlines").querySelector(`.line[data-idx="${ds.idx}"]`);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("playing");}}if(ds.t!=null)seekAudio(parseInt(ds.t));},320);}
+let kiState={query:null,scope:null,status:null,text:null,fehler:null,id:null,timer:null};
+function stripHtml(s){return (""+s).replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#39;/g,"'").trim();}
+function kiPayload(raw,results){
+  const sess=results.slice(0,40).map(r=>({datum:r.d.datum,titel:r.d.titel,
+    fundstellen:r.hits.slice(0,8).map(h=>({art:h.kind,text:stripHtml(h.snippet)}))}));
+  return {query:raw,scope:state.mode,sitzungen:sess};}
+function kiPanelHtml(raw,results,total){
+  const ready=kiState.query===raw&&kiState.scope===state.mode;
+  if(ready&&kiState.status==="fertig")return `<div class="ki-note">🧠 Lokal mit Ollama aus ${results.length} Sitzungen erstellt. Bitte inhaltlich prüfen, eine KI kann sich irren.</div><div class="ki-prose">${esc(kiState.text||"").replace(/\n/g,"<br>")}</div><button class="btn small" id="kiRedo">Neu erstellen</button>`;
+  if(ready&&kiState.status==="laeuft")return `<div class="msg info">🧠 Die KI-Zusammenfassung wird gerade auf deinem lokalen Rechner erstellt … Das kann einen Moment dauern, das Fenster kann offen bleiben.</div>`;
+  if(ready&&kiState.status==="fehler")return `<div class="msg err">Konnte nicht erstellt werden: ${esc(kiState.fehler||"unbekannt")}</div><button class="btn small" id="kiStart">Erneut versuchen</button>`;
+  return `<div class="msg info">Eine zusammenhängende Prosa-Zusammenfassung zu „${esc(raw)}" aus ${results.length} Sitzungen (${total} Fundstellen), lokal mit Ollama auf deinem Rechner erstellt. Kein Text verlässt eure Infrastruktur.</div><button class="btn primary" id="kiStart" style="margin-top:10px">🧠 KI-Zusammenfassung lokal erstellen</button>`;}
+async function startKiJob(raw,results){
+  if(!supa||!state.email){kiState.status="fehler";kiState.fehler="Nicht angemeldet.";research();return;}
+  if(kiState.timer){clearInterval(kiState.timer);kiState.timer=null;}
+  const id="rj_"+Date.now()+"_"+Math.random().toString(36).slice(2,6);
+  kiState={query:raw,scope:state.mode,status:"laeuft",text:null,fehler:null,id,timer:null};
+  research();
+  try{
+    const {error}=await supa.from("recherche_jobs").insert({id,query:raw,scope:state.mode,payload:kiPayload(raw,results),status:"offen",angefordert_von:state.email});
+    if(error)throw error;
+    if(state.mode==="int")logIntern("ki_recherche",null,raw);
+    let tries=0;
+    kiState.timer=setInterval(async()=>{tries++;
+      try{const {data}=await supa.from("recherche_jobs").select("status,ergebnis,fehler").eq("id",id).maybeSingle();
+        if(data&&data.status==="fertig"){clearInterval(kiState.timer);kiState.timer=null;if(kiState.id===id){kiState.status="fertig";kiState.text=data.ergebnis||"(leer)";if(!$("#ovResearch").hidden)research();}}
+        else if(data&&data.status==="fehler"){clearInterval(kiState.timer);kiState.timer=null;if(kiState.id===id){kiState.status="fehler";kiState.fehler=data.fehler||"unbekannt";if(!$("#ovResearch").hidden)research();}}
+      }catch(e){}
+      if(tries>=60){clearInterval(kiState.timer);kiState.timer=null;if(kiState.id===id&&kiState.status==="laeuft"){kiState.status="fehler";kiState.fehler="Zeitüberschreitung. Läuft der lokale Rechner? Bitte später erneut versuchen.";if(!$("#ovResearch").hidden)research();}}
+    },4000);
+  }catch(e){kiState.status="fehler";kiState.fehler=e.message||(""+e);research();}}
 function researchPdf(){if(!state.authed)return;const raw=$("#rechQ").value.trim();if(!raw)return;const {results,total}=computeResearch(raw,$("#rechSort").value);if(!results.length)return;
   const w=window.open("","_blank");if(!w){$("#rechMsg").textContent="Bitte Pop-ups erlauben.";return;}
   const css="body{font-family:Georgia,serif;color:#111;max-width:820px;margin:24px auto;padding:0 18px;line-height:1.55}h1{font-size:20px}h2{font-size:15px;margin-top:20px;border-bottom:1px solid #ccc}h3{font-size:13px;margin:16px 0 4px}.kind{color:#666;font-size:11px}.snip{margin:2px 0 8px}.hl{background:#fde68a}p{margin:6px 0}";
