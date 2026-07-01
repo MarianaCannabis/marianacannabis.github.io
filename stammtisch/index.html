@@ -155,6 +155,15 @@
   .dnav{display:flex;align-items:center;gap:10px;margin-bottom:10px}
   .dnav .dnav-pos{font-size:12px;color:var(--muted-2);font-variant-numeric:tabular-nums}
   .dnav button[disabled]{opacity:.4;cursor:default}
+  .rech-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .rech-tools input[type=search]{flex:1;min-width:220px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 12px;font-size:14px}
+  .rech-scope{margin-bottom:10px}
+  .rech-sess{margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px}
+  .rech-sess h4{margin:0 0 6px;font-size:14px}.rech-sess h4 .reset{color:var(--gold);font-size:14px}
+  .rech-hit{padding:7px 10px;border:1px solid var(--line);border-radius:8px;margin:5px 0;cursor:pointer;background:rgba(255,255,255,.02)}
+  .rech-hit:hover{border-color:var(--green)}
+  .rech-kind{display:block;font-size:11px;color:var(--muted-2);margin-bottom:2px}
+  .rech-snip{font-size:13.5px;color:var(--text);line-height:1.5}
   .line.playing .said{color:#eafff1}
   .lnedit{width:100%;min-height:54px;background:var(--bg);border:1px solid var(--green-dim);color:var(--text);border-radius:7px;padding:7px 9px;font-size:14px}.lnedit-act{display:flex;gap:6px;margin-top:6px}
   abbr.gl{text-decoration:underline dotted var(--green-dim);text-underline-offset:2px;cursor:help}
@@ -192,6 +201,7 @@
     <div class="spacer"></div>
     <button class="btn" id="btnStats">Statistik</button>
     <button class="btn" id="btnGesamt" hidden>Gesamtprotokoll</button>
+    <button class="btn" id="btnResearch" hidden>🔎 Recherche</button>
     <button class="btn" id="btnProtokoll" hidden>Beschlüsse &amp; Aufgaben</button>
     <button class="btn" id="btnHelp" title="Kurzanleitung">Hilfe</button>
     <button class="btn icon" id="btnMobile" aria-pressed="false" title="Handy-Ansicht" aria-label="Handy-Ansicht umschalten">📱</button>
@@ -325,6 +335,19 @@
   <div class="modal-head"><h3>Gesamtprotokoll</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body"><div class="gp-tools"><label>Reihenfolge <select class="sel" id="gpSort"><option value="desc">neueste zuerst</option><option value="asc">älteste zuerst</option></select></label><button class="btn small" id="gpPrint">Drucken / PDF</button></div><div id="gpBody"></div></div>
   <div class="modal-foot"><span class="msg info" id="gpMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovResearch" hidden role="dialog" aria-modal="true" aria-label="Recherche"><div class="modal modal-wide">
+  <div class="modal-head"><h3>🔎 Recherche</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <div class="rech-tools">
+      <input type="search" id="rechQ" placeholder="Begriff, z. B. Bonus … (mehrere Wörter: alle müssen vorkommen, &quot;in Anführungszeichen&quot; = genaue Wortfolge)" autocomplete="off">
+      <select id="rechSort" class="sel"><option value="chrono_desc">neueste zuerst</option><option value="chrono_asc">älteste zuerst</option><option value="count">meiste Treffer zuerst</option></select>
+      <button class="btn small" id="rechPdf">Als PDF</button>
+    </div>
+    <div class="rech-scope msg info" id="rechScope"></div>
+    <div id="rechBody"><div class="msg info">Gib oben einen Begriff ein. Durchsucht Titel, Themen, Zusammenfassungen, Beschlüsse, Aufgaben, Folientexte und alle Transkripte, chronologisch geordnet. Klick auf eine Fundstelle springt genau dorthin.</div></div>
+  </div>
+  <div class="modal-foot"><span class="msg info" id="rechMsg">Nur für Admin und Vorstand.</span><button class="btn" data-close>Schließen</button></div></div></div>
 
 <div class="overlay" id="ovProtokoll" hidden role="dialog" aria-modal="true" aria-label="Protokoll"><div class="modal">
   <div class="modal-head"><h3>Protokoll über alle Stammtische</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -750,6 +773,48 @@ function openHits(){const q=state.q.trim().toLowerCase();if(!q)return;const out=
 /* ---- Hilfe ---- */
 $("#btnHelp").onclick=()=>openModal($("#ovHelp"));
 
+/* ---- Recherche (Admin + Vorstand) ---- */
+function spName(d,i){return (d.sprecher&&d.sprecher[i])||("Sprecher "+(i!=null?i+1:"?"));}
+function rechTokens(raw){const ph=raw.match(/^"(.+)"$/);return ph?[ph[1].toLowerCase()]:raw.toLowerCase().split(/\s+/).filter(Boolean);}
+function rechSnip(text,tokens){text=""+text;const low=text.toLowerCase();let pos=-1;for(const tok of tokens){const p=low.indexOf(tok);if(p>=0&&(pos<0||p<pos))pos=p;}if(pos<0)pos=0;const start=Math.max(0,pos-60),end=Math.min(text.length,pos+150);let s=(start>0?"… ":"")+text.slice(start,end)+(end<text.length?" …":"");let out=esc(s);const re=new RegExp("("+tokens.map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")","gi");return out.replace(re,'<span class="hl">$1</span>');}
+function computeResearch(raw,sort){const tokens=rechTokens(raw);const m=txt=>{if(txt==null||txt==="")return false;const t=(""+txt).toLowerCase();return tokens.every(tok=>t.includes(tok));};
+  const results=[];
+  for(const d of DATA){const z=d.zusammenfassung||{};const hits=[];
+    const add=(kind,text,ex)=>{if(m(text))hits.push(Object.assign({kind,snippet:rechSnip(text,tokens)},ex||{}));};
+    add("Titel",d.titel);(d.themen||[]).forEach(t=>add("Thema",t));
+    add("Einleitung",z.lead);
+    (z.sachstand&&z.sachstand.length?z.sachstand:(z.punkte||[])).forEach(s=>add("Sachstand",s));
+    (z.fragen||[]).forEach(s=>add("Fragen & Reaktionen",s));
+    (z.offene_fragen||[]).forEach(s=>add("Offen geblieben",s));
+    (z.beschluesse||[]).forEach(s=>add("Beschluss",s));
+    (z.aufgaben||[]).forEach(a=>add("Aufgabe",(a&&a.text!=null)?a.text:a));
+    if(m(d.folientext))hits.push({kind:"Folientext",snippet:rechSnip(d.folientext,tokens)});
+    (d.transkript||[]).forEach((l,i)=>{if(l.red)return;if(m(l.text))hits.push({kind:"Transkript",t:l.t,idx:i,sp:l.sp,snippet:rechSnip(l.text,tokens)});});
+    if(hits.length)results.push({d,hits});}
+  results.sort((a,b)=>sort==="count"?(b.hits.length-a.hits.length)||b.d.datum.localeCompare(a.d.datum):sort==="chrono_asc"?a.d.datum.localeCompare(b.d.datum):b.d.datum.localeCompare(a.d.datum));
+  return {results,total:results.reduce((s,r)=>s+r.hits.length,0),tokens};}
+function research(){if(!state.authed)return;const raw=$("#rechQ").value.trim();
+  if(!raw){$("#rechBody").innerHTML='<div class="msg info">Gib oben einen Begriff ein…</div>';$("#rechScope").textContent="";return;}
+  const {results,total}=computeResearch(raw,$("#rechSort").value);
+  $("#rechScope").textContent=`${total} Fundstellen in ${results.length} Sitzungen für „${raw}".`;
+  if(!results.length){$("#rechBody").innerHTML='<div class="msg info">Keine Fundstellen.</div>';return;}
+  $("#rechBody").innerHTML=results.map(r=>`<section class="rech-sess"><h4><button class="reset" data-open="${esc(r.d.id)}">${fmtDate(r.d.datum)} · ${esc(r.d.titel)}</button> <span class="msg info">${r.hits.length}×</span></h4>${r.hits.map(h=>`<div class="rech-hit" data-id="${esc(r.d.id)}" data-kind="${esc(h.kind)}"${h.t!=null?` data-t="${h.t}"`:""}${h.idx!=null?` data-idx="${h.idx}"`:""}><span class="rech-kind">${esc(h.kind)}${h.t!=null?(" · "+fmt(h.t)):""}${h.sp!=null?(" · "+esc(spName(r.d,h.sp))):""}</span><span class="rech-snip">${h.snippet}</span></div>`).join("")}</section>`).join("");
+  $("#rechBody").querySelectorAll(".rech-hit").forEach(el=>el.onclick=()=>rechJump(el.dataset,raw));
+  $("#rechBody").querySelectorAll("[data-open]").forEach(b=>b.onclick=e=>{e.stopPropagation();rechJump({id:b.dataset.open,kind:"Titel"},raw);});}
+function rechJump(ds,raw){closeModal($("#ovResearch"));state.current=ds.id;state.txSp=null;state.hits=[];state.hit=-1;state.autohit=null;
+  if(ds.kind==="Transkript"){state.tab="transcript";state.txQ=raw||"";}
+  else if(ds.kind==="Folientext"){state.tab="slides";state.txQ=raw||"";}
+  else{state.tab="summary";state.txQ="";}
+  renderList();renderDetail(true);
+  setTimeout(()=>{if(ds.idx!=null){const el=$("#txlines")&&$("#txlines").querySelector(`.line[data-idx="${ds.idx}"]`);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("playing");}}if(ds.t!=null)seekAudio(parseInt(ds.t));},320);}
+function researchPdf(){if(!state.authed)return;const raw=$("#rechQ").value.trim();if(!raw)return;const {results,total}=computeResearch(raw,$("#rechSort").value);if(!results.length)return;
+  const w=window.open("","_blank");if(!w){$("#rechMsg").textContent="Bitte Pop-ups erlauben.";return;}
+  const css="body{font-family:Georgia,serif;color:#111;max-width:820px;margin:24px auto;padding:0 18px;line-height:1.5}h1{font-size:20px}h2{font-size:15px;margin-top:20px;border-bottom:1px solid #ccc}.kind{color:#666;font-size:11px}.snip{margin:2px 0 8px}mark{background:#fde68a}.hl{background:#fde68a}";
+  const body=`<h1>Recherche: „${esc(raw)}"</h1><p class="kind">${total} Fundstellen in ${results.length} Sitzungen · Stand ${fmtDate(new Date().toISOString().slice(0,10))}</p>`+results.map(r=>`<h2>${fmtDate(r.d.datum)} · ${esc(r.d.titel)} (${r.hits.length}×)</h2>`+r.hits.map(h=>`<div><span class="kind">${esc(h.kind)}${h.t!=null?(" · "+fmt(h.t)):""}</span><div class="snip">${h.snippet}</div></div>`).join("")).join("");
+  w.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Recherche ${esc(raw)}</title><style>${css}</style></head><body>${body}<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script></body></html>`);w.document.close();}
+$("#btnResearch").onclick=()=>{openModal($("#ovResearch"));setTimeout(()=>$("#rechQ").focus(),60);};
+$("#rechQ").oninput=research;$("#rechSort").onchange=research;$("#rechPdf").onclick=researchPdf;
+
 /* ---- Gesamtprotokoll (für alle) ---- */
 function gpList(){const order=state.gpSort||"desc";return DATA.filter(d=>{const z=d.zusammenfassung||{};return z.lead||(z.sachstand&&z.sachstand.length)||(z.punkte&&z.punkte.length);}).sort((a,b)=>order==="asc"?a.datum.localeCompare(b.datum):b.datum.localeCompare(a.datum));}
 function gpEntryHtml(d){const z=d.zusammenfassung||{};const sach=(z.sachstand&&z.sachstand.length?z.sachstand:(z.punkte||[]));
@@ -828,7 +893,7 @@ async function reprocess(d,mode){const txt=mode==="retranscribe"?"komplett neu t
 
 /* ---- auth ---- */
 async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.auth.getSession();setAuthed(!!session);}
-function setAuthed(on){state.authed=on;$("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!on;$("#btnQueue").hidden=!on;$("#btnBackup").hidden=!on;$("#btnPflege").hidden=!on;$("#btnProtokoll").hidden=!on;$("#btnGesamt").hidden=!on;renderDetail();}
+function setAuthed(on){state.authed=on;$("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!on;$("#btnQueue").hidden=!on;$("#btnBackup").hidden=!on;$("#btnPflege").hidden=!on;$("#btnProtokoll").hidden=!on;$("#btnGesamt").hidden=!on;$("#btnResearch").hidden=!on;renderDetail();}
 $("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";openModal($("#ovLogin"));};
 $("#btnLogout").onclick=async()=>{await supa.auth.signOut();setAuthed(false);announce("Abgemeldet.");};
 $("#loginGo").onclick=async()=>{const pw=$("#loginPw").value,msg=$("#loginMsg");msg.textContent="Anmelden…";msg.className="msg info";
