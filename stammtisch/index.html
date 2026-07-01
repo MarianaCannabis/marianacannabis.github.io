@@ -296,6 +296,16 @@
   </div>
   <div class="modal-foot"><span></span><button class="btn" data-close>Schließen</button></div></div></div>
 
+<div class="overlay noquit" id="ovIntro" hidden role="dialog" aria-modal="true" aria-labelledby="introTitle"><div class="modal">
+  <div class="modal-head"><h3 id="introTitle">Kurz vorab</h3></div>
+  <div class="modal-body">
+    <p>Schön, dass du reinschaust. Ein kurzer Hinweis, bevor es losgeht.</p>
+    <p>Die Zusammenfassungen und Transkripte in diesem Archiv werden automatisch erstellt und können Fehler enthalten, etwa bei Namen, Zahlen oder undeutlichen Stellen. Sie sind als Orientierung und zum schnellen Finden gedacht, nicht als wortgenaues Protokoll.</p>
+    <p>Wenn es auf den genauen Inhalt ankommt, hör dir bitte immer die eigentliche Aufnahme an und sieh dir die zugehörigen Folien an. Die Audioaufnahme ist die verlässliche Quelle, der Text hilft dir nur beim Einordnen.</p>
+    <p class="msg info">Diesen Hinweis findest du später jederzeit wieder unter „Hilfe".</p>
+  </div>
+  <div class="modal-foot"><span></span><button class="btn primary" id="introOk">Verstanden, los geht's</button></div></div></div>
+
 <div class="overlay" id="ovGesamt" hidden role="dialog" aria-modal="true" aria-label="Gesamtprotokoll"><div class="modal modal-wide">
   <div class="modal-head"><h3>Gesamtprotokoll</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body"><div class="gp-tools"><label>Reihenfolge <select class="sel" id="gpSort"><option value="desc">neueste zuerst</option><option value="asc">älteste zuerst</option></select></label><button class="btn small" id="gpPrint">Drucken / PDF</button></div><div id="gpBody"></div></div>
@@ -332,8 +342,8 @@ function announce(m){const e=$("#srlive");if(e){e.textContent="";setTimeout(()=>
 let lastFocus=null;
 function openModal(o){lastFocus=document.activeElement;o.hidden=false;const f=o.querySelector('input,button,select,textarea,[href]');if(f)setTimeout(()=>f.focus(),40);}
 function closeModal(o){o.hidden=true;if(lastFocus&&lastFocus.focus)try{lastFocus.focus();}catch(e){}}
-function trap(o,e){if(e.key==="Escape"){e.preventDefault();closeModal(o);return;}if(e.key!=="Tab")return;const f=[...o.querySelectorAll('button,[href],input:not([type=hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!f.length)return;const a=f[0],b=f[f.length-1];if(e.shiftKey&&document.activeElement===a){e.preventDefault();b.focus();}else if(!e.shiftKey&&document.activeElement===b){e.preventDefault();a.focus();}}
-document.querySelectorAll(".overlay").forEach(o=>{o.addEventListener("keydown",e=>trap(o,e));o.addEventListener("click",e=>{if(e.target===o)closeModal(o);});});
+function trap(o,e){if(e.key==="Escape"){if(o.classList.contains("noquit")){e.preventDefault();return;}e.preventDefault();closeModal(o);return;}if(e.key!=="Tab")return;const f=[...o.querySelectorAll('button,[href],input:not([type=hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!f.length)return;const a=f[0],b=f[f.length-1];if(e.shiftKey&&document.activeElement===a){e.preventDefault();b.focus();}else if(!e.shiftKey&&document.activeElement===b){e.preventDefault();a.focus();}}
+document.querySelectorAll(".overlay").forEach(o=>{o.addEventListener("keydown",e=>trap(o,e));o.addEventListener("click",e=>{if(e.target===o&&!o.classList.contains("noquit"))closeModal(o);});});
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeModal(b.closest(".overlay")));
 
 /* ---- prefs ---- */
@@ -1010,6 +1020,8 @@ function computeSince(){const last=lsGet("st_lastvisit",null);
   DATA=await loadData();buildFacets();initCollapse();computeSince();renderFacets();renderList();
   if(!parseHash())renderDetail();
   window.addEventListener("hashchange",parseHash);
+  $("#introOk").onclick=()=>{try{localStorage.setItem("st_intro_ok","1");}catch(e){}closeModal($("#ovIntro"));};
+  if(!gp("st_intro_ok"))setTimeout(()=>openModal($("#ovIntro")),300);
   refreshBanner();statusTimer=setInterval(()=>{refreshBanner();if(!$("#ovQueue").hidden)renderStatusPanel();},20000);})();
 </script>
 </body>
