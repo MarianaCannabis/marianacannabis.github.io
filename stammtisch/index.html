@@ -1233,8 +1233,9 @@ async function renderStatusPanel(){const s=await getStatus();const wd=await getW
       <div class="steuerrow">
         <button class="btn small" data-steuer="fortsetzen">▶ Lauf fortsetzen</button>
         <button class="btn small" data-steuer="ueberspringen">⏭ Aktuelle Datei überspringen</button>
-        <button class="btn small" data-steuer="fehler_neu">↻ Fehlversuche zurücksetzen</button>
-      </div><div class="msg info" id="steuerMsg">Der Wachhund führt einen Befehl bei seiner nächsten Prüfung aus (in der Regel innerhalb einer Minute).</div>`;}
+        <button class="btn small danger" data-steuer="ignorieren">⛔ Datei dauerhaft ignorieren</button>
+        <button class="btn small" data-steuer="fehler_neu">↻ Fehler &amp; Ignoriert zurücksetzen</button>
+      </div><div class="msg info" id="steuerMsg">Der Wachhund führt einen Befehl bei seiner nächsten Prüfung aus (in der Regel innerhalb einer Minute). „Ignorieren" schließt die aktuelle Datei dauerhaft aus, „Fehler &amp; Ignoriert zurücksetzen" macht das wieder rückgängig.</div>`;}
   } else {h+=`<div class="msg info">Gerade läuft keine Verarbeitung.</div>`;}
   // Dienste-Ueberwachung (Wachhund)
   h+=`<div class="sec-h" style="margin-top:18px">Dienste-Überwachung</div>`;
@@ -1250,10 +1251,16 @@ function phaseStepHtml(phase){const p=(phase||"").toLowerCase();let cur=0;
   if(/upload|hochgel|veröff|veroff/.test(p))cur=3;else if(/zusammen|protokoll/.test(p))cur=2;else if(/transk|ausricht|sprecher|diaris/.test(p))cur=1;else cur=0;
   const steps=["Audio vorbereiten","Transkription & Sprechertrennung","Zusammenfassung","Veröffentlichen"];
   return `<div class="steps">${steps.map((s,i)=>`<div class="step ${i<cur?'done':i===cur?'active':'todo'}"><span class="dot2">${i<cur?'✓':i===cur?'●':(i+1)}</span><span>${esc(s)}</span></div>`).join("")}</div>`;}
-async function steuerBefehl(befehl){const m=$("#steuerMsg");const namen={fortsetzen:"Lauf fortsetzen",ueberspringen:"aktuelle Datei überspringen",fehler_neu:"Fehlversuche zurücksetzen"};
+async function steuerBefehl(befehl){const m=$("#steuerMsg");const namen={fortsetzen:"Lauf fortsetzen",ueberspringen:"aktuelle Datei überspringen",fehler_neu:"Fehler und Ignoriert zurücksetzen",ignorieren:"Datei dauerhaft ignorieren"};
+  let ziel=(LIVE_STATUS&&LIVE_STATUS.detail&&LIVE_STATUS.detail.cur_id)||null;
   if(befehl==="ueberspringen"&&!confirm("Die aktuell verarbeitete Datei überspringen und mit der nächsten weitermachen?"))return;
+  if(befehl==="ignorieren"){
+    if(!ziel){if(m){m.className="msg err";m.textContent="Keine aktuelle Datei bekannt, nichts zu ignorieren.";}return;}
+    if(!confirm("Diese Datei dauerhaft ignorieren? Sie wird nie wieder verarbeitet, bleibt aber im Archiv sichtbar. Rückgängig über „Fehler und Ignoriert zurücksetzen\u201C."))return;
+    const grund=(window.prompt("Grund (optional, wird im Manifest hinterlegt):","")||"").trim();
+    if(grund)ziel=ziel+"::"+grund;
+  }
   if(m){m.className="msg info";m.textContent="Sende Befehl…";}
-  const ziel=(LIVE_STATUS&&LIVE_STATUS.detail&&LIVE_STATUS.detail.cur_id)||null;
   try{const {error}=await supa.from("steuerung").insert({befehl,ziel,angefordert_am:new Date().toISOString(),erledigt:false});if(error)throw error;
     if(m){m.className="msg ok";m.textContent=`„${namen[befehl]||befehl}" gesendet. Der Wachhund führt das in Kürze aus.`;}announce("Befehl gesendet.");}
   catch(e){if(m){m.className="msg err";m.textContent="Steuerung ist noch nicht eingerichtet (Tabelle steuerung fehlt). "+(e.message||e);}}}
