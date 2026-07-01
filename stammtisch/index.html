@@ -176,7 +176,7 @@
     <div class="brand"><div class="brand-mark" aria-hidden="true">S</div><div class="brand-txt"><b>Stammtisch-Archiv</b><span>Mariana Cannabis</span></div></div>
     <div class="spacer"></div>
     <button class="btn" id="btnStats">Statistik</button>
-    <button class="btn" id="btnGesamt">Gesamtprotokoll</button>
+    <button class="btn" id="btnGesamt" hidden>Gesamtprotokoll</button>
     <button class="btn" id="btnProtokoll" hidden>Beschlüsse &amp; Aufgaben</button>
     <button class="btn" id="btnHelp" title="Kurzanleitung">Hilfe</button>
     <button class="btn icon" id="btnMobile" aria-pressed="false" title="Handy-Ansicht" aria-label="Handy-Ansicht umschalten">📱</button>
@@ -289,8 +289,8 @@
     <p>Links filterst du nach Jahr, Sprecher und Thema. Mehrere Filter lassen sich kombinieren. Lange Listen klappst du mit „alle anzeigen" auf. „Nur Lesezeichen" zeigt deine gemerkten Einträge.</p>
     <div class="sec-h">Ein Eintrag</div>
     <p>Jeder Eintrag hat eine Zusammenfassung, das Transkript und, wenn vorhanden, Folien. Im Transkript kannst du suchen, die Schrift vergrößern, Fachbegriffe hervorheben und auf eine Zeitmarke tippen, um an die Audiostelle zu springen.</p>
-    <div class="sec-h">Merken und Teilen</div>
-    <p>Mit dem Stern setzt du ein Lesezeichen, mit „Notiz" hinterlegst du eine private Notiz, beides nur auf deinem Gerät. „Teilen" kopiert einen Link, der genau diesen Eintrag öffnet, „Stelle teilen" zusätzlich an der aktuellen Audiostelle.</p>
+    <div class="sec-h">Merken</div>
+    <p>Mit dem Stern setzt du ein Lesezeichen, mit „Notiz" hinterlegst du eine persönliche Notiz. Beides wird nur auf deinem eigenen Gerät gespeichert und ist für niemanden sonst sichtbar.</p>
     <div class="sec-h">Hinweis</div>
     <p>Transkripte und Zusammenfassungen werden automatisch erstellt und können Fehler enthalten. Einen Tippfehler im Transkript kannst du über „Fehler melden" an die Verwaltung schicken.</p>
   </div>
@@ -454,12 +454,12 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
     <div class="sub"><span><b>Ort</b> ${esc(d.ort)}</span><span><b>Dauer</b> ${fmt(d.dauer)}</span><span><b>Themen</b> ${(d.themen||[]).join(", ")||"–"}</span></div>
     <div class="speakers">${(d.sprecher||[]).map((s,i)=>`<span class="sp-tag"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</span>`).join("")}</div>
     ${d.verarbeitung==="offen"?'<div class="msg info" style="margin-top:10px;color:var(--gold)">Audio und Folien sind bereits verfügbar. Transkript und Zusammenfassung werden noch erstellt und erscheinen automatisch.</div>':''}
-    <div class="personal"><button class="btn small" id="dBook">${isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen'}</button><button class="btn small" id="dNoteToggle">✎ Notiz${(NOTES[d.id]&&NOTES[d.id].trim())?' (vorhanden)':''}</button><button class="btn small" id="dShare">🔗 Teilen</button>${(PLAYED[d.id]&&PLAYED[d.id].pos>15)?`<button class="btn small" id="dResume">▶ Fortsetzen bei ${fmt(PLAYED[d.id].pos)}</button>`:''}</div>
+    <div class="personal"><button class="btn small" id="dBook">${isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen'}</button><button class="btn small" id="dNoteToggle">✎ Notiz${(NOTES[d.id]&&NOTES[d.id].trim())?' (vorhanden)':''}</button>${state.authed?'<button class="btn small" id="dShare">🔗 Teilen</button>':''}${(PLAYED[d.id]&&PLAYED[d.id].pos>15)?`<button class="btn small" id="dResume">▶ Fortsetzen bei ${fmt(PLAYED[d.id].pos)}</button>`:''}</div>
     <div id="noteBox" hidden style="margin-top:8px"><textarea id="dNote" placeholder="Persönliche Notiz (nur auf diesem Gerät gespeichert)" style="width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px">${esc(NOTES[d.id]||"")}</textarea></div>
     ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button><button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
     ${src?`<div class="miniplayer"><audio id="aud" controls preload="none" src="${src}" ${noDL}></audio>
       <div class="mp-row"><label>Tempo <select id="spd"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>1.75</option><option>2</option></select></label>
-      <span id="curChap"></span><button class="btn small ghost" id="shareAt">🔗 Stelle teilen</button>${state.authed?`<a class="btn small" href="${src}" download>Audio herunterladen</a>`:""}</div>
+      <span id="curChap"></span>${state.authed?'<button class="btn small ghost" id="shareAt">🔗 Stelle teilen</button>':''}${state.authed?`<a class="btn small" href="${src}" download>Audio herunterladen</a>`:""}</div>
       <div class="chapters" id="chapters"></div></div>`:`<div class="miniplayer"><div class="msg info">Kein Audio vorhanden.</div></div>`}
     <div class="tabs" role="tablist" id="tabs">
       <button role="tab" data-tab="summary">✨ Zusammenfassung</button>
@@ -739,7 +739,7 @@ async function reprocess(d,mode){const txt=mode==="retranscribe"?"komplett neu t
 
 /* ---- auth ---- */
 async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.auth.getSession();setAuthed(!!session);}
-function setAuthed(on){state.authed=on;$("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!on;$("#btnQueue").hidden=!on;$("#btnBackup").hidden=!on;$("#btnPflege").hidden=!on;$("#btnProtokoll").hidden=!on;renderDetail();}
+function setAuthed(on){state.authed=on;$("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!on;$("#btnQueue").hidden=!on;$("#btnBackup").hidden=!on;$("#btnPflege").hidden=!on;$("#btnProtokoll").hidden=!on;$("#btnGesamt").hidden=!on;renderDetail();}
 $("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";openModal($("#ovLogin"));};
 $("#btnLogout").onclick=async()=>{await supa.auth.signOut();setAuthed(false);announce("Abgemeldet.");};
 $("#loginGo").onclick=async()=>{const pw=$("#loginPw").value,msg=$("#loginMsg");msg.textContent="Anmelden…";msg.className="msg info";
