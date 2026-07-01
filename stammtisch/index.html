@@ -339,6 +339,7 @@ $("#btnSr").onclick=()=>applySr(!document.body.classList.contains("sr-mode"));
 /* ---- helpers ---- */
 function fmt(s){s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),se=s%60;const mm=String(m).padStart(h?2:1,"0"),ss=String(se).padStart(2,"0");return h?`${h}:${mm}:${ss}`:`${mm}:${ss}`;}
 function fmtDate(iso){return iso?new Date(iso+"T00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"long",year:"numeric"}):"–";}
+function parseMin(s){if(!s)return null;let t=0,m;if((m=s.match(/(\d+)\s*h/)))t+=+m[1]*60;if((m=s.match(/(\d+)\s*min/)))t+=+m[1];return t||null;}
 function esc(t){return (t==null?"":String(t)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 function hl(t,q,cur){t=esc(t);if(!q)return t;const re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi");return t.replace(re,`<span class="hl${cur?' cur':''}">$1</span>`);}
 const GLOSSAR={"CanG":"Cannabisgesetz","KCanG":"Konsumcannabisgesetz","CSC":"Cannabis Social Club","THC":"Tetrahydrocannabinol","CBD":"Cannabidiol","Terptrain":"interne Vereinsplattform","DSGVO":"Datenschutz-Grundverordnung","Anbauvereinigung":"Verein zum gemeinschaftlichen Eigenanbau","BtMG":"Betäubungsmittelgesetz"};
@@ -830,8 +831,11 @@ async function renderStatusPanel(){const s=await getStatus();const wd=await getW
     h+=`<div class="msg info">Phase: ${esc(d.phase||s.phase||"–")}${s.scope==="ingest"?" · Einzelverarbeitung":""}</div>`;
     if(cp!=null){h+=`<div class="progress"><div style="width:${cp}%"></div></div><div class="msg info">${cp}% · ${esc(d.cur_elapsed||"?")} von geschätzt ${esc(d.cur_len||"?")} · ${esc(d.cur_remaining||"")}${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</div>`;}
     else{h+=`<div class="msg info">${esc(d.cur_len?("Länge "+d.cur_len):"")} ${esc(d.cur_elapsed?("· läuft seit "+d.cur_elapsed):"")}</div>`;}
+    const elMin=parseMin(d.cur_elapsed),lenMin=parseMin(d.cur_len);
+    if(elMin!=null&&lenMin>0&&elMin>Math.max(lenMin*2.5,lenMin+120)){h+=`<div class="msg err" style="margin-top:6px">⚠ Läuft ungewöhnlich lange (${esc(d.cur_elapsed)} statt geschätzt ${esc(d.cur_len)}). Die Datei hängt vermutlich, etwa in der Sprechertrennung. Bitte diesen Eintrag prüfen oder überspringen.</div>`;}
     if(d.rtf)h+=`<div class="msg info">Tempo: ${esc(d.rtf)}</div>`;
-    if(s.scope!=="ingest"){h+=`<div class="sec-h" style="margin-top:16px">Gesamter Batch</div><div><b>${s.active?"läuft":"pausiert"}</b> · ${s.done||0} von ${s.total||0} fertig${s.eta?(" · voraussichtlich fertig "+esc(s.eta)):""}</div><div class="progress"><div style="width:${pct}%"></div></div>`;}
+    if(s.scope!=="ingest"){h+=`<div class="sec-h" style="margin-top:16px">Gesamter Batch</div><div><b>${s.active?"läuft":"pausiert"}</b> · ${s.done||0} von ${s.total||0} fertig${s.eta?(" · voraussichtlich fertig "+esc(s.eta)):""}</div><div class="progress"><div style="width:${pct}%"></div></div>`;
+      if(!s.active)h+=`<div class="msg err" style="margin-top:4px">Der Lauf ist derzeit gestoppt und wird nicht fortgesetzt, bis er wieder gestartet wird.</div>`;}
     if(d.fehler&&d.fehler.length){h+=`<div class="sec-h" style="margin-top:16px;color:var(--red)">Fehlgeschlagen (${d.fehler.length})</div>`+d.fehler.map(f=>`<div class="qrow"><div><b>${esc(f.titel||f.id)}</b><div class="msg err">${esc(f.msg||"Fehler")}</div></div><span class="qstatus error">fehler</span></div>`).join("");}
     h+=`<div class="msg info" style="margin-top:8px">Stand: ${s.updated_at?new Date(s.updated_at).toLocaleString("de-DE"):"–"}${s.message?(" · "+esc(s.message)):""}</div>`;
   } else {h+=`<div class="msg info">Gerade läuft keine Verarbeitung.</div>`;}
