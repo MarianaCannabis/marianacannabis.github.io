@@ -520,11 +520,18 @@ function setupPlayer(d){const a=$("#aud");if(!a)return;
   /* Wellenform */
   const cv=$("#wave");const rawPeaks=(d.wellenform&&d.wellenform.length)?d.wellenform:null;
   const pkMax=rawPeaks?(Math.max.apply(null,rawPeaks)||1):1;
+  const _css=getComputedStyle(document.documentElement);
+  const SPCOL=["--sp1","--sp2","--sp3","--sp4","--sp5","--sp6"].map(v=>(_css.getPropertyValue(v).trim()||"#4caf6a"));
+  const spcHex=i=>SPCOL[((i||0)%SPCOL.length+SPCOL.length)%SPCOL.length];
+  const segs=(d.transkript||[]).map(l=>({t:l.t||0,sp:l.sp||0})).sort((x,y)=>x.t-y.t);
   function drawWave(){if(!cv)return;const dpr=window.devicePixelRatio||1;const W=cv.clientWidth||600,H=cv.clientHeight||64;
     if(cv._W!==W||cv._dpr!==dpr){cv.width=W*dpr;cv.height=H*dpr;cv._W=W;cv._dpr=dpr;}
     const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
-    const dur=a.duration||d.dauer||0;const prog=dur?a.currentTime/dur:0;const mid=H/2;
-    if(rawPeaks){const n=rawPeaks.length,bw=W/n;for(let i=0;i<n;i++){const v=Math.max(0.02,rawPeaks[i]/pkMax);const bh=v*(H*0.92);const x=i*bw;ctx.fillStyle=(i/n)<=prog?"rgba(76,175,106,.92)":"rgba(150,170,158,.32)";ctx.fillRect(x,mid-bh/2,Math.max(1,bw-0.6),bh);}}
+    const dur=a.duration||d.dauer||0;const prog=dur?a.currentTime/dur:0;const mid=H/2;const bySpk=segs.length&&dur>0;
+    if(rawPeaks){const n=rawPeaks.length,bw=W/n;let j=0;for(let i=0;i<n;i++){const v=Math.max(0.02,rawPeaks[i]/pkMax);const bh=v*(H*0.92);const x=i*bw;const played=(i/n)<=prog;
+      if(bySpk){const bt=dur*(i/n);while(j+1<segs.length&&segs[j+1].t<=bt)j++;ctx.globalAlpha=played?0.95:0.38;ctx.fillStyle=spcHex(segs[j].sp);}
+      else{ctx.globalAlpha=1;ctx.fillStyle=played?"rgba(76,175,106,.92)":"rgba(150,170,158,.32)";}
+      ctx.fillRect(x,mid-bh/2,Math.max(1,bw-0.6),bh);}ctx.globalAlpha=1;}
     else{ctx.strokeStyle="rgba(150,170,158,.28)";ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(W,mid);ctx.stroke();ctx.fillStyle="rgba(76,175,106,.28)";ctx.fillRect(0,mid-2,W*prog,4);}
     if(dur){(d.kapitel||[]).forEach(c=>{const x=c.t/dur*W;ctx.fillStyle="rgba(255,255,255,.4)";ctx.fillRect(x,0,1,9);});}
     if(dur&&loopA!=null){const xa=loopA/dur*W;if(loopB!=null){const xb=loopB/dur*W;ctx.fillStyle="rgba(249,199,79,.14)";ctx.fillRect(xa,0,xb-xa,H);ctx.fillStyle="rgba(249,199,79,.95)";ctx.fillRect(xb-1,0,2,H);}ctx.fillStyle="rgba(249,199,79,.95)";ctx.fillRect(xa-1,0,2,H);}
