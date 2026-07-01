@@ -420,7 +420,7 @@ function filtered(){let r=DATA.filter(d=>{if(state.q&&!entryText(d).includes(sta
 /* ---- rail ---- */
 function chip(l,on,a){return `<button class="chip ${on?'on':''}" ${a} aria-pressed="${on}">${esc(l)}</button>`;}
 function facetList(items,limit,open,render){const show=open?items:items.slice(0,limit);let h=show.map(render).join("");if(items.length>limit)h+=`<button class="chip morebtn" data-more="${open?'0':'1'}">${open?'▴ weniger':('▾ alle '+items.length)}</button>`;return h;}
-function fgOpen(k){const v=localStorage.getItem("st_fg_"+k);return v==null?(k==="year"):v==="1";}
+function fgOpen(k){const v=localStorage.getItem("st_fg2_"+k);return v==null?(k==="year"):v==="1";}
 function applyFg(){[["year","fYears"],["spk","fSpeakers"],["th","fThemes"]].forEach(([k,id])=>{const open=fgOpen(k);const box=$("#"+id);const btn=document.querySelector(`.facet-h[data-fg="${k}"]`);if(box)box.hidden=!open;if(btn){btn.setAttribute("aria-expanded",open);const c=btn.querySelector(".fcaret");if(c)c.textContent=open?"▾":"▸";}});}
 function renderFacets(){const spk=ALL_SPK.filter(o=>!o.anon);
   $("#fYears").innerHTML=ALL_YEARS.map(y=>chip(y,state.years.has(y),`data-yr="${y}"`)).join("")||'<span class="msg info">–</span>';
@@ -430,7 +430,7 @@ function renderFacets(){const spk=ALL_SPK.filter(o=>!o.anon);
   $("#metaSpk").textContent=state.speakers.size?`${state.speakers.size} aktiv`:`${spk.length}`;
   $("#metaTh").textContent=state.themes.size?`${state.themes.size} aktiv`:`${ALL_TH.length}`;
   applyFg();
-  document.querySelectorAll(".facet-h").forEach(btn=>btn.onclick=()=>{const k=btn.dataset.fg;localStorage.setItem("st_fg_"+k,fgOpen(k)?"0":"1");applyFg();});}
+  document.querySelectorAll(".facet-h").forEach(btn=>btn.onclick=()=>{const k=btn.dataset.fg;localStorage.setItem("st_fg2_"+k,fgOpen(k)?"0":"1");applyFg();});}
 function snippetFor(d){const q=(state.q||"").trim().toLowerCase();if(!q||!(d.transkript||[]).length)return "";
   const idx=d.transkript.findIndex(l=>!l.red&&l.text.toLowerCase().includes(q));if(idx<0)return "";
   let t=d.transkript[idx].text;const pos=t.toLowerCase().indexOf(q);const from=Math.max(0,pos-50);
