@@ -165,6 +165,17 @@
   .rech-hit:hover{border-color:var(--green)}
   .rech-kind{display:block;font-size:11px;color:var(--muted-2);margin-bottom:2px}
   .rech-snip{font-size:13.5px;color:var(--text);line-height:1.5}
+  .intern-banner{max-width:var(--maxw);margin:0 auto;padding:10px 22px;background:rgba(249,199,79,.10);border:1px solid var(--gold);border-radius:10px;color:var(--text);font-size:13.5px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
+  body.mobile .intern-banner,@media(max-width:880px){.intern-banner{padding:10px 14px}}
+  .doc-item{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin:7px 0;background:rgba(255,255,255,.02)}
+  .doc-meta{font-size:11.5px;color:var(--muted-2);margin-top:2px}
+  .doc-beschr{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.5}
+  .doc-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .doc-tags .tag{font-size:11px;background:rgba(76,175,106,.14);border:1px solid var(--line);border-radius:20px;padding:2px 9px;color:var(--text)}
+  .doc-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+  .logtab{width:100%;border-collapse:collapse;font-size:13px}
+  .logtab th,.logtab td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .logtab th{color:var(--muted-2);font-weight:600;font-size:11.5px}
   .line.playing .said{color:#eafff1}
   .lnedit{width:100%;min-height:54px;background:var(--bg);border:1px solid var(--green-dim);color:var(--text);border-radius:7px;padding:7px 9px;font-size:14px}.lnedit-act{display:flex;gap:6px;margin-top:6px}
   abbr.gl{text-decoration:underline dotted var(--green-dim);text-underline-offset:2px;cursor:help}
@@ -212,6 +223,9 @@
     <button class="btn" id="btnPflege" hidden>Pflege</button>
     <button class="btn" id="btnBackup" hidden>Verwaltung</button>
     <button class="btn gold" id="btnAdmin">Admin</button>
+    <button class="btn" id="btnIntern" hidden title="Interner Vorstandsbereich">🔒 Vorstandsbereich</button>
+    <button class="btn" id="btnDocs" hidden>Dokumente</button>
+    <button class="btn" id="btnLog" hidden title="Zugriffsprotokoll (nur Admin)">Zugriffe</button>
     <button class="btn" id="btnLogout" hidden>Abmelden</button>
   </div>
   <div class="kbd-help"><div>Tastatur: <kbd>Tab</kbd> wechselt zwischen Suche, Filtern und Liste. In der Liste mit <kbd>Pfeil hoch</kbd>/<kbd>runter</kbd> blättern, <kbd>Enter</kbd> öffnet. In Dialogen schließt <kbd>Esc</kbd>. In der Transkriptsuche springt <kbd>Enter</kbd> zum nächsten Treffer.</div></div>
@@ -240,10 +254,18 @@
   <section class="detail" id="detail" tabindex="-1" aria-label="Stammtisch-Details"><div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Lade Daten…</p></div></section>
 </main>
 
-<div class="overlay" id="ovLogin" hidden role="dialog" aria-modal="true" aria-label="Admin-Zugang"><div class="modal small">
-  <div class="modal-head"><h3>Admin-Zugang</h3><button class="x" data-close aria-label="Schließen">×</button></div>
-  <div class="modal-body"><div class="field"><label for="loginPw">Passwort</label><input id="loginPw" type="password" autocomplete="current-password"></div><div class="msg" id="loginMsg"></div></div>
-  <div class="modal-foot"><span></span><button class="btn primary" id="loginGo">Anmelden</button></div></div></div>
+<div class="overlay" id="ovLogin" hidden role="dialog" aria-modal="true" aria-label="Anmeldung"><div class="modal small">
+  <div class="modal-head"><h3>Anmeldung</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <div class="field"><label for="loginEmail">Vorstands- oder Admin-Adresse</label><input id="loginEmail" type="email" autocomplete="email" placeholder="stadt@mariana-cannabis.de"></div>
+    <button class="btn primary" id="loginMagic" style="width:100%;margin-top:6px">Anmeldelink per E-Mail senden</button>
+    <div class="msg" id="loginMsg" style="margin-top:8px"></div>
+    <details style="margin-top:12px"><summary style="cursor:pointer;color:var(--muted)">Admin mit Passwort</summary>
+      <div class="field" style="margin-top:8px"><label for="loginPw">Admin-Passwort</label><input id="loginPw" type="password" autocomplete="current-password"></div>
+      <button class="btn" id="loginGo" style="width:100%">Als Admin anmelden</button>
+    </details>
+  </div>
+  <div class="modal-foot"><span class="msg info">Der Link führt Sie zurück und meldet Sie automatisch an.</span></div></div></div>
 
 <div class="overlay" id="ovDelPw" hidden role="dialog" aria-modal="true" aria-label="Löschen bestätigen"><div class="modal small">
   <div class="modal-head"><h3>Löschen bestätigen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -337,6 +359,35 @@
   <div class="modal-body"><div class="gp-tools"><label>Reihenfolge <select class="sel" id="gpSort"><option value="desc">neueste zuerst</option><option value="asc">älteste zuerst</option></select></label><button class="btn small" id="gpPrint">Drucken / PDF</button></div><div id="gpBody"></div></div>
   <div class="modal-foot"><span class="msg info" id="gpMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
 
+<div class="overlay" id="ovDocs" hidden role="dialog" aria-modal="true" aria-label="Dokumente"><div class="modal modal-wide">
+  <div class="modal-head"><h3>Dokumentenablage (intern)</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <div class="tabs" role="tablist" id="docTabs"><button role="tab" data-dt="browse" class="on">Durchsuchen</button><button role="tab" data-dt="upload">Hochladen</button></div>
+    <div id="docBrowse">
+      <div class="rech-tools">
+        <input type="search" id="docQ" placeholder="Suche in Titel, Beschreibung, Schlagworten und Dokumenttext…" autocomplete="off">
+        <select id="docCat" class="sel"><option value="">Alle Kategorien</option></select>
+      </div>
+      <div id="docList"><div class="msg info">Lade…</div></div>
+    </div>
+    <div id="docUpload" hidden>
+      <div class="field"><label for="docFile">Datei</label><input type="file" id="docFile"></div>
+      <div class="field"><label for="docTitel">Titel</label><input type="text" id="docTitel" placeholder="Aussagekräftiger Titel"></div>
+      <div class="field"><label for="docKat">Kategorie (wählen oder neue eingeben)</label><input type="text" id="docKat" list="docCatList" placeholder="z. B. Protokolle"><datalist id="docCatList"></datalist></div>
+      <div class="field"><label for="docTags">Schlagworte (mit Komma getrennt)</label><input type="text" id="docTags" placeholder="z. B. Satzung, 2026, Mitgliederversammlung"></div>
+      <div class="field"><label for="docBeschr">Beschreibung</label><textarea id="docBeschr" rows="3" placeholder="Worum geht es? Das hilft beim Wiederfinden."></textarea></div>
+      <div class="field"><label for="docDatum">Dokumentdatum</label><input type="date" id="docDatum"></div>
+      <button class="btn primary" id="docUp">Hochladen</button>
+      <div class="msg" id="docUpMsg" style="margin-top:8px"></div>
+    </div>
+  </div>
+  <div class="modal-foot"><span class="msg info" id="docMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovLog" hidden role="dialog" aria-modal="true" aria-label="Zugriffsprotokoll"><div class="modal modal-wide">
+  <div class="modal-head"><h3>Zugriffsprotokoll (intern)</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body"><div id="logBody"><div class="msg info">Lade…</div></div></div>
+  <div class="modal-foot"><span class="msg info">Nur für den Admin sichtbar.</span><button class="btn" data-close>Schließen</button></div></div></div>
+
 <div class="overlay" id="ovResearch" hidden role="dialog" aria-modal="true" aria-label="Recherche"><div class="modal modal-wide">
   <div class="modal-head"><h3>🔎 Recherche</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
@@ -373,7 +424,8 @@ const supa=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_ANON):null
 const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var(--sp6)"];
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
-let state={authed:false,q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
+let DATA_PUB=[],DATA_INT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
+let state={authed:false,email:null,internOk:false,mode:"pub",q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
 let wz={step:1,files:[],folien:null,ort:""};
 let editObj=null,pendingDelete=null,statusTimer=null,LIVE_STATUS=null;
 
@@ -430,8 +482,9 @@ function download(name,text,mime){const b=new Blob([text],{type:mime||"text/plai
 function audioDuration(file){return new Promise((res,rej)=>{const a=document.createElement("audio");a.preload="metadata";a.onloadedmetadata=()=>{const d=a.duration;URL.revokeObjectURL(a.src);res(isFinite(d)?d:0);};a.onerror=()=>{URL.revokeObjectURL(a.src);rej(new Error("keine Metadaten"));};a.src=URL.createObjectURL(file);});}
 
 /* ---- data ---- */
+function normalizeRow(r){return {...r,dauer:r.dauer_sek||0,verarbeitung:r.verarbeitung||"fertig",zusammenfassung:r.zusammenfassung||{lead:"",punkte:[]},transkript:r.transkript||[],sprecher:r.sprecher||[],themen:r.themen||[],kapitel:r.kapitel||[],folientext:r.folientext||""};}
 async function loadData(){if(!supa)return [];const {data,error}=await supa.from("stammtische").select("*").order("datum",{ascending:false});if(error){console.error(error);return [];}
-  return data.map(r=>({...r,dauer:r.dauer_sek||0,verarbeitung:r.verarbeitung||"fertig",zusammenfassung:r.zusammenfassung||{lead:"",punkte:[]},transkript:r.transkript||[],sprecher:r.sprecher||[],themen:r.themen||[],kapitel:r.kapitel||[],folientext:r.folientext||""}));}
+  return data.map(normalizeRow);}
 function thKey(t){return (t||"").trim().toLowerCase();}
 function buildFacets(){ALL_YEARS=[...new Set(DATA.map(d=>(d.datum||"").slice(0,4)).filter(Boolean))].sort().reverse();
   const sp={};DATA.forEach(d=>(d.sprecher||[]).forEach(s=>{const n=(s||"").trim();if(n)sp[n]=(sp[n]||0)+1;}));
@@ -494,7 +547,7 @@ $("#list").addEventListener("keydown",e=>{if(e.key!=="ArrowDown"&&e.key!=="Arrow
 function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$("#detail");
   if(!d){det.innerHTML=`<div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Wähle links einen Stammtisch.</p></div>`;return;}
   if(state.tab==="slides"&&!(d.folien&&d.folien.length))state.tab="summary";
-  const src=d.audio_pfad?pubUrl("audio",d.audio_pfad):null;
+  const src=d.audio_pfad?(state.mode==="int"?null:pubUrl("audio",d.audio_pfad)):null;
   const noDL=state.authed?"":'controlslist="nodownload noplaybackrate" oncontextmenu="return false"';
   const order=filtered();const oIdx=order.findIndex(x=>x.id===d.id);const oN=order.length;
   const nav=`<div class="dnav"><button class="btn small" id="dPrev" ${oIdx<=0?'disabled':''} title="Vorheriger Stammtisch">◀ Vorheriger</button><span class="dnav-pos">${oIdx>=0?`${oIdx+1} / ${oN}`:""}</span><button class="btn small" id="dNext" ${(oIdx<0||oIdx>=oN-1)?'disabled':''} title="Nächster Stammtisch">Nächster ▶</button></div>`;
@@ -526,6 +579,10 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
       ${d.folien&&d.folien.length?`<button role="tab" data-tab="slides">📄 Folien<span class="badge">${d.folien.length}</span></button>`:`<span class="tab-missing">📄 Keine Folien</span>`}
     </div><div class="tabwrap" id="tabwrap"></div>`;
   setupPlayer(d);renderTabBar();renderTab(d);
+  if(state.mode==="int"){
+    logIntern("sitzung_geoeffnet",d.id,d.titel||null);
+    if(d.audio_pfad&&supa){supa.storage.from("audio-intern").createSignedUrl(d.audio_pfad,3600).then(r=>{const a=$("#aud");if(a&&r&&r.data&&r.data.signedUrl){a.src=r.data.signedUrl;a.addEventListener("play",()=>logIntern("audio_gestartet",d.id,null),{once:true});}}).catch(()=>{});}
+  }
   if($("#dPrev"))$("#dPrev").onclick=()=>stepEntry(-1);
   if($("#dNext"))$("#dNext").onclick=()=>stepEntry(1);
   $("#dBook").onclick=()=>{toggleBookmark(d.id);$("#dBook").textContent=isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen';renderList();};
@@ -844,6 +901,51 @@ function researchPdf(){if(!state.authed)return;const raw=$("#rechQ").value.trim(
 $("#btnResearch").onclick=()=>{openModal($("#ovResearch"));setTimeout(()=>$("#rechQ").focus(),60);};
 $("#rechQ").oninput=research;$("#rechSort").onchange=research;$("#rechPdf").onclick=researchPdf;
 
+/* ---- Dokumentenablage (intern) ---- */
+let DOCS=[];
+$("#btnDocs").onclick=()=>openDocs();
+$("#btnLog").onclick=()=>openLog();
+document.querySelectorAll('#docTabs [data-dt]').forEach(b=>b.onclick=()=>{document.querySelectorAll('#docTabs [data-dt]').forEach(x=>x.classList.toggle("on",x===b));const up=b.dataset.dt==="upload";$("#docUpload").hidden=!up;$("#docBrowse").hidden=up;});
+async function openDocs(){openModal($("#ovDocs"));$("#docList").innerHTML='<div class="msg info">Lade…</div>';await loadDocs();renderDocs();}
+async function loadDocs(){if(!supa)return;try{const {data,error}=await supa.from("dokumente_intern").select("*").order("dok_datum",{ascending:false,nullsFirst:false}).order("hochgeladen_am",{ascending:false});if(error)throw error;DOCS=data||[];
+    const cats=[...new Set(DOCS.map(d=>d.kategorie).filter(Boolean))].sort();
+    $("#docCat").innerHTML='<option value="">Alle Kategorien</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    $("#docCatList").innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join("");
+  }catch(e){$("#docList").innerHTML='<div class="msg info">Die Dokumentenablage ist noch leer oder nicht erreichbar.</div>';DOCS=[];}}
+function renderDocs(){const q=($("#docQ").value||"").trim().toLowerCase().split(/\s+/).filter(Boolean);const cat=$("#docCat").value;
+  let rows=DOCS.filter(d=>(!cat||d.kategorie===cat));
+  if(q.length)rows=rows.filter(d=>{const hay=((d.titel||"")+" "+(d.beschreibung||"")+" "+((d.tags||[]).join(" "))+" "+(d.volltext||"")).toLowerCase();return q.every(t=>hay.includes(t));});
+  $("#docMsg").textContent=`${rows.length} Dokument(e)`;
+  if(!rows.length){$("#docList").innerHTML='<div class="msg info">Keine Dokumente gefunden.</div>';return;}
+  $("#docList").innerHTML=rows.map(d=>`<div class="doc-item"><div class="doc-main"><b>${esc(d.titel)}</b><div class="doc-meta">${esc(d.kategorie||"Sonstiges")}${d.dok_datum?" · "+fmtDate(d.dok_datum):""}${d.dateiname?" · "+esc(d.dateiname):""}${d.groesse?" · "+Math.round(d.groesse/1024)+" KB":""}</div>${d.beschreibung?`<div class="doc-beschr">${esc(d.beschreibung)}</div>`:""}${(d.tags&&d.tags.length)?`<div class="doc-tags">${d.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}</div><div class="doc-actions"><button class="btn small" data-doc="${esc(d.pfad)}" data-id="${d.id}">Öffnen</button>${isAdmin()?`<button class="btn small danger" data-docdel="${d.id}" data-p="${esc(d.pfad)}">Löschen</button>`:""}</div></div>`).join("");
+  $("#docList").querySelectorAll("[data-doc]").forEach(b=>b.onclick=()=>openDoc(b.dataset.doc,b.dataset.id));
+  $("#docList").querySelectorAll("[data-docdel]").forEach(b=>b.onclick=()=>delDoc(b.dataset.docdel,b.dataset.p));}
+async function openDoc(pfad,id){if(!supa)return;$("#docMsg").textContent="Öffne…";try{const {data,error}=await supa.storage.from("dokumente-intern").createSignedUrl(pfad,3600);if(error)throw error;logIntern("dokument_geoeffnet",null,pfad);window.open(data.signedUrl,"_blank");$("#docMsg").textContent="";}catch(e){$("#docMsg").textContent="Konnte Dokument nicht öffnen.";}}
+async function delDoc(id,pfad){if(!isAdmin()||!confirm("Dieses Dokument endgültig löschen?"))return;try{await supa.storage.from("dokumente-intern").remove([pfad]);await supa.from("dokumente_intern").delete().eq("id",id);await loadDocs();renderDocs();}catch(e){$("#docMsg").textContent="Löschen fehlgeschlagen.";}}
+$("#docQ").oninput=renderDocs;$("#docCat").onchange=renderDocs;
+$("#docUp").onclick=async()=>{const msg=$("#docUpMsg");const f=$("#docFile").files[0];const titel=$("#docTitel").value.trim();const kat=$("#docKat").value.trim()||"Sonstiges";
+  if(!f){msg.textContent="Bitte eine Datei wählen.";msg.className="msg err";return;}
+  if(!titel){msg.textContent="Bitte einen Titel eingeben.";msg.className="msg err";return;}
+  const tags=$("#docTags").value.split(",").map(t=>t.trim()).filter(Boolean);
+  msg.textContent="Lade hoch…";msg.className="msg info";
+  try{const path=Date.now()+"_"+f.name.replace(/[^\w.\-]+/g,"_");
+    const up=await supa.storage.from("dokumente-intern").upload(path,f);if(up.error)throw up.error;
+    const row={titel,kategorie:kat,tags,beschreibung:$("#docBeschr").value.trim()||null,dok_datum:$("#docDatum").value||null,dateiname:f.name,pfad:path,typ:f.type||null,groesse:f.size,hochgeladen_von:state.email};
+    const ins=await supa.from("dokumente_intern").insert(row);if(ins.error)throw ins.error;
+    logIntern("dokument_hochgeladen",null,titel);
+    msg.textContent="Hochgeladen.";msg.className="msg info";
+    $("#docFile").value="";$("#docTitel").value="";$("#docKat").value="";$("#docTags").value="";$("#docBeschr").value="";$("#docDatum").value="";
+    await loadDocs();document.querySelector('#docTabs [data-dt="browse"]').click();renderDocs();
+  }catch(e){msg.textContent="Hochladen fehlgeschlagen: "+(e.message||e);msg.className="msg err";}};
+
+/* ---- Zugriffsprotokoll (nur Admin) ---- */
+async function openLog(){if(!isAdmin())return;openModal($("#ovLog"));$("#logBody").innerHTML='<div class="msg info">Lade…</div>';
+  try{const {data,error}=await supa.from("intern_zugriff_log").select("*").order("ts",{ascending:false}).limit(500);if(error)throw error;
+    if(!data||!data.length){$("#logBody").innerHTML='<div class="msg info">Noch keine Zugriffe protokolliert.</div>';return;}
+    const label={bereich_geoeffnet:"Bereich geöffnet",sitzung_geoeffnet:"Sitzung geöffnet",audio_gestartet:"Audio gestartet",dokument_geoeffnet:"Dokument geöffnet",dokument_hochgeladen:"Dokument hochgeladen"};
+    $("#logBody").innerHTML='<table class="logtab"><thead><tr><th>Zeitpunkt</th><th>Adresse</th><th>Aktion</th><th>Bezug</th></tr></thead><tbody>'+data.map(r=>`<tr><td>${new Date(r.ts).toLocaleString("de-DE")}</td><td>${esc(r.email)}</td><td>${esc(label[r.aktion]||r.aktion)}</td><td>${esc(r.detail||r.stammtisch_id||"")}</td></tr>`).join("")+'</tbody></table>';
+  }catch(e){$("#logBody").innerHTML='<div class="msg info">Protokoll nicht erreichbar.</div>';}}
+
 /* ---- Gesamtprotokoll (für alle) ---- */
 function gpList(){const order=state.gpSort||"desc";return DATA.filter(d=>{const z=d.zusammenfassung||{};return z.lead||(z.sachstand&&z.sachstand.length)||(z.punkte&&z.punkte.length);}).sort((a,b)=>order==="asc"?a.datum.localeCompare(b.datum):b.datum.localeCompare(a.datum));}
 function gpEntryHtml(d){const z=d.zusammenfassung||{};const sach=(z.sachstand&&z.sachstand.length?z.sachstand:(z.punkte||[]));
@@ -921,15 +1023,50 @@ async function reprocess(d,mode){const txt=mode==="retranscribe"?"komplett neu t
     announce("In die Warteschlange gestellt.");openQueue();}catch(e){alert("Fehler: "+(e.message||e));}}
 
 /* ---- auth ---- */
-async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.auth.getSession();setAuthed(!!session);}
-function setAuthed(on){state.authed=on;$("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!on;$("#btnQueue").hidden=!on;$("#btnBackup").hidden=!on;$("#btnPflege").hidden=!on;$("#btnProtokoll").hidden=!on;$("#btnGesamt").hidden=!on;$("#btnResearch").hidden=!on;renderDetail();}
-$("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";openModal($("#ovLogin"));};
-$("#btnLogout").onclick=async()=>{await supa.auth.signOut();setAuthed(false);announce("Abgemeldet.");};
+async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.auth.getSession();
+  state.email=session&&session.user?(session.user.email||"").toLowerCase():null;
+  state.internOk=!!state.email&&(state.email===ADMIN_EMAIL.toLowerCase()||state.email.endsWith("@mariana-cannabis.de"));
+  setAuthed(!!session);}
+function isAdmin(){return state.authed&&state.email===ADMIN_EMAIL.toLowerCase();}
+function setAuthed(on){state.authed=on;$("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!on;$("#btnQueue").hidden=!on;$("#btnBackup").hidden=!on;$("#btnPflege").hidden=!on;$("#btnProtokoll").hidden=!on;$("#btnGesamt").hidden=!on;$("#btnResearch").hidden=!on;
+  $("#btnIntern").hidden=!(on&&state.internOk);
+  if(!on){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;}
+  renderDetail();}
+$("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";$("#loginEmail").value=state.email||"";openModal($("#ovLogin"));};
+$("#btnLogout").onclick=async()=>{await supa.auth.signOut();state.email=null;state.internOk=false;setAuthed(false);announce("Abgemeldet.");};
+$("#loginMagic").onclick=async()=>{const email=($("#loginEmail").value||"").trim().toLowerCase(),msg=$("#loginMsg");
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){msg.textContent="Bitte eine gültige E-Mail-Adresse eingeben.";msg.className="msg err";return;}
+  msg.textContent="Sende Anmeldelink…";msg.className="msg info";
+  try{const {error}=await supa.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
+    if(error)throw error;
+    msg.textContent="Anmeldelink gesendet. Bitte öffne die E-Mail an "+email+" und klicke den Link. Danach bist du automatisch angemeldet.";msg.className="msg info";
+  }catch(e){msg.textContent="Konnte keinen Link senden: "+(e.message||e);msg.className="msg err";}};
+$("#loginEmail").addEventListener("keydown",e=>{if(e.key==="Enter")$("#loginMagic").click();});
 $("#loginGo").onclick=async()=>{const pw=$("#loginPw").value,msg=$("#loginMsg");msg.textContent="Anmelden…";msg.className="msg info";
   if(ADMIN_EMAIL==="ADMIN_EMAIL_HIER"){msg.textContent="ADMIN_EMAIL nicht gesetzt.";msg.className="msg err";return;}
   const {error}=await supa.auth.signInWithPassword({email:ADMIN_EMAIL,password:pw});if(error){msg.textContent="Anmeldung fehlgeschlagen.";msg.className="msg err";return;}
-  closeModal($("#ovLogin"));setAuthed(true);announce("Als Admin angemeldet.");};
+  await refreshAuth();closeModal($("#ovLogin"));announce("Als Admin angemeldet.");};
 $("#loginPw").addEventListener("keydown",e=>{if(e.key==="Enter")$("#loginGo").click();});
+
+/* ---- Vorstandsbereich: Umschaltung oeffentlich/intern ---- */
+function internBanner(show){let b=$("#internBanner");
+  if(show){if(!b){b=document.createElement("div");b.id="internBanner";b.className="intern-banner";document.querySelector(".wrap").before(b);}b.innerHTML='🔒 Interner Vorstandsbereich · Inhalte sind nur für Vorstand und Admin sichtbar. <button class="btn small" id="internBack">Zurück zum öffentlichen Archiv</button>';$("#internBack").onclick=()=>setMode("pub");}
+  else if(b){b.remove();}}
+async function loadIntern(){if(DATA_INT)return DATA_INT;if(!supa)return[];
+  const {data,error}=await supa.from("stammtische_intern").select("*").order("datum",{ascending:false});
+  if(error){console.error(error);return[];}DATA_INT=(data||[]).map(normalizeRow);return DATA_INT;}
+async function setMode(m){if(m==="int"){
+    if(!state.internOk){announce("Kein Zugriff auf den internen Bereich.");return;}
+    const rows=await loadIntern();DATA=rows;state.mode="int";
+    $("#btnDocs").hidden=false;$("#btnLog").hidden=!isAdmin();internBanner(true);
+    logIntern("bereich_geoeffnet",null,null);
+  }else{DATA=DATA_PUB;state.mode="pub";$("#btnDocs").hidden=true;$("#btnLog").hidden=true;internBanner(false);}
+  state.current=null;state.q="";$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
+  buildFacets();computeSince();renderFacets();renderList();renderDetail();
+  document.querySelector(".wrap").scrollIntoView({block:"start"});}
+$("#btnIntern").onclick=()=>setMode(state.mode==="int"?"pub":"int");
+function logIntern(aktion,sid,detail){if(!supa||!state.email)return;
+  try{supa.from("intern_zugriff_log").insert({email:state.email,aktion,stammtisch_id:sid,detail}).then(()=>{},()=>{});}catch(e){}}
 
 /* ---- edit ---- */
 function openEdit(d){editObj=JSON.parse(JSON.stringify(d));editObj.kapitel=editObj.kapitel||[];$("#editMsg").textContent="";renderEdit();openModal($("#ovEdit"));}
@@ -1200,7 +1337,7 @@ function computeSince(){const last=lsGet("st_lastvisit",null);
   if(last){const lt=new Date(last).getTime();state.sinceCount=DATA.filter(d=>d.erstellt_am&&new Date(d.erstellt_am).getTime()>lt).length;state.sinceLabel=new Date(last).toLocaleDateString("de-DE");}
   lsSet("st_lastvisit",new Date().toISOString());}
 (async function boot(){applyMobile(gp("st_mobile"));applySr(gp("st_sr"));if(gp("st_txtsize"))document.body.classList.add("tx-large");await refreshAuth();
-  DATA=await loadData();buildFacets();initCollapse();computeSince();renderFacets();renderList();
+  DATA=await loadData();DATA_PUB=DATA;buildFacets();initCollapse();computeSince();renderFacets();renderList();
   if(!parseHash())renderDetail();
   window.addEventListener("hashchange",parseHash);
   $("#introOk").onclick=()=>{try{localStorage.setItem("st_intro_ok","1");}catch(e){}closeModal($("#ovIntro"));};
