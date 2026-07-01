@@ -166,6 +166,14 @@
   .rech-kind{display:block;font-size:11px;color:var(--muted-2);margin-bottom:2px}
   .rech-snip{font-size:13.5px;color:var(--text);line-height:1.5}
   .intern-banner{max-width:var(--maxw);margin:0 auto;padding:10px 22px;background:rgba(249,199,79,.10);border:1px solid var(--gold);border-radius:10px;color:var(--text);font-size:13.5px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
+  .menu{position:relative;display:inline-block}
+  .menu-trigger .caret{font-size:10px;opacity:.8}
+  .menu.open .menu-trigger{border-color:var(--green)}
+  .menu-panel{position:absolute;top:calc(100% + 6px);right:0;min-width:210px;background:var(--panel-solid);border:1px solid var(--line);border-radius:12px;padding:6px;display:none;flex-direction:column;gap:3px;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+  .menu.open .menu-panel{display:flex}
+  .menu-item{width:100%;justify-content:flex-start;text-align:left;background:transparent;border-color:transparent}
+  .menu-item:hover{background:rgba(255,255,255,.05);border-color:var(--line)}
+  .menu-item[hidden]{display:none}
   body.mobile .intern-banner,@media(max-width:880px){.intern-banner{padding:10px 14px}}
   .doc-item{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin:7px 0;background:rgba(255,255,255,.02)}
   .doc-meta{font-size:11.5px;color:var(--muted-2);margin-top:2px}
@@ -212,20 +220,35 @@
     <div class="brand"><div class="brand-mark" aria-hidden="true">S</div><div class="brand-txt"><b>Stammtisch-Archiv</b><span>Mariana Cannabis</span></div></div>
     <div class="spacer"></div>
     <button class="btn" id="btnStats">Statistik</button>
-    <button class="btn" id="btnGesamt" hidden>Gesamtprotokoll</button>
-    <button class="btn" id="btnResearch" hidden>🔎 Recherche</button>
-    <button class="btn" id="btnProtokoll" hidden>Beschlüsse &amp; Aufgaben</button>
+    <button class="btn primary" id="btnWizard" hidden>＋ Hochladen</button>
+    <div class="menu" id="menuAuswertung" hidden>
+      <button class="btn menu-trigger" aria-haspopup="true" aria-expanded="false">Auswertung <span class="caret">▾</span></button>
+      <div class="menu-panel" role="menu">
+        <button class="btn menu-item" id="btnGesamt">Gesamtprotokoll</button>
+        <button class="btn menu-item" id="btnProtokoll">Beschlüsse &amp; Aufgaben</button>
+        <button class="btn menu-item" id="btnResearch">🔎 Recherche</button>
+      </div>
+    </div>
+    <div class="menu" id="menuVerwaltung" hidden>
+      <button class="btn menu-trigger" aria-haspopup="true" aria-expanded="false">Verwaltung <span class="caret">▾</span></button>
+      <div class="menu-panel" role="menu">
+        <button class="btn menu-item" id="btnQueue">Status &amp; Warteschlange</button>
+        <button class="btn menu-item" id="btnPflege">Pflege</button>
+        <button class="btn menu-item" id="btnBackup">Sicherung &amp; Export</button>
+      </div>
+    </div>
+    <div class="menu" id="menuVorstand" hidden>
+      <button class="btn menu-trigger gold" aria-haspopup="true" aria-expanded="false">🔒 Vorstand <span class="caret">▾</span></button>
+      <div class="menu-panel" role="menu">
+        <button class="btn menu-item" id="btnIntern" title="Interner Vorstandsbereich">Vorstandsbereich öffnen</button>
+        <button class="btn menu-item" id="btnDocs" hidden>Dokumente</button>
+        <button class="btn menu-item" id="btnLog" hidden title="Zugriffsprotokoll (nur Admin)">Zugriffe</button>
+      </div>
+    </div>
     <button class="btn" id="btnHelp" title="Kurzanleitung">Hilfe</button>
     <button class="btn icon" id="btnMobile" aria-pressed="false" title="Handy-Ansicht" aria-label="Handy-Ansicht umschalten">📱</button>
     <button class="btn icon" id="btnSr" aria-pressed="false" title="Screenreader-Modus" aria-label="Screenreader-Modus umschalten">♿</button>
-    <button class="btn primary" id="btnWizard" hidden>＋ Hochladen</button>
-    <button class="btn" id="btnQueue" hidden>Status &amp; Warteschlange</button>
-    <button class="btn" id="btnPflege" hidden>Pflege</button>
-    <button class="btn" id="btnBackup" hidden>Verwaltung</button>
     <button class="btn gold" id="btnAdmin">Admin</button>
-    <button class="btn" id="btnIntern" hidden title="Interner Vorstandsbereich">🔒 Vorstandsbereich</button>
-    <button class="btn" id="btnDocs" hidden>Dokumente</button>
-    <button class="btn" id="btnLog" hidden title="Zugriffsprotokoll (nur Admin)">Zugriffe</button>
     <button class="btn" id="btnLogout" hidden>Abmelden</button>
   </div>
   <div class="kbd-help"><div>Tastatur: <kbd>Tab</kbd> wechselt zwischen Suche, Filtern und Liste. In der Liste mit <kbd>Pfeil hoch</kbd>/<kbd>runter</kbd> blättern, <kbd>Enter</kbd> öffnet. In Dialogen schließt <kbd>Esc</kbd>. In der Transkriptsuche springt <kbd>Enter</kbd> zum nächsten Treffer.</div></div>
@@ -1028,9 +1051,10 @@ async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.a
   state.internOk=!!state.email&&(state.email===ADMIN_EMAIL.toLowerCase()||state.email.endsWith("@mariana-cannabis.de"));
   setAuthed(!!session);}
 function isAdmin(){return state.authed&&state.email===ADMIN_EMAIL.toLowerCase();}
-function setAuthed(on){state.authed=on;$("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!on;$("#btnQueue").hidden=!on;$("#btnBackup").hidden=!on;$("#btnPflege").hidden=!on;$("#btnProtokoll").hidden=!on;$("#btnGesamt").hidden=!on;$("#btnResearch").hidden=!on;
-  $("#btnIntern").hidden=!(on&&state.internOk);
-  if(!on){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;}
+function setAuthed(on){state.authed=on;$("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!on;
+  $("#menuAuswertung").hidden=!on;$("#menuVerwaltung").hidden=!on;
+  $("#menuVorstand").hidden=!(on&&state.internOk);
+  if(!on){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
   renderDetail();}
 $("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";$("#loginEmail").value=state.email||"";openModal($("#ovLogin"));};
 $("#btnLogout").onclick=async()=>{await supa.auth.signOut();state.email=null;state.internOk=false;setAuthed(false);announce("Abgemeldet.");};
@@ -1048,7 +1072,12 @@ $("#loginGo").onclick=async()=>{const pw=$("#loginPw").value,msg=$("#loginMsg");
   await refreshAuth();closeModal($("#ovLogin"));announce("Als Admin angemeldet.");};
 $("#loginPw").addEventListener("keydown",e=>{if(e.key==="Enter")$("#loginGo").click();});
 
-/* ---- Vorstandsbereich: Umschaltung oeffentlich/intern ---- */
+/* ---- Kopfleisten-Menues (gruppiert) ---- */
+function closeMenus(except){document.querySelectorAll(".menu.open").forEach(m=>{if(m!==except){m.classList.remove("open");const t=m.querySelector(".menu-trigger");if(t)t.setAttribute("aria-expanded","false");}});}
+document.querySelectorAll(".menu .menu-trigger").forEach(tr=>{tr.onclick=e=>{e.stopPropagation();const m=tr.parentElement,open=m.classList.contains("open");closeMenus();if(!open){m.classList.add("open");tr.setAttribute("aria-expanded","true");}};});
+document.querySelectorAll(".menu-panel .menu-item").forEach(b=>b.addEventListener("click",()=>closeMenus()));
+document.addEventListener("click",e=>{if(!e.target.closest(".menu"))closeMenus();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMenus();});
 function internBanner(show){let b=$("#internBanner");
   if(show){if(!b){b=document.createElement("div");b.id="internBanner";b.className="intern-banner";document.querySelector(".wrap").before(b);}b.innerHTML='🔒 Interner Vorstandsbereich · Inhalte sind nur für Vorstand und Admin sichtbar. <button class="btn small" id="internBack">Zurück zum öffentlichen Archiv</button>';$("#internBack").onclick=()=>setMode("pub");}
   else if(b){b.remove();}}
@@ -1058,9 +1087,9 @@ async function loadIntern(){if(DATA_INT)return DATA_INT;if(!supa)return[];
 async function setMode(m){if(m==="int"){
     if(!state.internOk){announce("Kein Zugriff auf den internen Bereich.");return;}
     const rows=await loadIntern();DATA=rows;state.mode="int";
-    $("#btnDocs").hidden=false;$("#btnLog").hidden=!isAdmin();internBanner(true);
+    $("#btnDocs").hidden=false;$("#btnLog").hidden=!isAdmin();$("#btnIntern").textContent="Zum öffentlichen Archiv";internBanner(true);
     logIntern("bereich_geoeffnet",null,null);
-  }else{DATA=DATA_PUB;state.mode="pub";$("#btnDocs").hidden=true;$("#btnLog").hidden=true;internBanner(false);}
+  }else{DATA=DATA_PUB;state.mode="pub";$("#btnDocs").hidden=true;$("#btnLog").hidden=true;$("#btnIntern").textContent="Vorstandsbereich öffnen";internBanner(false);}
   state.current=null;state.q="";$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
   buildFacets();computeSince();renderFacets();renderList();renderDetail();
   document.querySelector(".wrap").scrollIntoView({block:"start"});}
