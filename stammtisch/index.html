@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>Stammtisch-Archiv</title>
 <style>
-  :root{--bg:#08100b;--bg-2:#0d1812;--panel-solid:#0f1d14;--line:#1d3325;--green:#4caf6a;--green-dim:#3c8a54;--gold:#f9c74f;--red:#d9694e;--text:#e8f1ea;--muted:#8aa394;--muted-2:#5f7568;--radius:14px;--maxw:1180px;--sp1:#4caf6a;--sp2:#f9c74f;--sp3:#6fa8dc;--sp4:#c98bdb;--sp5:#e0936a;--sp6:#7ec8a0;}
+  :root{--bg:#08100b;--bg-2:#0d1812;--panel-solid:#0f1d14;--line:#1d3325;--green:#4caf6a;--green-dim:#3c8a54;--gold:#f9c74f;--red:#d9694e;--text:#e8f1ea;--muted:#8aa394;--muted-2:#5f7568;--radius:14px;--maxw:1180px;--sp1:#4caf6a;--sp2:#f9c74f;--sp3:#6fa8dc;--sp4:#c98bdb;--sp5:#e0936a;--sp6:#7ec8a0;--amber:#e0a63a;--panel:#0d1812;}
   *{box-sizing:border-box}html,body{margin:0;padding:0}
   body{background:radial-gradient(1200px 600px at 80% -10%,#102a1b 0%,transparent 55%),var(--bg);color:var(--text);font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh}
   h1,h2,h3,h4{margin:0;font-weight:650;letter-spacing:-.01em}button{font-family:inherit;cursor:pointer}input,select,textarea{font-family:inherit}::selection{background:var(--green);color:#04150b}
@@ -27,9 +27,11 @@
   .banner .pulse{width:9px;height:9px;border-radius:50%;background:var(--sp3);flex:none;animation:pulse 1.6s infinite}
   @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
   .wrap{max-width:var(--maxw);margin:0 auto;padding:22px;display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
-  @media(max-width:880px){.wrap{grid-template-columns:1fr;padding:14px;gap:14px}.rail{position:static!important}}
-  body.mobile .wrap{grid-template-columns:1fr;gap:14px}body.mobile .rail{position:static}body.mobile .btn{padding:11px 15px;font-size:14px}body.mobile .card{padding:17px}body.mobile .card h3{font-size:16px}body.mobile .tabs button{padding:15px 15px;font-size:14px}body.mobile .line{padding:12px 0}body.mobile .line .said{font-size:15px}
-  .rail{position:sticky;top:84px}
+  @media(max-width:880px){.wrap{grid-template-columns:1fr;padding:14px;gap:14px}.rail{position:static!important;max-height:none;overflow:visible}.rail .search{position:static}}
+  body.mobile .wrap{grid-template-columns:1fr;gap:14px}body.mobile .rail{position:static;max-height:none;overflow:visible}body.mobile .rail .search{position:static}body.mobile .btn{padding:11px 15px;font-size:14px}body.mobile .card{padding:17px}body.mobile .card h3{font-size:16px}body.mobile .tabs button{padding:15px 15px;font-size:14px}body.mobile .line{padding:12px 0}body.mobile .line .said{font-size:15px}
+  .rail{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow-y:auto;overflow-x:hidden;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .rail::-webkit-scrollbar{width:9px}.rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}.rail::-webkit-scrollbar-track{background:transparent}
+  .rail .search{position:sticky;top:0;z-index:3;background:var(--bg);padding-bottom:8px}
   .search{background:var(--panel-solid);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px}
   .search-field{display:flex;align-items:center;gap:9px;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
   .search-field input{border:0;background:transparent;color:var(--text);font-size:14px;width:100%;outline:none}.search-field svg{flex:none;color:var(--muted)}
@@ -150,6 +152,9 @@
   .lntools{display:flex;gap:4px;align-self:flex-start;opacity:.6}.line:hover .lntools{opacity:1}.lntools button{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:2px 6px;cursor:pointer;font-size:12px}.lntools button:hover{color:var(--text);border-color:var(--green-dim)}
   .line.red .said{opacity:.55}.redbadge{font-size:10px;background:var(--red);color:#fff;border-radius:4px;padding:1px 5px;margin-left:6px}
   .line.playing{background:rgba(76,175,106,.12);border-radius:8px;box-shadow:-3px 0 0 var(--green)}
+  .dnav{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .dnav .dnav-pos{font-size:12px;color:var(--muted-2);font-variant-numeric:tabular-nums}
+  .dnav button[disabled]{opacity:.4;cursor:default}
   .line.playing .said{color:#eafff1}
   .lnedit{width:100%;min-height:54px;background:var(--bg);border:1px solid var(--green-dim);color:var(--text);border-radius:7px;padding:7px 9px;font-size:14px}.lnedit-act{display:flex;gap:6px;margin-top:6px}
   abbr.gl{text-decoration:underline dotted var(--green-dim);text-underline-offset:2px;cursor:help}
@@ -327,6 +332,7 @@
   <div class="modal-body" id="protBody"></div>
   <div class="modal-foot"><span class="msg info" id="protMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
 
+<div class="overlay" id="ovEdit" hidden role="dialog" aria-modal="true" aria-label="Stammtisch bearbeiten"><div class="modal">
   <div class="modal-head"><h3>Stammtisch bearbeiten</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body" id="editBody"></div>
   <div class="modal-foot"><button class="btn danger" id="editDelete">Löschen</button><span class="msg" id="editMsg"></span><button class="btn primary" id="editSave">Speichern</button></div></div></div>
@@ -466,7 +472,9 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   if(state.tab==="slides"&&!(d.folien&&d.folien.length))state.tab="summary";
   const src=d.audio_pfad?pubUrl("audio",d.audio_pfad):null;
   const noDL=state.authed?"":'controlslist="nodownload noplaybackrate" oncontextmenu="return false"';
-  det.innerHTML=`<div class="dhead"><span class="date">${fmtDate(d.datum)} ${isNew(d)?'· <span style="color:var(--green)">Neu</span>':''}</span><h2>${esc(d.titel)}</h2>
+  const order=filtered();const oIdx=order.findIndex(x=>x.id===d.id);const oN=order.length;
+  const nav=`<div class="dnav"><button class="btn small" id="dPrev" ${oIdx<=0?'disabled':''} title="Vorheriger Stammtisch">◀ Vorheriger</button><span class="dnav-pos">${oIdx>=0?`${oIdx+1} / ${oN}`:""}</span><button class="btn small" id="dNext" ${(oIdx<0||oIdx>=oN-1)?'disabled':''} title="Nächster Stammtisch">Nächster ▶</button></div>`;
+  det.innerHTML=`<div class="dhead">${nav}<span class="date">${fmtDate(d.datum)} ${isNew(d)?'· <span style="color:var(--green)">Neu</span>':''}</span><h2>${esc(d.titel)}</h2>
     <div class="sub"><span><b>Ort</b> ${esc(d.ort)}</span><span><b>Dauer</b> ${fmt(d.dauer)}</span><span><b>Themen</b> ${(d.themen||[]).join(", ")||"–"}</span></div>
     <div class="speakers">${(d.sprecher||[]).map((s,i)=>`<span class="sp-tag"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</span>`).join("")}</div>
     ${d.verarbeitung==="offen"?'<div class="msg info" style="margin-top:10px;color:var(--gold)">Audio und Folien sind bereits verfügbar. Transkript und Zusammenfassung werden noch erstellt und erscheinen automatisch.</div>':''}
@@ -494,6 +502,8 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
       ${d.folien&&d.folien.length?`<button role="tab" data-tab="slides">📄 Folien<span class="badge">${d.folien.length}</span></button>`:`<span class="tab-missing">📄 Keine Folien</span>`}
     </div><div class="tabwrap" id="tabwrap"></div>`;
   setupPlayer(d);renderTabBar();renderTab(d);
+  if($("#dPrev"))$("#dPrev").onclick=()=>stepEntry(-1);
+  if($("#dNext"))$("#dNext").onclick=()=>stepEntry(1);
   $("#dBook").onclick=()=>{toggleBookmark(d.id);$("#dBook").textContent=isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen';renderList();};
   $("#dNoteToggle").onclick=()=>{const nb=$("#noteBox");nb.hidden=!nb.hidden;if(!nb.hidden)$("#dNote").focus();};
   $("#dNote").oninput=e=>{NOTES[d.id]=e.target.value;lsSet("st_notes",NOTES);};
@@ -563,6 +573,10 @@ function scrollToCurrentLine(d,force){const idx=currentLineIdx(d);if(idx<0)retur
     setTimeout(()=>{const el=$("#txlines")&&$("#txlines").querySelector(`.line[data-idx="${idx}"]`);if(el)el.scrollIntoView({behavior:"smooth",block:"center"});highlightCurrentLine(d);},80);return;}
   const el=$("#txlines").querySelector(`.line[data-idx="${idx}"]`);if(el)el.scrollIntoView({behavior:"smooth",block:"center"});}
 function seekAudio(t){const a=$("#aud");if(a){try{a.currentTime=t;a.play&&a.play().catch(()=>{});}catch(e){}}}
+function stepEntry(dir){const order=filtered();const i=order.findIndex(x=>x.id===state.current);if(i<0)return;const j=i+dir;if(j<0||j>=order.length)return;
+  state.current=order[j].id;state.tab="summary";state.txQ="";state.txSp=null;state.hits=[];state.hit=-1;
+  renderList();renderDetail(true);
+  const card=$("#list").querySelector(".card.active");if(card)card.scrollIntoView({block:"nearest"});}
 function shareLink(id,t){let url=location.origin+location.pathname+"#e="+encodeURIComponent(id);if(t)url+="&t="+t;
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(()=>announce("Teilen-Link kopiert."),()=>window.prompt("Link kopieren:",url));
   else window.prompt("Link kopieren:",url);}
