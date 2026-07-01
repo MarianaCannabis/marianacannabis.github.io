@@ -174,6 +174,9 @@
   .menu-item{width:100%;justify-content:flex-start;text-align:left;background:transparent;border-color:transparent}
   .menu-item:hover{background:rgba(255,255,255,.05);border-color:var(--line)}
   .menu-item[hidden]{display:none}
+  .wz-target{padding:9px 12px;border-radius:9px;font-size:13px;margin-bottom:12px;border:1px solid var(--line)}
+  .wz-target.pub{background:rgba(76,175,106,.12);border-color:var(--green)}
+  .wz-target.intern{background:rgba(249,199,79,.12);border-color:var(--gold)}
   body.mobile .intern-banner,@media(max-width:880px){.intern-banner{padding:10px 14px}}
   .doc-item{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin:7px 0;background:rgba(255,255,255,.02)}
   .doc-meta{font-size:11.5px;color:var(--muted-2);margin-top:2px}
@@ -296,8 +299,8 @@
   <div class="modal-foot"><span></span><button class="btn danger" id="delGo">Endgültig löschen</button></div></div></div>
 
 <div class="overlay" id="ovWizard" hidden role="dialog" aria-modal="true" aria-label="Stammtisch hochladen"><div class="modal">
-  <div class="modal-head"><h3>Stammtisch hochladen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
-  <div class="modal-body"><div class="steps" aria-hidden="true"><div id="stp1"></div><div id="stp2"></div><div id="stp3"></div></div><div id="wzBody"></div><div class="msg" id="wzMsg"></div></div>
+  <div class="modal-head"><h3 id="wzTitle">Stammtisch hochladen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body"><div id="wzTarget" class="wz-target"></div><div class="steps" aria-hidden="true"><div id="stp1"></div><div id="stp2"></div><div id="stp3"></div></div><div id="wzBody"></div><div class="msg" id="wzMsg"></div></div>
   <div class="modal-foot"><button class="btn" id="wzBack">Zurück</button><button class="btn primary" id="wzNext">Weiter</button></div></div></div>
 
 <div class="overlay" id="ovQueue" hidden role="dialog" aria-modal="true" aria-label="Status und Warteschlange"><div class="modal">
@@ -1148,7 +1151,11 @@ $("#delGo").onclick=async()=>{if(!pendingDelete)return;const msg=$("#delMsg");ms
   }catch(e){msg.textContent="Löschen fehlgeschlagen: "+(e.message||e);msg.className="msg err";}};
 
 /* ---- wizard (mehrfach) ---- */
-function openWizard(){wz={step:1,files:[],folien:null,ort:""};$("#wzMsg").textContent="";renderWizard();openModal($("#ovWizard"));}
+function openWizard(){wz={step:1,files:[],folien:null,ort:"",intern:state.mode==="int"};$("#wzMsg").textContent="";
+  const t=$("#wzTarget");
+  if(wz.intern){t.className="wz-target intern";t.innerHTML="🔒 <b>Interner Upload.</b> Diese Aufnahme(n) landen im Vorstandsbereich und sind nur für Vorstand und Admin sichtbar.";$("#wzTitle").textContent="Interne Aufnahme hochladen";}
+  else{t.className="wz-target pub";t.innerHTML="🌐 <b>Öffentlicher Upload.</b> Diese Aufnahme(n) sind nach dem Hochladen für alle Besucher sichtbar.";$("#wzTitle").textContent="Stammtisch hochladen";}
+  renderWizard();openModal($("#ovWizard"));}
 function renderWizard(){["stp1","stp2","stp3"].forEach((id,i)=>$("#"+id).className=wz.step>=i+1?"on":"");const b=$("#wzBody");
   if(wz.step===1){const noDate=wz.files.filter(f=>!f.datum).length;
     b.innerHTML=`<div class="field"><label>Audiodateien (eine oder mehrere)</label><input id="wzAudio" type="file" accept="audio/*" multiple></div>
@@ -1173,19 +1180,22 @@ $("#wzNext").onclick=async()=>{
   if(wz.step===1){if(!wz.files.length){$("#wzMsg").textContent="Bitte mindestens eine Aufnahme wählen.";$("#wzMsg").className="msg err";return;}wz.step=2;return renderWizard();}
   if(wz.step===2){if(wz.files.some(f=>!f.datum)){$("#wzMsg").textContent="Bitte für jede Datei ein Datum angeben.";$("#wzMsg").className="msg err";return;}wz.step=3;return renderWizard();}
   const msg=$("#wzMsg");let ok=0;const errs=[];
+  const intern=wz.intern;const BA=intern?"audio-intern":"audio",BF=intern?"folien-intern":"folien",TB=intern?"stammtische_intern":"stammtische",PFX=intern?"sti":"st",IMODE=intern?"fill_intern":"fill";
   for(let k=0;k<wz.files.length;k++){const f=wz.files[k];msg.className="msg info";msg.textContent=`Lade hoch (${k+1}/${wz.files.length}) …`;
-    try{const sid="st_"+f.datum+"_"+Math.random().toString(36).slice(2,6);const aExt=(f.file.name.split(".").pop()||"m4a").toLowerCase();const aPath=`${sid}/audio.${aExt}`;
+    try{const sid=PFX+"_"+f.datum+"_"+Math.random().toString(36).slice(2,6);const aExt=(f.file.name.split(".").pop()||"m4a").toLowerCase();const aPath=`${sid}/audio.${aExt}`;
       let dur=0;try{dur=await audioDuration(f.file);}catch(e){}
-      let u=await supa.storage.from("audio").upload(aPath,f.file,{upsert:true});if(u.error)throw u.error;
-      let folien=null;if(wz.files.length===1&&wz.folien){const fPath=`${sid}/folien.pdf`;let uf=await supa.storage.from("folien").upload(fPath,wz.folien,{upsert:true});if(uf.error)throw uf.error;folien=[{n:1,titel:"Foliensatz",note:f.titel||("Stammtisch "+f.datum),pfad:fPath}];}
+      let u=await supa.storage.from(BA).upload(aPath,f.file,{upsert:!intern});if(u.error)throw u.error;
+      let folien=null;if(wz.files.length===1&&wz.folien){const fPath=`${sid}/folien.pdf`;let uf=await supa.storage.from(BF).upload(fPath,wz.folien,{upsert:!intern});if(uf.error)throw uf.error;folien=[{n:1,titel:"Foliensatz",note:f.titel||("Stammtisch "+f.datum),pfad:fPath}];}
       const titel=f.titel||("Stammtisch "+fmtDate(f.datum));
       const row={id:sid,datum:f.datum,titel,ort:wz.ort||"",audio_pfad:aPath,folien,dauer_sek:Math.round(dur),sprecher:[],themen:[],zusammenfassung:{lead:"",punkte:[]},transkript:[],kapitel:[],verarbeitung:"offen",volltext:titel+" "+(wz.ort||"")};
-      let ins=await supa.from("stammtische").insert(row);if(ins.error)throw ins.error;
-      await supa.from("ingest").insert({id:"fill_"+sid,status:"queued",mode:"fill",stammtisch_id:sid,datum:f.datum,titel});ok++;
+      let ins=await supa.from(TB).insert(row);if(ins.error)throw ins.error;
+      await supa.from("ingest").insert({id:(intern?"filli_":"fill_")+sid,status:"queued",mode:IMODE,stammtisch_id:sid,datum:f.datum,titel});ok++;
+      if(intern)logIntern("aufnahme_hochgeladen",sid,titel);
     }catch(e){errs.push(f.file.name+": "+(e.message||e));}}
-  DATA=await loadData();buildFacets();renderFacets();renderList();
-  if(errs.length){msg.className="msg err";msg.textContent=`${ok} veröffentlicht, ${errs.length} fehlgeschlagen. ${errs[0]}`;}
-  else{msg.className="msg ok";msg.textContent=`${ok} veröffentlicht. Audio ist sofort verfügbar, Transkript und Zusammenfassung folgen.`;announce("Hochgeladen.");setTimeout(()=>closeModal($("#ovWizard")),1600);}};
+  if(intern){DATA_INT=null;DATA=await loadIntern();}else{DATA=await loadData();DATA_PUB=DATA;}
+  buildFacets();renderFacets();renderList();
+  if(errs.length){msg.className="msg err";msg.textContent=`${ok} ${intern?"intern hinterlegt":"veröffentlicht"}, ${errs.length} fehlgeschlagen. ${errs[0]}`;}
+  else{msg.className="msg ok";msg.textContent=`${ok} ${intern?"intern hinterlegt":"veröffentlicht"}. Audio ist sofort verfügbar, Transkript und Zusammenfassung folgen.`;announce("Hochgeladen.");setTimeout(()=>closeModal($("#ovWizard")),1600);}};
 
 /* ---- status + queue ---- */
 async function getStatus(){if(!supa)return null;try{const {data}=await supa.from("processing_status").select("*").eq("id","batch").maybeSingle();return data;}catch(e){return null;}}
