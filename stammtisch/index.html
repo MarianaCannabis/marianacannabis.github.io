@@ -944,18 +944,21 @@ function rechJump(ds,raw){closeModal($("#ovResearch"));state.current=ds.id;state
   setTimeout(()=>{if(ds.idx!=null){const el=$("#txlines")&&$("#txlines").querySelector(`.line[data-idx="${ds.idx}"]`);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("playing");}}if(ds.t!=null)seekAudio(parseInt(ds.t));},320);}
 let kiState={query:null,scope:null,status:null,phase:null,text:null,fehler:null,id:null,timer:null,tick:null,startedAt:0};
 function kiStop(){if(kiState.timer){clearInterval(kiState.timer);kiState.timer=null;}if(kiState.tick){clearInterval(kiState.tick);kiState.tick=null;}}
-let kiWorkerSeen=undefined,kiWorkerCheckedAt=0;
+let kiWorkerSeen=undefined,kiWorkerDetail="",kiWorkerCheckedAt=0;
 async function kiCheckWorker(force){
   if(!supa)return;
   if(!force&&Date.now()-kiWorkerCheckedAt<15000)return;
   kiWorkerCheckedAt=Date.now();
-  try{const {data}=await supa.from("dienst_status").select("last_seen").eq("dienst","recherche").maybeSingle();
+  try{const {data}=await supa.from("dienst_status").select("last_seen,detail").eq("dienst","recherche").maybeSingle();
     kiWorkerSeen=(data&&data.last_seen)?(Date.now()-Date.parse(data.last_seen))/1000:Infinity;
+    kiWorkerDetail=(data&&data.detail)||"";
   }catch(e){kiWorkerSeen=undefined;}
   if(rechMode==="ki"&&$("#ovResearch")&&!$("#ovResearch").hidden)research();}
 function kiOfflineNote(){
-  if(kiWorkerSeen===undefined||kiWorkerSeen<=60)return "";
-  return `<div class="msg err" style="margin-bottom:10px">⚠️ Der lokale KI-Dienst meldet sich gerade nicht (er läuft auf dem Vereinsrechner). Du kannst die Zusammenfassung trotzdem anfordern, sie wird erstellt, sobald der Rechner wieder läuft, und erscheint beim erneuten Öffnen dieses Fensters.</div>`;}
+  if(kiWorkerSeen===undefined)return "";
+  if(kiWorkerSeen>60)return `<div class="msg err" style="margin-bottom:10px">⚠️ Der lokale KI-Dienst meldet sich gerade nicht (er läuft auf dem Vereinsrechner). Du kannst die Zusammenfassung trotzdem anfordern, sie wird erstellt, sobald der Rechner wieder läuft, und erscheint beim erneuten Öffnen dieses Fensters.</div>`;
+  if(kiWorkerDetail==="ollama_down")return `<div class="msg err" style="margin-bottom:10px">⚠️ Der KI-Dienst läuft, aber die lokale KI (Ollama) ist gerade nicht gestartet. Eine Zusammenfassung kann erst erstellt werden, wenn Ollama wieder läuft. Du kannst den Auftrag trotzdem stellen, er wird nachgeholt.</div>`;
+  return "";}
 function kiFmtDur(s){return s>=60?`${Math.floor(s/60)} min ${s%60} s`:`${s} s`;}
 function kiRenderProg(){const el=$("#kiProg");if(!el||kiState.status!=="laeuft")return;
   const s=Math.max(0,Math.round((Date.now()-kiState.startedAt)/1000));
