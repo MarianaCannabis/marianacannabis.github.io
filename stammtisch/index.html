@@ -944,11 +944,12 @@ function kiPayload(raw,results){
     fundstellen:r.hits.slice(0,8).map(h=>({art:h.kind,text:stripHtml(h.snippet)}))}));
   return {query:raw,scope:state.mode,sitzungen:sess};}
 function kiFormat(text){
-  const heads=["Überblick","Einleitung","Sachstand und besprochene Punkte","Sachstand","Fragen und Reaktionen aus der Mitgliedschaft","Fragen und Reaktionen","Fragen","Offen geblieben","Offen","Beschlüsse","Beschluss","Aufgaben"];
-  const hs=new Set(heads.map(h=>h.toLowerCase()));
-  const norm=s=>s.replace(/[:：]\s*$/,"").replace(/^\*+|\*+$/g,"").replace(/^#+\s*/,"").trim();
+  const fold=s=>(""+s).toLowerCase().replace(/ü/g,"ue").replace(/ö/g,"oe").replace(/ä/g,"ae").replace(/ß/g,"ss");
+  const canon={"ueberblick":"Überblick","einleitung":"Einleitung","sachstand und besprochene punkte":"Sachstand und besprochene Punkte","sachstand":"Sachstand und besprochene Punkte","fragen und reaktionen aus der mitgliedschaft":"Fragen und Reaktionen aus der Mitgliedschaft","fragen und reaktionen":"Fragen und Reaktionen aus der Mitgliedschaft","fragen":"Fragen und Reaktionen aus der Mitgliedschaft","offen geblieben":"Offen geblieben","offen":"Offen geblieben","beschluesse":"Beschlüsse","beschluss":"Beschlüsse","aufgaben":"Aufgaben"};
+  const norm=s=>s.replace(/^#+\s*/,"").replace(/^\*+|\*+$/g,"").replace(/[:：]\s*$/,"").trim();
   return (""+text).split(/\n/).map(line=>{const t=line.trim();if(!t)return "";
-    if(hs.has(norm(t).toLowerCase()))return `<div class="sec-h" style="margin-top:12px">${esc(norm(t))}</div>`;
+    const head=canon[fold(norm(t))];
+    if(head)return `<div class="sec-h" style="margin-top:12px">${esc(head)}</div>`;
     return `<p style="margin:6px 0;line-height:1.65">${esc(t)}</p>`;}).join("");}
 function kiPanelHtml(raw,results,total){
   const ready=kiState.query===raw&&kiState.scope===state.mode;
