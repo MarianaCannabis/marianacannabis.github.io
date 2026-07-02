@@ -943,12 +943,19 @@ function kiPayload(raw,results){
   const sess=results.slice(0,40).map(r=>({datum:r.d.datum,titel:r.d.titel,
     fundstellen:r.hits.slice(0,8).map(h=>({art:h.kind,text:stripHtml(h.snippet)}))}));
   return {query:raw,scope:state.mode,sitzungen:sess};}
+function kiFormat(text){
+  const heads=["Überblick","Einleitung","Sachstand und besprochene Punkte","Sachstand","Fragen und Reaktionen aus der Mitgliedschaft","Fragen und Reaktionen","Fragen","Offen geblieben","Offen","Beschlüsse","Beschluss","Aufgaben"];
+  const hs=new Set(heads.map(h=>h.toLowerCase()));
+  const norm=s=>s.replace(/[:：]\s*$/,"").replace(/^\*+|\*+$/g,"").replace(/^#+\s*/,"").trim();
+  return (""+text).split(/\n/).map(line=>{const t=line.trim();if(!t)return "";
+    if(hs.has(norm(t).toLowerCase()))return `<div class="sec-h" style="margin-top:12px">${esc(norm(t))}</div>`;
+    return `<p style="margin:6px 0;line-height:1.65">${esc(t)}</p>`;}).join("");}
 function kiPanelHtml(raw,results,total){
   const ready=kiState.query===raw&&kiState.scope===state.mode;
-  if(ready&&kiState.status==="fertig")return `<div class="ki-note">🧠 Lokal mit Ollama aus ${results.length} Sitzungen erstellt. Bitte inhaltlich prüfen, eine KI kann sich irren.</div><div class="ki-prose">${esc(kiState.text||"").replace(/\n/g,"<br>")}</div><button class="btn small" id="kiRedo">Neu erstellen</button>`;
+  if(ready&&kiState.status==="fertig")return `<div class="ki-note">🧠 Lokal mit Ollama aus ${results.length} Sitzungen erstellt, im Protokoll-Format. Bitte inhaltlich prüfen, eine KI kann sich irren.</div><div class="ki-prose">${kiFormat(kiState.text||"")}</div><button class="btn small" id="kiRedo">Neu erstellen</button>`;
   if(ready&&kiState.status==="laeuft")return `<div class="msg info">🧠 Die KI-Zusammenfassung wird gerade auf deinem lokalen Rechner erstellt … Das kann einen Moment dauern, das Fenster kann offen bleiben.</div>`;
   if(ready&&kiState.status==="fehler")return `<div class="msg err">Konnte nicht erstellt werden: ${esc(kiState.fehler||"unbekannt")}</div><button class="btn small" id="kiStart">Erneut versuchen</button>`;
-  return `<div class="msg info">Eine zusammenhängende Prosa-Zusammenfassung zu „${esc(raw)}" aus ${results.length} Sitzungen (${total} Fundstellen), lokal mit Ollama auf deinem Rechner erstellt. Kein Text verlässt eure Infrastruktur.</div><button class="btn primary" id="kiStart" style="margin-top:10px">🧠 KI-Zusammenfassung lokal erstellen</button>`;}
+  return `<div class="msg info">Eine zusammenhängende Zusammenfassung zu „${esc(raw)}" aus ${results.length} Sitzungen (${total} Fundstellen), im Format deiner Protokolle (Einleitung, Sachstand, Fragen und Reaktionen, Offen geblieben), lokal mit Ollama auf deinem Rechner erstellt. Kein Text verlässt eure Infrastruktur.</div><button class="btn primary" id="kiStart" style="margin-top:10px">🧠 KI-Zusammenfassung lokal erstellen</button>`;}
 async function startKiJob(raw,results){
   if(!supa||!state.email){kiState.status="fehler";kiState.fehler="Nicht angemeldet.";research();return;}
   if(kiState.timer){clearInterval(kiState.timer);kiState.timer=null;}
@@ -1110,10 +1117,11 @@ async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.a
   state.internOk=!!state.email&&(state.email===ADMIN_EMAIL.toLowerCase()||state.email.endsWith("@mariana-cannabis.de"));
   setAuthed(!!session);}
 function isAdmin(){return state.authed&&state.email===ADMIN_EMAIL.toLowerCase();}
-function setAuthed(on){state.authed=on;$("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!on;
-  $("#menuAuswertung").hidden=!on;$("#menuVerwaltung").hidden=!on;
-  $("#menuVorstand").hidden=!(on&&state.internOk);
-  if(!on){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
+function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechtigt;
+  $("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!berechtigt;
+  $("#menuAuswertung").hidden=!berechtigt;$("#menuVerwaltung").hidden=!berechtigt;
+  $("#menuVorstand").hidden=!berechtigt;
+  if(!berechtigt){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
   renderDetail();}
 $("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";$("#loginEmail").value=state.email||"";openModal($("#ovLogin"));};
 $("#btnLogout").onclick=async()=>{await supa.auth.signOut();state.email=null;state.internOk=false;setAuthed(false);announce("Abgemeldet.");};
