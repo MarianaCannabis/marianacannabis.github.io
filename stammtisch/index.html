@@ -296,7 +296,7 @@
     <button class="btn" id="btnHelp" title="Kurzanleitung">Hilfe</button>
     <button class="btn icon" id="btnMobile" aria-pressed="false" title="Handy-Ansicht" aria-label="Handy-Ansicht umschalten">📱</button>
     <button class="btn icon" id="btnSr" aria-pressed="false" title="Screenreader-Modus" aria-label="Screenreader-Modus umschalten">♿</button>
-    <button class="btn primary" id="btnVorstandLogin">🔒 Vorstand</button>
+    <button class="btn primary" id="btnVorstandLogin" aria-label="Als Vorstand anmelden"><span aria-hidden="true">🔒</span> Vorstand</button>
     <button class="btn gold" id="btnAdmin">Admin</button>
     <button class="btn" id="btnLogout" hidden>Abmelden</button>
   </div>
@@ -329,24 +329,24 @@
   <section class="detail" id="detail" tabindex="-1" aria-label="Stammtisch-Details"><div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Lade Daten…</p></div></section>
 </main>
 
-<div class="overlay" id="ovLogin" hidden role="dialog" aria-modal="true" aria-label="Vorstand anmelden"><div class="modal small">
-  <div class="modal-head"><h3>Vorstand anmelden</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+<div class="overlay" id="ovLogin" hidden role="dialog" aria-modal="true" aria-labelledby="loginTitel" aria-describedby="loginErkl"><div class="modal small">
+  <div class="modal-head"><h3 id="loginTitel">Vorstand anmelden</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
-    <p class="msg info">Für den Vorstandsbereich meldest du dich mit deiner E-Mail-Adresse an. Du bekommst einen Anmeldelink per E-Mail (Magic Link). Öffne die E-Mail und klicke auf den Link, danach bist du hier automatisch angemeldet und der Vorstandsbereich steht dir offen. Den Link erhältst du nur, wenn deine Adresse als Vorstand freigeschaltet ist.</p>
-    <div id="loginHinweis"></div>
-    <div class="field"><label for="loginEmail">Deine Vorstands-Adresse</label><input id="loginEmail" type="email" autocomplete="email" placeholder="stadt@mariana-cannabis.de"></div>
+    <p class="msg info" id="loginErkl">Für den Vorstandsbereich meldest du dich mit deiner E-Mail-Adresse an. Du bekommst einen Anmeldelink per E-Mail (Magic Link). Öffne die E-Mail und klicke auf den Link, danach bist du hier automatisch angemeldet und der Vorstandsbereich steht dir offen. Den Link erhältst du nur, wenn deine Adresse als Vorstand freigeschaltet ist.</p>
+    <div id="loginHinweis" role="alert"></div>
+    <div class="field"><label for="loginEmail">Deine Vorstands-Adresse</label><input id="loginEmail" type="email" autocomplete="email" inputmode="email" placeholder="stadt@mariana-cannabis.de"></div>
     <button class="btn primary" id="loginMagic" style="width:100%;margin-top:6px">Anmeldelink per E-Mail senden</button>
-    <div class="msg" id="loginMsg" style="margin-top:8px"></div>
+    <div class="msg" id="loginMsg" role="status" style="margin-top:8px"></div>
   </div>
   <div class="modal-foot"><span class="msg info">Der Link führt dich zurück und meldet dich automatisch an.</span></div></div></div>
 
-<div class="overlay" id="ovAdminLogin" hidden role="dialog" aria-modal="true" aria-label="Admin-Anmeldung"><div class="modal small">
-  <div class="modal-head"><h3>Admin-Anmeldung</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+<div class="overlay" id="ovAdminLogin" hidden role="dialog" aria-modal="true" aria-labelledby="adminTitel" aria-describedby="adminErkl"><div class="modal small">
+  <div class="modal-head"><h3 id="adminTitel">Admin-Anmeldung</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
-    <p class="msg info">Nur für den Admin. Vorstände melden sich stattdessen über „Vorstand" mit einem Anmeldelink an.</p>
+    <p class="msg info" id="adminErkl">Nur für den Admin. Vorstände melden sich stattdessen über „Vorstand" mit einem Anmeldelink an.</p>
     <div class="field"><label for="loginPw">Admin-Passwort</label><input id="loginPw" type="password" autocomplete="current-password"></div>
     <button class="btn primary" id="loginGo" style="width:100%;margin-top:6px">Als Admin anmelden</button>
-    <div class="msg" id="loginMsgAdmin" style="margin-top:8px"></div>
+    <div class="msg" id="loginMsgAdmin" role="status" style="margin-top:8px"></div>
   </div>
   <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
 
@@ -377,7 +377,7 @@
     <p class="msg info">Das gesamte Archiv als JSON für deine Unterlagen.</p>
     <button class="btn" id="vBackup">Backup herunterladen (JSON)</button>
     <div class="sec-h" style="margin-top:18px">Sammel-PDF über einen Zeitraum</div>
-    <div class="grid2"><div class="field"><label>von</label><input type="date" id="vVon"></div><div class="field"><label>bis</label><input type="date" id="vBis"></div></div>
+    <div class="grid2"><div class="field"><label for="vVon">von</label><input type="date" id="vVon" aria-label="Zeitraum von"></div><div class="field"><label for="vBis">bis</label><input type="date" id="vBis" aria-label="Zeitraum bis"></div></div>
     <button class="btn" id="vPdf">Druckansicht öffnen</button>
     <span class="msg info" id="vPdfMsg"></span>
     <div class="sec-h" style="margin-top:18px">Aufräumen</div>
@@ -389,7 +389,7 @@
     <button class="btn" id="vStorage">Speicher berechnen</button>
     <div id="vStorageOut" style="margin-top:10px"></div>
     <div class="sec-h" style="margin-top:18px">Vorstandsbericht</div>
-    <div class="grid2"><div class="field"><label>von</label><input type="date" id="vrVon"></div><div class="field"><label>bis</label><input type="date" id="vrBis"></div></div>
+    <div class="grid2"><div class="field"><label for="vrVon">von</label><input type="date" id="vrVon" aria-label="Zeitraum von"></div><div class="field"><label for="vrBis">bis</label><input type="date" id="vrBis" aria-label="Zeitraum bis"></div></div>
     <button class="btn" id="vReport">Bericht als PDF öffnen</button>
     <span class="msg info" id="vReportMsg"></span>
   </div>
@@ -507,8 +507,8 @@
     <div class="tabs" role="tablist" id="docTabs"><button role="tab" data-dt="browse" class="on">Durchsuchen</button><button role="tab" data-dt="upload">Hochladen</button></div>
     <div id="docBrowse">
       <div class="rech-tools">
-        <input type="search" id="docQ" placeholder="Suche in Titel, Beschreibung, Schlagworten und Dokumenttext…" autocomplete="off">
-        <select id="docCat" class="sel"><option value="">Alle Kategorien</option></select>
+        <input type="search" id="docQ" placeholder="Suche in Titel, Beschreibung, Schlagworten und Dokumenttext…" autocomplete="off" aria-label="Dokumente durchsuchen">
+        <select id="docCat" class="sel" aria-label="Nach Kategorie filtern"><option value="">Alle Kategorien</option></select>
       </div>
       <div id="docList"><div class="msg info">Lade…</div></div>
     </div>
@@ -534,8 +534,8 @@
   <div class="modal-head"><h3>🔎 Recherche</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
     <div class="rech-tools">
-      <input type="search" id="rechQ" placeholder="Begriff, z. B. Bonus … (mehrere Wörter: alle müssen vorkommen, &quot;in Anführungszeichen&quot; = genaue Wortfolge)" autocomplete="off">
-      <select id="rechSort" class="sel"><option value="chrono_desc">neueste zuerst</option><option value="chrono_asc">älteste zuerst</option><option value="count">meiste Treffer zuerst</option></select>
+      <input type="search" id="rechQ" placeholder="Begriff, z. B. Bonus … (mehrere Wörter: alle müssen vorkommen, &quot;in Anführungszeichen&quot; = genaue Wortfolge)" autocomplete="off" aria-label="Archiv nach Begriff durchsuchen">
+      <select id="rechSort" class="sel" aria-label="Treffer sortieren"><option value="chrono_desc">neueste zuerst</option><option value="chrono_asc">älteste zuerst</option><option value="count">meiste Treffer zuerst</option></select>
       <button class="btn small" id="rechPdf">Als PDF</button>
     </div>
     <div class="rech-scope msg info" id="rechScope"></div>
@@ -737,7 +737,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
     <div class="speakers">${(d.sprecher||[]).map((s,i)=>`<span class="sp-tag"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</span>`).join("")}</div>
     ${d.verarbeitung==="offen"?'<div class="msg info" style="margin-top:10px;color:var(--gold)">Audio und Folien sind bereits verfügbar. Transkript und Zusammenfassung werden noch erstellt und erscheinen automatisch.</div>':''}
     <div class="personal"><button class="btn small" id="dBook">${isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen'}</button><button class="btn small" id="dNoteToggle">✎ Notiz${(NOTES[d.id]&&NOTES[d.id].trim())?' (vorhanden)':''}</button>${state.authed?'<button class="btn small" id="dShare">🔗 Teilen</button>':''}${(PLAYED[d.id]&&PLAYED[d.id].pos>15)?`<button class="btn small" id="dResume">▶ Fortsetzen bei ${fmt(PLAYED[d.id].pos)}</button>`:''}</div>
-    <div id="noteBox" hidden style="margin-top:8px"><textarea id="dNote" placeholder="Persönliche Notiz (nur auf diesem Gerät gespeichert)" style="width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px">${esc(NOTES[d.id]||"")}</textarea></div>
+    <div id="noteBox" hidden style="margin-top:8px"><textarea id="dNote" aria-label="Persönliche Notiz zu dieser Sitzung" placeholder="Persönliche Notiz (nur auf diesem Gerät gespeichert)" style="width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px">${esc(NOTES[d.id]||"")}</textarea></div>
     ${isAdmin()&&d.aufbewahrung_markiert?`<div class="msg info" style="margin-top:8px;color:var(--gold)">🗄 Zur Aufbewahrungsprüfung markiert${d.markiert_grund?': '+esc(d.markiert_grund):''}</div>`:''}
     ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button>${isAdmin()?'<button class="btn small" id="dProtokoll">🖨 Protokoll</button>':''}<button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
     ${src?`<div class="miniplayer" id="player">
@@ -920,7 +920,7 @@ function renderLines(d){const box=$("#txlines"),q=state.txQ.trim().toLowerCase()
     if(l.red&&!state.authed)return `<div class="line redacted"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="said" style="color:var(--muted-2);font-style:italic">[redigiert]</div></div></div>`;
     const m=!q||l.text.toLowerCase().includes(q);
     const who=esc((d.sprecher||[])[l.sp]||"?");
-    const tools=state.authed?`<div class="lntools"><button data-edit="${idx}" title="Text korrigieren">✎</button><button data-red="${idx}" title="${l.red?'Redaktion aufheben':'Redigieren (Inhalt für Mitglieder ausblenden)'}">${l.red?'⦿':'⊘'}</button></div>`:`<div class="lntools"><button data-report="${idx}" title="Tippfehler melden">⚠</button></div>`;
+    const tools=state.authed?`<div class="lntools"><button data-edit="${idx}" title="Text korrigieren" aria-label="Text korrigieren">✎</button><button data-red="${idx}" title="${l.red?'Redaktion aufheben':'Redigieren (Inhalt für Mitglieder ausblenden)'}" aria-label="${l.red?'Redaktion aufheben':'Redigieren, Inhalt für Mitglieder ausblenden'}">${l.red?'⦿':'⊘'}</button></div>`:`<div class="lntools"><button data-report="${idx}" title="Tippfehler melden" aria-label="Tippfehler melden">⚠</button></div>`;
     return `<div class="line ${m?'':'dim'} ${idx===curIdx?'curhit':''} ${l.red?'red':''}" data-idx="${idx}"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="who ${state.authed?'editable':''}" style="color:${spc(l.sp)}" ${state.authed?`data-sp="${l.sp}"`:''}>${who}${l.red?' <span class="redbadge">redigiert</span>':''}</div><div class="said" data-said="${idx}">${txHtml(l.text,state.txQ.trim(),idx===curIdx)}</div></div>${tools}</div>`;}).join("")||`<div class="tx-empty">Keine Zeilen.</div>`;
   box.querySelectorAll(".ts").forEach(b=>b.onclick=()=>{seekAudio(+b.dataset.t);b.closest(".line").scrollIntoView({behavior:"smooth",block:"center"});});
   if(state.authed){
@@ -1619,10 +1619,10 @@ if($("#btnAgenda"))$("#btnAgenda").onclick=()=>openAgenda();
 /* ---- edit ---- */
 function openEdit(d){editObj=JSON.parse(JSON.stringify(d));editObj.kapitel=editObj.kapitel||[];$("#editMsg").textContent="";renderEdit();openModal($("#ovEdit"));}
 function renderEdit(){const d=editObj;
-  $("#editBody").innerHTML=`<div class="grid2"><div class="field"><label>Datum</label><input id="eDatum" type="date" value="${esc(d.datum)}"></div><div class="field"><label>Ort</label><input id="eOrt" value="${esc(d.ort)}"></div></div>
-    <div class="field"><label>Titel</label><input id="eTitel" value="${esc(d.titel)}"></div>
-    <div class="field"><label>Themen (Komma)</label><input id="eThemen" value="${esc((d.themen||[]).join(', '))}"></div>
-    <div class="field"><label>Zusammenfassung, Kernaussage</label><textarea id="eLead" rows="2">${esc(d.zusammenfassung.lead)}</textarea></div>
+  $("#editBody").innerHTML=`<div class="grid2"><div class="field"><label for="eDatum">Datum</label><input id="eDatum" type="date" value="${esc(d.datum)}"></div><div class="field"><label for="eOrt">Ort</label><input id="eOrt" value="${esc(d.ort)}"></div></div>
+    <div class="field"><label for="eTitel">Titel</label><input id="eTitel" value="${esc(d.titel)}"></div>
+    <div class="field"><label for="eThemen">Themen (Komma)</label><input id="eThemen" value="${esc((d.themen||[]).join(', '))}"></div>
+    <div class="field"><label for="eLead">Zusammenfassung, Kernaussage</label><textarea id="eLead" rows="2">${esc(d.zusammenfassung.lead)}</textarea></div>
     <div class="field"><label>Punkte</label><div id="ePunkte"></div><button class="addbtn" id="addPunkt">+ Punkt</button></div>
     <div class="field"><label>Sprecher benennen</label><div id="eSpeakers"></div></div>
     <div class="field"><label>Kapitelmarken (Zeit mm:ss oder Sekunden + Titel)</label><div id="eKap"></div><button class="addbtn" id="addKap">+ Kapitel</button></div>
@@ -1680,8 +1680,8 @@ function renderWizard(){["stp1","stp2","stp3"].forEach((id,i)=>$("#"+id).classNa
     $("#wzAudio").onchange=e=>{wz.files=[...e.target.files].map(f=>({file:f,datum:dateFromName(f.name)||"",titel:""}));if(wz.files.length!==1)wz.folien=null;renderWizard();};
     const wf=$("#wzFolien");if(wf)wf.onchange=e=>{wz.folien=e.target.files[0];};}
   else if(wz.step===2){const single=wz.files.length===1;
-    b.innerHTML=`<div class="field"><label>Ort (für alle)</label><input id="wzOrt" value="${esc(wz.ort)}" placeholder="z.B. Marburg"></div>
-      ${single?`<div class="field"><label>Titel (optional)</label><input id="wzTitel" value="${esc(wz.files[0].titel)}"></div>`:''}
+    b.innerHTML=`<div class="field"><label for="wzOrt">Ort (für alle)</label><input id="wzOrt" value="${esc(wz.ort)}" placeholder="z.B. Marburg"></div>
+      ${single?`<div class="field"><label for="wzTitel">Titel (optional)</label><input id="wzTitel" value="${esc(wz.files[0].titel)}"></div>`:''}
       <div class="field"><label>Datum je Datei (Pflicht)</label><div id="wzList"></div></div>
       <div class="msg info">Veröffentlicht wird je Datei einheitlich als <b>st_&lt;Datum&gt;</b>. Der Dateiname spielt keine Rolle.</div>`;
     $("#wzOrt").oninput=e=>wz.ort=e.target.value;const t=$("#wzTitel");if(single&&t)t.oninput=e=>wz.files[0].titel=e.target.value;
