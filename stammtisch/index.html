@@ -271,6 +271,8 @@
         <button class="btn menu-item" id="btnQueue">Status &amp; Warteschlange</button>
         <button class="btn menu-item" id="btnPflege">Pflege</button>
         <button class="btn menu-item" id="btnBackup">Sicherung &amp; Export</button>
+        <button class="btn menu-item" id="btnRechte" hidden>Rechte &amp; Vorstand</button>
+        <button class="btn menu-item" id="btnAufbewahrung" hidden>Aufbewahrung</button>
       </div>
     </div>
     <div class="menu" id="menuVorstand" hidden>
@@ -372,6 +374,17 @@
     <span class="msg info" id="vReportMsg"></span>
   </div>
   <div class="modal-foot"><span class="msg" id="vMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovRechte" hidden role="dialog" aria-modal="true" aria-label="Rechte und Vorstand"><div class="modal">
+  <div class="modal-head"><h3>Rechte &amp; Vorstand</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Die Admin-Adresse und alle Adressen auf <b>@mariana-cannabis.de</b> sind ohnehin für den Vorstandsbereich berechtigt. Diese Liste ist für zusätzliche Adressen und für die Vergabe einzelner Werkzeug-Rechte (Aufgaben, Freigabe, Agenda).</p>
+    <div class="sec-h" role="heading" aria-level="4">Vorstands-Adresse hinzufügen</div>
+    <div class="field"><label for="rechtNeu">E-Mail-Adresse</label><div class="punkt-row"><input id="rechtNeu" type="email" placeholder="name@example.de" style="flex:1"><button class="btn" id="rechtAdd">Hinzufügen</button></div></div>
+    <div class="sec-h" role="heading" aria-level="4" style="margin-top:14px">Adressen und Rechte</div>
+    <div id="rechteListe"><div class="msg info">Lade…</div></div>
+  </div>
+  <div class="modal-foot"><span class="msg" id="rechteMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
 
 <div class="overlay" id="ovHits" hidden role="dialog" aria-modal="true" aria-label="Fundstellen"><div class="modal">
   <div class="modal-head"><h3>Fundstellen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -486,7 +499,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-let state={authed:false,email:null,internOk:false,mode:"pub",q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
+let state={authed:false,email:null,internOk:false,rechte:[],mode:"pub",q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
 let wz={step:1,files:[],folien:null,ort:""};
 let editObj=null,pendingDelete=null,statusTimer=null,LIVE_STATUS=null;
 
@@ -1216,12 +1229,17 @@ async function reprocess(d,mode){const txt=mode==="retranscribe"?"komplett neu t
 async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.auth.getSession();
   state.email=session&&session.user?(session.user.email||"").toLowerCase():null;
   state.internOk=!!state.email&&(state.email===ADMIN_EMAIL.toLowerCase()||state.email.endsWith("@mariana-cannabis.de"));
+  state.rechte=[];
+  if(state.email){try{const {data}=await supa.from("vorstand_rechte").select("recht").eq("email",state.email).eq("aktiv",true);state.rechte=(data||[]).map(x=>x.recht);}catch(e){state.rechte=[];}}
   setAuthed(!!session);}
 function isAdmin(){return state.authed&&state.email===ADMIN_EMAIL.toLowerCase();}
+function hatRecht(r){return state.email===ADMIN_EMAIL.toLowerCase()||(state.rechte||[]).includes(r);}
 function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechtigt;
   $("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!berechtigt;
   $("#menuAuswertung").hidden=!berechtigt;$("#menuVerwaltung").hidden=!berechtigt;
   $("#menuVorstand").hidden=!berechtigt;
+  if($("#btnRechte"))$("#btnRechte").hidden=!isAdmin();
+  if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
   if(!berechtigt){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
   renderDetail();}
 $("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";$("#loginEmail").value=state.email||"";openModal($("#ovLogin"));};
@@ -1265,6 +1283,45 @@ async function setMode(m){if(m==="int"){
 $("#btnIntern").onclick=()=>setMode(state.mode==="int"?"pub":"int");
 function logIntern(aktion,sid,detail){if(!supa||!state.email)return;
   try{supa.from("intern_zugriff_log").insert({email:state.email,aktion,stammtisch_id:sid,detail}).then(()=>{},()=>{});}catch(e){}}
+
+/* ---- Phase 1: Rechte-Verwaltung + Allowlist (Admin) ---- */
+const RECHTE_DEF=[["aufgaben","Aufgaben"],["freigabe","Freigabe"],["agenda","Agenda"]];
+let RECHTE_ALLOW=[],RECHTE_MAP={};
+async function openRechte(){if(!isAdmin()){announce("Nur für den Admin.");return;}$("#rechteMsg").textContent="";openModal($("#ovRechte"));await loadRechte();}
+async function loadRechte(){const box=$("#rechteListe");if(!box)return;box.innerHTML='<div class="msg info">Lade…</div>';
+  try{const al=await supa.from("intern_allowlist").select("email").order("email");
+    const vr=await supa.from("vorstand_rechte").select("email,recht,aktiv");
+    RECHTE_ALLOW=(al.data||[]).map(x=>(x.email||"").toLowerCase());
+    RECHTE_MAP={};(vr.data||[]).forEach(r=>{if(r.aktiv){const e=(r.email||"").toLowerCase();(RECHTE_MAP[e]=RECHTE_MAP[e]||new Set()).add(r.recht);}});
+    renderRechte();
+  }catch(e){box.innerHTML=`<div class="msg err">Konnte nicht laden: ${esc(e.message||e)}</div>`;}}
+function renderRechte(){const box=$("#rechteListe");if(!box)return;
+  const emails=[...new Set([...RECHTE_ALLOW,...Object.keys(RECHTE_MAP)])].sort();
+  if(!emails.length){box.innerHTML='<div class="msg info">Noch keine zusätzlichen Adressen eingetragen. Rechte lassen sich für jede hier eingetragene Adresse vergeben.</div>';return;}
+  box.innerHTML=emails.map(em=>{const set=RECHTE_MAP[em]||new Set();const inAllow=RECHTE_ALLOW.includes(em);
+    return `<div class="rechte-row" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(em)}</b>
+      ${inAllow?`<button class="btn small" data-delallow="${esc(em)}" aria-label="${esc(em)} aus der Allowlist entfernen">Entfernen</button>`:'<span class="msg info">nicht in Allowlist, nur Rechte</span>'}</div>
+      <div class="tx-filter" style="margin-top:8px">${RECHTE_DEF.map(([k,lbl])=>`<button data-recht="${k}" data-em="${esc(em)}" class="${set.has(k)?'on':''}" aria-pressed="${set.has(k)}" aria-label="Recht ${lbl} für ${esc(em)} ${set.has(k)?'entziehen':'erteilen'}">${lbl}</button>`).join("")}</div></div>`;
+  }).join("");
+  box.querySelectorAll("[data-delallow]").forEach(b=>b.onclick=()=>rechteRemove(b.dataset.delallow));
+  box.querySelectorAll("[data-recht]").forEach(b=>b.onclick=()=>rechteToggle(b.dataset.em,b.dataset.recht,!b.classList.contains("on")));}
+async function rechteAdd(){const em=($("#rechtNeu").value||"").trim().toLowerCase(),msg=$("#rechteMsg");
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){msg.textContent="Bitte eine gültige E-Mail-Adresse eingeben.";msg.className="msg err";return;}
+  try{const {error}=await supa.from("intern_allowlist").insert({email:em});if(error)throw error;
+    $("#rechtNeu").value="";msg.textContent="Adresse hinzugefügt.";msg.className="msg ok";announce(em+" hinzugefügt.");await loadRechte();
+  }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+async function rechteRemove(em){const msg=$("#rechteMsg");
+  try{const {error}=await supa.from("intern_allowlist").delete().eq("email",em);if(error)throw error;
+    msg.textContent="Adresse entfernt.";msg.className="msg ok";announce(em+" entfernt.");await loadRechte();
+  }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+async function rechteToggle(em,recht,on){const msg=$("#rechteMsg");
+  try{const {error}=await supa.from("vorstand_rechte").upsert({email:em,recht,aktiv:on,gesetzt_von:state.email,gesetzt_am:new Date().toISOString()},{onConflict:"email,recht"});if(error)throw error;
+    msg.textContent=(on?"Recht erteilt: ":"Recht entzogen: ")+recht+" für "+em;msg.className="msg ok";announce(msg.textContent);await loadRechte();
+  }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+if($("#btnRechte"))$("#btnRechte").onclick=()=>openRechte();
+if($("#rechtAdd"))$("#rechtAdd").onclick=()=>rechteAdd();
+if($("#rechtNeu"))$("#rechtNeu").addEventListener("keydown",e=>{if(e.key==="Enter")rechteAdd();});
 
 /* ---- edit ---- */
 function openEdit(d){editObj=JSON.parse(JSON.stringify(d));editObj.kapitel=editObj.kapitel||[];$("#editMsg").textContent="";renderEdit();openModal($("#ovEdit"));}
