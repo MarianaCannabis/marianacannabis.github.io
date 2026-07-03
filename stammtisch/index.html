@@ -1321,9 +1321,13 @@ async function reprocess(d,mode){const txt=mode==="retranscribe"?"komplett neu t
 /* ---- auth ---- */
 async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.auth.getSession();
   state.email=session&&session.user?(session.user.email||"").toLowerCase():null;
+  // Muster als schneller Startwert; maszgeblich ist die Backend-Funktion (deckt auch die Allowlist ab).
   state.internOk=!!state.email&&(state.email===ADMIN_EMAIL.toLowerCase()||state.email.endsWith("@mariana-cannabis.de"));
   state.rechte=[];
-  if(state.email){try{const {data}=await supa.from("vorstand_rechte").select("recht").eq("email",state.email).eq("aktiv",true);state.rechte=(data||[]).map(x=>x.recht);}catch(e){state.rechte=[];}}
+  if(state.email){
+    try{const {data}=await supa.rpc("ist_intern_berechtigt");if(data!=null)state.internOk=!!data;}catch(e){}
+    try{const {data}=await supa.from("vorstand_rechte").select("recht").eq("email",state.email).eq("aktiv",true);state.rechte=(data||[]).map(x=>x.recht);}catch(e){state.rechte=[];}
+  }
   setAuthed(!!session);}
 function isAdmin(){return state.authed&&state.email===ADMIN_EMAIL.toLowerCase();}
 function hatRecht(r){return state.email===ADMIN_EMAIL.toLowerCase()||(state.rechte||[]).includes(r);}
