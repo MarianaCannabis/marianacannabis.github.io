@@ -1724,7 +1724,7 @@ async function renderStatusPanel(){const s=await getStatus();const wd=await getW
     if(cp!=null){h+=`<div class="progress"><div style="width:${cp}%"></div></div><div class="msg info">${cp}% · ${esc(d.cur_elapsed||"?")} von geschätzt ${esc(d.cur_len||"?")} · ${esc(d.cur_remaining||"")}${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</div>`;}
     else{h+=`<div class="msg info">${esc(d.cur_len?("Länge "+d.cur_len):"")} ${esc(d.cur_elapsed?("· läuft seit "+d.cur_elapsed):"")}</div>`;}
     const elMin=parseMin(d.cur_elapsed),lenMin=parseMin(d.cur_len);
-    const haengt=elMin!=null&&lenMin>0&&elMin>Math.max(lenMin*2.5,lenMin+120);
+    const haengt=elMin!=null&&lenMin>0&&elMin>Math.max(lenMin*4,lenMin+120);
     if(haengt){h+=`<div class="msg err" style="margin-top:6px">⚠ Läuft ungewöhnlich lange (${esc(d.cur_elapsed)} statt geschätzt ${esc(d.cur_len)}). Die Datei hängt vermutlich, etwa in der Sprechertrennung. Bitte diesen Eintrag prüfen oder überspringen.</div>`;}
     else if(cp!=null&&lenMin>=60){h+=`<div class="msg info" style="margin-top:6px">🕑 Große Aufnahme (${esc(d.cur_len)}). Die Verarbeitung läuft und dauert entsprechend, hier kann längere Zeit keine neue Datei fertig werden.</div>`;}
     if(d.rtf)h+=`<div class="msg info">Tempo: ${esc(d.rtf)}</div>`;
