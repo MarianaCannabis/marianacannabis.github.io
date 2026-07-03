@@ -528,18 +528,17 @@ function naechsterStammtisch(){
 function isoOf(dt){const m=String(dt.getMonth()+1).padStart(2,"0"),d=String(dt.getDate()).padStart(2,"0");return `${dt.getFullYear()}-${m}-${d}`;}
 function stammtischICS(dt){
   const ymd=x=>`${x.getFullYear()}${String(x.getMonth()+1).padStart(2,"0")}${String(x.getDate()).padStart(2,"0")}`;
-  const ende=new Date(dt.getTime()+86400000);
   const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+Z$/,"Z");
   return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mariana Cannabis//Stammtisch-Archiv//DE","CALSCALE:GREGORIAN",
     "BEGIN:VEVENT","UID:stammtisch-"+ymd(dt)+"@mariana-cannabis","DTSTAMP:"+stamp,
-    "DTSTART;VALUE=DATE:"+ymd(dt),"DTEND;VALUE=DATE:"+ymd(ende),
-    "SUMMARY:Stammtisch Mariana Cannabis","DESCRIPTION:Naechster Stammtisch der Mariana Cannabis.",
+    "DTSTART:"+ymd(dt)+"T190000","DTEND:"+ymd(dt)+"T220000",
+    "SUMMARY:Stammtisch Mariana Cannabis","DESCRIPTION:Naechster Stammtisch der Mariana Cannabis. Beginn 19:00 Uhr.",
     "END:VEVENT","END:VCALENDAR"].join("\r\n");}
 function renderNextMeet(){
   const el=$("#nextMeet");if(!el)return;
   const dt=naechsterStammtisch();
   const wtag=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"][dt.getDay()];
-  el.innerHTML=`<span class="nm-ico" aria-hidden="true">📅</span><div class="nm-txt"><span class="nm-lbl">Nächster Stammtisch</span><b>${wtag}, ${fmtDate(isoOf(dt))}</b></div><button class="btn small" id="nmIcs" aria-label="Nächsten Stammtisch als Kalendereintrag herunterladen">Kalender</button>`;
+  el.innerHTML=`<span class="nm-ico" aria-hidden="true">📅</span><div class="nm-txt"><span class="nm-lbl">Nächster Stammtisch</span><b>${wtag}, ${fmtDate(isoOf(dt))}, 19:00 Uhr</b></div><button class="btn small" id="nmIcs" aria-label="Nächsten Stammtisch als Kalendereintrag herunterladen">Kalender</button>`;
   el.hidden=false;
   $("#nmIcs").onclick=()=>{
     try{const blob=new Blob([stammtischICS(dt)],{type:"text/calendar"});const url=URL.createObjectURL(blob);
