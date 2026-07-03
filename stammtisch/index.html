@@ -170,6 +170,7 @@
   .nextmeet .nm-txt{display:flex;flex-direction:column;line-height:1.25;flex:1;min-width:0}
   .nextmeet .nm-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .nextmeet .nm-txt b{font-size:14px;color:var(--text)}
+  .nextmeet-int{border-left-color:var(--green)}
   .rech-sess{margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px}
   .rech-sess h4{margin:0 0 6px;font-size:14px}.rech-sess h4 .reset{color:var(--gold);font-size:14px}
   .rech-hit{padding:7px 10px;border:1px solid var(--line);border-radius:8px;margin:5px 0;cursor:pointer;background:rgba(255,255,255,.02)}
@@ -294,6 +295,7 @@
 <main class="wrap">
   <aside class="rail" aria-label="Suche und Filter">
     <div class="nextmeet" id="nextMeet" hidden></div>
+    <div class="nextmeet nextmeet-int" id="nextMeetIntern" hidden></div>
     <div class="search">
       <div class="search-field"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Alles durchsuchen…" aria-label="Stammtische durchsuchen"></div>
       <div class="filters">
@@ -519,32 +521,45 @@ $("#btnSr").onclick=()=>applySr(!document.body.classList.contains("sr-mode"));
 /* ---- helpers ---- */
 function fmt(s){s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),se=s%60;const mm=String(m).padStart(h?2:1,"0"),ss=String(se).padStart(2,"0");return h?`${h}:${mm}:${ss}`:`${mm}:${ss}`;}
 function fmtDate(iso){return iso?new Date(iso+"T00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"long",year:"numeric"}):"–";}
-const STAMMTISCH_ANKER="2026-07-05"; // Sonntag; danach alle 14 Tage
+const STAMMTISCH_ANKER="2026-07-05"; // Sonntag; oeffentlich danach alle 14 Tage
 function naechsterStammtisch(){
   const tag=86400000,anker=new Date(STAMMTISCH_ANKER+"T00:00:00");
   const heute=new Date();heute.setHours(0,0,0,0);
   const rest=((Math.round((heute-anker)/tag))%14+14)%14;
   return new Date(heute.getTime()+(rest===0?0:14-rest)*tag);}
+function naechsterMittwoch(){ // interner Stammtisch: woechentlich Mittwoch
+  const heute=new Date();heute.setHours(0,0,0,0);
+  const bis=(3-heute.getDay()+7)%7; // 3 = Mittwoch
+  return new Date(heute.getTime()+bis*86400000);}
 function isoOf(dt){const m=String(dt.getMonth()+1).padStart(2,"0"),d=String(dt.getDate()).padStart(2,"0");return `${dt.getFullYear()}-${m}-${d}`;}
-function stammtischICS(dt){
+function buildICS(o){
   const ymd=x=>`${x.getFullYear()}${String(x.getMonth()+1).padStart(2,"0")}${String(x.getDate()).padStart(2,"0")}`;
   const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+Z$/,"Z");
-  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mariana Cannabis//Stammtisch-Archiv//DE","CALSCALE:GREGORIAN",
-    "BEGIN:VEVENT","UID:stammtisch-"+ymd(dt)+"@mariana-cannabis","DTSTAMP:"+stamp,
-    "DTSTART:"+ymd(dt)+"T190000","DTEND:"+ymd(dt)+"T220000",
-    "SUMMARY:Stammtisch Mariana Cannabis","DESCRIPTION:Naechster Stammtisch der Mariana Cannabis. Beginn 19:00 Uhr.",
-    "END:VEVENT","END:VCALENDAR"].join("\r\n");}
+  const lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mariana Cannabis//Stammtisch-Archiv//DE","CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT","UID:"+o.uid+"-"+ymd(o.dt)+"@mariana-cannabis","DTSTAMP:"+stamp,
+    "DTSTART:"+ymd(o.dt)+"T190000","DTEND:"+ymd(o.dt)+"T220000","SUMMARY:"+o.summary,"DESCRIPTION:"+o.desc];
+  if(o.rrule)lines.push("RRULE:"+o.rrule);
+  lines.push("END:VEVENT","END:VCALENDAR");
+  return lines.join("\r\n");}
+function ladeICS(text,name){
+  try{const blob=new Blob([text],{type:"text/calendar"});const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);announce("Kalendereintrag heruntergeladen.");}catch(e){}}
+const WTAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
 function renderNextMeet(){
-  const el=$("#nextMeet");if(!el)return;
-  const dt=naechsterStammtisch();
-  const wtag=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"][dt.getDay()];
-  el.innerHTML=`<span class="nm-ico" aria-hidden="true">📅</span><div class="nm-txt"><span class="nm-lbl">Nächster Stammtisch</span><b>${wtag}, ${fmtDate(isoOf(dt))}, 19:00 Uhr</b></div><button class="btn small" id="nmIcs" aria-label="Nächsten Stammtisch als Kalendereintrag herunterladen">Kalender</button>`;
-  el.hidden=false;
-  $("#nmIcs").onclick=()=>{
-    try{const blob=new Blob([stammtischICS(dt)],{type:"text/calendar"});const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");a.href=url;a.download="stammtisch.ics";document.body.appendChild(a);a.click();a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),1000);announce("Kalendereintrag heruntergeladen.");}catch(e){}
-  };}
+  const el=$("#nextMeet");
+  if(el){const dt=naechsterStammtisch();
+    el.innerHTML=`<span class="nm-ico" aria-hidden="true">📅</span><div class="nm-txt"><span class="nm-lbl">Nächster Stammtisch</span><b>${WTAGE[dt.getDay()]}, ${fmtDate(isoOf(dt))}, 19:00 Uhr</b></div><button class="btn small" id="nmIcs" aria-label="Nächsten Stammtisch als Kalendereintrag herunterladen">Kalender</button>`;
+    el.hidden=false;
+    $("#nmIcs").onclick=()=>ladeICS(buildICS({dt,uid:"stammtisch",summary:"Stammtisch Mariana Cannabis",desc:"Naechster Stammtisch der Mariana Cannabis. Beginn 19:00 Uhr.",rrule:"FREQ=WEEKLY;INTERVAL=2;BYDAY=SU"}),"stammtisch.ics");}
+  const ei=$("#nextMeetIntern");
+  if(ei){
+    if(state.internOk&&state.mode==="int"){const dt=naechsterMittwoch();
+      ei.innerHTML=`<span class="nm-ico" aria-hidden="true">🔒</span><div class="nm-txt"><span class="nm-lbl">Interner Stammtisch (Vorstand)</span><b>${WTAGE[dt.getDay()]}, ${fmtDate(isoOf(dt))}, 19:00 Uhr</b></div><button class="btn small" id="nmIcsInt" aria-label="Internen Stammtisch als Kalendereintrag herunterladen">Kalender</button>`;
+      ei.hidden=false;
+      $("#nmIcsInt").onclick=()=>ladeICS(buildICS({dt,uid:"stammtisch-intern",summary:"Interner Stammtisch (Vorstand) Mariana Cannabis",desc:"Woechentlicher interner Stammtisch des Vorstands. Beginn 19:00 Uhr.",rrule:"FREQ=WEEKLY;BYDAY=WE"}),"stammtisch-intern.ics");
+    }else ei.hidden=true;
+  }}
 function parseMin(s){if(!s)return null;let t=0,m;if((m=s.match(/(\d+)\s*h/)))t+=+m[1]*60;if((m=s.match(/(\d+)\s*min/)))t+=+m[1];return t||null;}
 function esc(t){return (t==null?"":String(t)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 function hl(t,q,cur){t=esc(t);if(!q)return t;const re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi");return t.replace(re,`<span class="hl${cur?' cur':''}">$1</span>`);}
@@ -1244,7 +1259,7 @@ async function setMode(m){if(m==="int"){
     logIntern("bereich_geoeffnet",null,null);
   }else{DATA=DATA_PUB;state.mode="pub";$("#btnDocs").hidden=true;$("#btnLog").hidden=true;$("#btnIntern").textContent="Vorstandsbereich öffnen";internBanner(false);}
   state.current=null;state.q="";$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
-  buildFacets();computeSince();renderFacets();renderList();renderDetail();
+  buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();
   announce(state.mode==="int"?"Interner Vorstandsbereich aktiv. Inhalte nur für Vorstand und Admin.":"Öffentliches Archiv.");
   document.querySelector(".wrap").scrollIntoView({block:"start"});}
 $("#btnIntern").onclick=()=>setMode(state.mode==="int"?"pub":"int");
