@@ -440,6 +440,11 @@
   </div>
   <div class="modal-foot"><span class="msg" id="aufbMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
 
+<div class="overlay" id="ovAgenda" hidden role="dialog" aria-modal="true" aria-label="Agenda-Entwurf"><div class="modal modal-wide">
+  <div class="modal-head"><h3>📋 Agenda-Entwurf für den nächsten Stammtisch</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body" id="agendaBody"><div class="msg info">Lade…</div></div>
+  <div class="modal-foot"><span class="msg" id="agendaMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
+
 <div class="overlay" id="ovHits" hidden role="dialog" aria-modal="true" aria-label="Fundstellen"><div class="modal">
   <div class="modal-head"><h3>Fundstellen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body" id="hitsBody"></div>
@@ -1332,6 +1337,7 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnVorschlagVorstand"))$("#btnVorschlagVorstand").hidden=!berechtigt;
   if($("#btnAufgaben"))$("#btnAufgaben").hidden=!(berechtigt&&hatRecht("aufgaben"));
   if($("#btnOffenePunkte"))$("#btnOffenePunkte").hidden=!isAdmin();
+  if($("#btnAgenda"))$("#btnAgenda").hidden=!(berechtigt&&hatRecht("agenda"));
   if(!berechtigt){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
   renderDetail();}
 $("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";$("#loginEmail").value=state.email||"";openModal($("#ovLogin"));};
@@ -1550,6 +1556,46 @@ async function aufbUnmark(id){const msg=$("#aufbMsg");
   }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
 if($("#btnAufbewahrung"))$("#btnAufbewahrung").onclick=()=>openAufbewahrung();
 if($("#aufbMonate"))$("#aufbMonate").onchange=e=>{AUFB_MONATE=Math.max(0,parseInt(e.target.value)||0);renderAufbewahrung();};
+
+/* ---- Phase 6a: Agenda-Entwurf (Admin oder Recht 'agenda'), lokaler Ollama-Job ---- */
+let agState={status:null,text:null,fehler:null,id:null,timer:null,startedAt:0},agWorkerSeen=undefined,agWorkerDetail="";
+function agStop(){if(agState.timer){clearInterval(agState.timer);agState.timer=null;}}
+async function agCheckWorker(){if(!supa)return;try{const {data}=await supa.from("dienst_status").select("last_seen,detail").eq("dienst","agenda").maybeSingle();agWorkerSeen=(data&&data.last_seen)?(Date.now()-Date.parse(data.last_seen))/1000:Infinity;agWorkerDetail=(data&&data.detail)||"";}catch(e){agWorkerSeen=undefined;}}
+function agOfflineNote(){if(agWorkerSeen===undefined)return "";
+  if(agWorkerSeen>60)return `<div class="msg err" role="alert" style="margin-bottom:10px">⚠️ Der lokale Agenda-Dienst meldet sich gerade nicht (er läuft auf dem Vereinsrechner). Du kannst den Entwurf trotzdem anfordern, er wird erstellt, sobald der Rechner wieder läuft, und erscheint beim erneuten Öffnen dieses Fensters.</div>`;
+  if(agWorkerDetail==="ollama_down")return `<div class="msg err" role="alert" style="margin-bottom:10px">⚠️ Der Agenda-Dienst läuft, aber die lokale KI (Ollama) ist gerade nicht gestartet. Der Entwurf wird erstellt, sobald Ollama wieder läuft.</div>`;
+  return "";}
+function agFormat(text){return (""+text).split(/\n/).map(t=>{t=t.trim();if(!t)return "";return `<p style="margin:6px 0;line-height:1.6">${esc(t)}</p>`;}).join("");}
+function renderAgenda(){const box=$("#agendaBody");if(!box)return;
+  if(agState.status==="fertig"){box.innerHTML=`<div class="ki-note">📋 Lokal mit Ollama erstellt aus offenen Aufgaben, offenen Punkten und eingegangenen Vorschlägen. Bitte inhaltlich prüfen, eine KI kann sich irren.</div><div class="ki-prose">${agFormat(agState.text||"")}</div><div style="margin-top:10px;display:flex;gap:8px"><button class="btn small" id="agRedo">Neu erstellen</button><button class="btn small" id="agCopy">Text kopieren</button></div>`;
+    if($("#agRedo"))$("#agRedo").onclick=()=>agStart();
+    if($("#agCopy"))$("#agCopy").onclick=()=>{try{navigator.clipboard&&navigator.clipboard.writeText(agState.text||"");announce("Agenda kopiert.");}catch(e){}};return;}
+  if(agState.status==="laeuft"){box.innerHTML=`<div class="msg info" style="margin-bottom:2px">📋 Der Agenda-Entwurf wird lokal auf dem Vereinsrechner erstellt. Das Fenster kann offen bleiben.</div><div class="ki-bar" id="agBar" role="progressbar" aria-label="Agenda-Entwurf wird erstellt" aria-valuetext="läuft"><div></div></div><div class="msg info" id="agProg" aria-hidden="true">läuft…</div>`;return;}
+  if(agState.status==="fehler"){box.innerHTML=`${agOfflineNote()}<div class="msg err">Konnte nicht erstellt werden: ${esc(agState.fehler||"unbekannt")}</div><button class="btn primary" id="agStart">Erneut versuchen</button>`;if($("#agStart"))$("#agStart").onclick=()=>agStart();return;}
+  box.innerHTML=`${agOfflineNote()}<div class="msg info">Erstellt einen gegliederten Tagesordnungs-Entwurf für den nächsten Stammtisch aus offenen Aufgaben, offenen Punkten früherer Sitzungen und den eingegangenen Vorschlägen. Lokal mit Ollama, kein Text verlässt eure Infrastruktur.</div><button class="btn primary" id="agStart" style="margin-top:10px">📋 Agenda-Entwurf erstellen</button>`;
+  if($("#agStart"))$("#agStart").onclick=()=>agStart();}
+async function openAgenda(){if(!hatRecht("agenda")){announce("Kein Zugriff auf die Agenda.");return;}$("#agendaMsg").textContent="";await agCheckWorker();await agAttach();renderAgenda();openModal($("#ovAgenda"));}
+async function agAttach(){if(!supa||!state.email)return;
+  try{const {data}=await supa.from("agenda_jobs").select("id,status,ergebnis,fehler,angefordert_am").eq("angefordert_von",state.email).order("angefordert_am",{ascending:false}).limit(1).maybeSingle();
+    if(data){const age=(Date.now()-Date.parse(data.angefordert_am))/1000;
+      if(data.status==="fertig"){agStop();agState={status:"fertig",text:data.ergebnis||"",fehler:null,id:data.id,timer:null,startedAt:0};}
+      else if((data.status==="laeuft"||data.status==="offen")&&age<1800){agState={status:"laeuft",text:null,fehler:null,id:data.id,timer:null,startedAt:Date.now()-age*1000};agBeginPolling(data.id);}
+    }}catch(e){}}
+async function agStart(){if(!supa||!state.email){agState.status="fehler";agState.fehler="Nicht angemeldet.";renderAgenda();return;}
+  if(!hatRecht("agenda")){agState.status="fehler";agState.fehler="Kein Zugriff.";renderAgenda();return;}
+  agStop();const id="ag_"+Date.now()+"_"+Math.random().toString(36).slice(2,6);
+  agState={status:"laeuft",text:null,fehler:null,id,timer:null,startedAt:Date.now()};renderAgenda();announce("Agenda-Entwurf wird lokal erstellt.");
+  try{const {error}=await supa.from("agenda_jobs").insert({id,payload:{},status:"offen",angefordert_von:state.email});if(error)throw error;agBeginPolling(id);}
+  catch(e){agStop();agState.status="fehler";agState.fehler=e.message||(""+e);renderAgenda();}}
+function agBeginPolling(id){agStop();let tries=0;
+  agState.timer=setInterval(async()=>{tries++;
+    try{const {data}=await supa.from("agenda_jobs").select("status,ergebnis,fehler").eq("id",id).maybeSingle();
+      if(data&&data.status==="fertig"){agStop();if(agState.id===id){agState.status="fertig";agState.text=data.ergebnis||"(leer)";announce("Agenda-Entwurf ist fertig.");if($("#ovAgenda")&&!$("#ovAgenda").hidden)renderAgenda();}}
+      else if(data&&data.status==="fehler"){agStop();if(agState.id===id){agState.status="fehler";agState.fehler=data.fehler||"unbekannt";if($("#ovAgenda")&&!$("#ovAgenda").hidden)renderAgenda();}}
+    }catch(e){}
+    if(tries>=300){agStop();if(agState.id===id&&agState.status==="laeuft"){agState.status="fehler";agState.fehler="Zeitüberschreitung im Browser. Du kannst das Fenster später erneut öffnen, ein fertiges Ergebnis wird dann angezeigt.";if($("#ovAgenda")&&!$("#ovAgenda").hidden)renderAgenda();}}
+  },4000);}
+if($("#btnAgenda"))$("#btnAgenda").onclick=()=>openAgenda();
 
 /* ---- edit ---- */
 function openEdit(d){editObj=JSON.parse(JSON.stringify(d));editObj.kapitel=editObj.kapitel||[];$("#editMsg").textContent="";renderEdit();openModal($("#ovEdit"));}
