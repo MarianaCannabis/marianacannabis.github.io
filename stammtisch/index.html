@@ -222,7 +222,12 @@
   .logtab th{color:var(--muted-2);font-weight:600;font-size:11.5px}
   .line.playing .said{color:#eafff1}
   .lnedit{width:100%;min-height:54px;background:var(--bg);border:1px solid var(--green-dim);color:var(--text);border-radius:7px;padding:7px 9px;font-size:14px}.lnedit-act{display:flex;gap:6px;margin-top:6px}
-  abbr.gl{text-decoration:underline dotted var(--green-dim);text-underline-offset:2px;cursor:help}
+  abbr.gl{text-decoration:underline dotted var(--green-dim);text-underline-offset:2px;cursor:help;position:relative}
+  abbr.gl:focus{outline:2px solid var(--gold);outline-offset:2px}
+  abbr.gl:focus::after{content:attr(title);position:absolute;left:0;top:130%;z-index:60;background:var(--panel-solid);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12px;line-height:1.4;color:var(--text);white-space:normal;width:max-content;max-width:240px;box-shadow:0 8px 20px rgba(0,0,0,.45);font-style:normal;text-decoration:none}
+  .kp-jump{margin-left:6px;border:1px solid var(--line);background:var(--bg);color:var(--green);border-radius:6px;font-size:11px;line-height:1;padding:3px 7px;cursor:pointer;vertical-align:middle;flex:none}
+  .kp-jump:hover{border-color:var(--green)}
+  .kp-jump:focus{outline:2px solid var(--gold);outline-offset:2px}
   .nv-badge{font-size:10px;border-radius:5px;padding:1px 7px;margin-left:4px}.nv-offen{background:#3a2a1a;color:var(--amber)}.nv-laeuft{background:#1a2f3a;color:#6fb6d9}.nv-umgesetzt{background:#16331f;color:var(--green)}
   .hitgrp{border-bottom:1px solid var(--line);padding:8px 0}.hitgrp-h{font-weight:600;margin-bottom:4px}
   .hitline{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 9px;margin:3px 0;color:var(--text);font-size:12.5px;cursor:pointer}.hitline:hover{border-color:var(--green-dim)}
@@ -576,9 +581,9 @@ function renderNextMeet(){
 function parseMin(s){if(!s)return null;let t=0,m;if((m=s.match(/(\d+)\s*h/)))t+=+m[1]*60;if((m=s.match(/(\d+)\s*min/)))t+=+m[1];return t||null;}
 function esc(t){return (t==null?"":String(t)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 function hl(t,q,cur){t=esc(t);if(!q)return t;const re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi");return t.replace(re,`<span class="hl${cur?' cur':''}">$1</span>`);}
-const GLOSSAR={"CanG":"Cannabisgesetz","KCanG":"Konsumcannabisgesetz","CSC":"Cannabis Social Club","THC":"Tetrahydrocannabinol","CBD":"Cannabidiol","Terptrain":"interne Vereinsplattform","DSGVO":"Datenschutz-Grundverordnung","Anbauvereinigung":"Verein zum gemeinschaftlichen Eigenanbau","BtMG":"Betäubungsmittelgesetz"};
-function glossaryWrap(html){if(!gp("st_glossar"))return html;const terms=Object.keys(GLOSSAR).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));const re=new RegExp("(?<![\\wäöüß])("+terms.join("|")+")(?![\\wäöüß])","g");
-  return html.split(/(<[^>]+>)/).map(seg=>seg.startsWith("<")?seg:seg.replace(re,m=>`<abbr class="gl" title="${esc(GLOSSAR[m]||m)}">${m}</abbr>`)).join("");}
+const GLOSSAR={"CanG":"Cannabisgesetz","KCanG":"Konsumcannabisgesetz","CSC":"Cannabis Social Club, Anbauvereinigung","Cannabis Social Club":"Anbauvereinigung zum gemeinschaftlichen Eigenanbau","THC":"Tetrahydrocannabinol, der psychoaktive Wirkstoff","CBD":"Cannabidiol, nicht berauschender Wirkstoff","Terptrain":"interne Vereinsplattform","DSGVO":"Datenschutz-Grundverordnung","Anbauvereinigung":"Verein zum gemeinschaftlichen Eigenanbau nach KCanG","BtMG":"Betäubungsmittelgesetz","Eigenanbau":"privater Anbau für den Eigenbedarf","Abgabe":"Weitergabe von Cannabis an Mitglieder der Anbauvereinigung","Ausgabe":"Aushändigung von Cannabis an Mitglieder","Grenzwerte":"gesetzlich festgelegte Höchstmengen oder THC-Grenzen","Grenzwert":"gesetzlich festgelegte Höchstmenge oder THC-Grenze","Mengenbegrenzung":"gesetzliche Obergrenze für Besitz und Abgabe","Prävention":"Maßnahmen zum Jugend- und Gesundheitsschutz","Präventionsbeauftragter":"für Jugend- und Gesundheitsschutz zuständige Person im Verein"};
+function glossaryWrap(html){if(!gp("st_glossar"))return html;const terms=Object.keys(GLOSSAR).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));const re=new RegExp("(?<![\\wäöüß])("+terms.join("|")+")(?![\\wäöüß])","g");const seen=new Set();
+  return html.split(/(<[^>]+>)/).map(seg=>seg.startsWith("<")?seg:seg.replace(re,m=>{if(seen.has(m))return m;seen.add(m);return `<abbr class="gl" tabindex="0" title="${esc(GLOSSAR[m]||m)}">${m}</abbr>`;})).join("");}
 function txHtml(t,q,cur){return glossaryWrap(hl(t,q,cur));}
 function spc(i){return SPV[i%SPV.length];}
 function isNew(d){if(!d.erstellt_am)return false;return (Date.now()-new Date(d.erstellt_am).getTime())<NEU_TAGE*864e5;}
@@ -767,6 +772,13 @@ function scrollToCurrentLine(d,force){const idx=currentLineIdx(d);if(idx<0)retur
     setTimeout(()=>{const el=$("#txlines")&&$("#txlines").querySelector(`.line[data-idx="${idx}"]`);if(el)el.scrollIntoView({behavior:"smooth",block:"center"});highlightCurrentLine(d);},80);return;}
   const el=$("#txlines").querySelector(`.line[data-idx="${idx}"]`);if(el)el.scrollIntoView({behavior:"smooth",block:"center"});}
 function seekAudio(t){const a=$("#aud");if(a){try{a.currentTime=t;a.play&&a.play().catch(()=>{});}catch(e){}}}
+/* Phase 2c: passendes Transkript-Segment zu einem Zusammenfassungspunkt finden (Stichwort-Match). */
+function matchSummaryPoint(d,text){const tx=(d.transkript||[]).filter(l=>!l.red&&l.text);if(!tx.length)return null;
+  const uniq=[...new Set((String(text).toLowerCase().match(/[a-zäöüß]{5,}/g)||[]))];if(!uniq.length)return null;
+  let best=null,bestScore=0;
+  for(const l of tx){const lt=l.text.toLowerCase();let sc=0;for(const wd of uniq)if(lt.includes(wd))sc++;
+    if(sc>bestScore){bestScore=sc;best=l;}}
+  return bestScore>0&&best?(best.t||0):null;}
 function stepEntry(dir){const order=filtered();const i=order.findIndex(x=>x.id===state.current);if(i<0)return;const j=i+dir;if(j<0||j>=order.length)return;
   state.current=order[j].id;state.tab="summary";state.txQ="";state.txSp=null;state.hits=[];state.hit=-1;
   renderList();renderDetail(true);
@@ -787,16 +799,19 @@ function renderTab(d){const w=$("#tabwrap");
     if(d.verarbeitung==="offen"&&!hasSummary){w.innerHTML=`<div class="nodata">Die Zusammenfassung wird noch erstellt. Audio und Folien sind bereits verfügbar.</div>`;return;}
     const sachstand=(z.sachstand&&z.sachstand.length?z.sachstand:(z.punkte||[]));
     const block=(t,arr,r)=>arr&&arr.length?`<div class="sec-h" style="margin-top:18px">${t}</div><div class="keyrow">${arr.map(r).join("")}</div>`:"";
+    const audioDa=!!d.audio_pfad;
+    const jumpBtn=p=>{if(!audioDa)return"";const t=matchSummaryPoint(d,p);return t==null?"":`<button class="kp-jump" data-jt="${t}" aria-label="Zur passenden Stelle im Audio springen (${fmt(t)})">▶ ${fmt(t)}</button>`;};
     let h=`<div class="summary">${state.authed?`<div style="text-align:right;margin-bottom:6px"><button class="btn small" id="sumEdit">✎ Zusammenfassung bearbeiten</button></div>`:""}`;
     h+=`<p class="lead">${z.lead?glossaryWrap(esc(z.lead)):'<span class="msg info">Keine Zusammenfassung hinterlegt.</span>'}</p>`;
-    h+=block("Sachstand und besprochene Punkte",sachstand,p=>`<div class="kp"><b>›</b><span>${glossaryWrap(esc(p))}</span></div>`);
-    h+=block("Fragen und Reaktionen aus der Mitgliedschaft",z.fragen,p=>`<div class="kp"><b style="color:var(--sp2)">?</b><span>${glossaryWrap(esc(p))}</span></div>`);
-    h+=block("Offen geblieben",z.offene_fragen,p=>`<div class="kp"><b style="color:var(--gold)">○</b><span>${glossaryWrap(esc(p))}</span></div>`);
+    h+=block("Sachstand und besprochene Punkte",sachstand,p=>`<div class="kp"><b>›</b><span>${glossaryWrap(esc(p))}</span>${jumpBtn(p)}</div>`);
+    h+=block("Fragen und Reaktionen aus der Mitgliedschaft",z.fragen,p=>`<div class="kp"><b style="color:var(--sp2)">?</b><span>${glossaryWrap(esc(p))}</span>${jumpBtn(p)}</div>`);
+    h+=block("Offen geblieben",z.offene_fragen,p=>`<div class="kp"><b style="color:var(--gold)">○</b><span>${glossaryWrap(esc(p))}</span>${jumpBtn(p)}</div>`);
     if(state.authed){
       h+=block("Beschlüsse (intern)",z.beschluesse,b=>`<div class="kp"><b style="color:var(--green)">✓</b><span>${esc(b)}</span></div>`);
       h+=block("Aufgaben (intern)",z.aufgaben,a=>`<div class="kp"><b style="color:var(--gold)">→</b><span>${esc(a&&a.text!=null?a.text:a)}${a&&a.wer?(' <span class="msg info">('+esc(a.wer)+')</span>'):''}</span></div>`);}
     h+=`<div class="themes">${(d.themen||[]).map(t=>`<span class="t">#${esc(t)}</span>`).join("")}</div>${redezeitHtml(d)}<div class="msg info" style="margin-top:14px">Automatisch erzeugt beziehungsweise redaktionell erstellt, kann Fehler enthalten.</div></div>`;
     w.innerHTML=h;
+    w.querySelectorAll(".kp-jump").forEach(b=>b.onclick=()=>seekAudio(+b.dataset.jt));
     if(state.authed&&$("#sumEdit"))$("#sumEdit").onclick=()=>editSummary(d);}
   else if(state.tab==="transcript"){
     if(d.verarbeitung==="offen"||!(d.transkript||[]).length){w.innerHTML=`<div class="nodata">Das Transkript wird noch erstellt und erscheint hier automatisch, sobald es fertig ist. Audio und Folien sind bereits verfügbar.</div>`;return;}
@@ -1607,6 +1622,7 @@ function computeSince(){const last=lsGet("st_lastvisit",null);
   lsSet("st_lastvisit",new Date().toISOString());}
 (async function boot(){applyMobile(gp("st_mobile"));applySr(gp("st_sr"));if(gp("st_txtsize"))document.body.classList.add("tx-large");await refreshAuth();
   DATA=await loadData();DATA_PUB=DATA;buildFacets();initCollapse();computeSince();renderFacets();renderList();renderNextMeet();
+  if(state.sinceCount>0)setTimeout(()=>announce(state.sinceCount+(state.sinceCount===1?" neuer Stammtisch":" neue Stammtische")+" seit deinem letzten Besuch."),500);
   if(!parseHash())renderDetail();
   window.addEventListener("hashchange",parseHash);
   $("#introOk").onclick=()=>{try{localStorage.setItem("st_intro_ok","1");}catch(e){}closeModal($("#ovIntro"));};
