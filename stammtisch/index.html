@@ -411,6 +411,26 @@
   <div class="modal-body" id="vsBody"><div class="msg info">Lade…</div></div>
   <div class="modal-foot"><span class="msg" id="vsMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
 
+<div class="overlay" id="ovAufgaben" hidden role="dialog" aria-modal="true" aria-label="Aufgaben-Tracker"><div class="modal modal-wide">
+  <div class="modal-head"><h3>Aufgaben</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <div class="sec-h" role="heading" aria-level="4" id="aufFormTitel">Neue Aufgabe</div>
+    <div class="grid2"><div class="field"><label for="aufTitel">Titel</label><input id="aufTitel" maxlength="500"></div><div class="field"><label for="aufVer">Verantwortlich</label><input id="aufVer"></div></div>
+    <div class="field"><label for="aufBeschr">Beschreibung</label><textarea id="aufBeschr" rows="2"></textarea></div>
+    <div class="grid2"><div class="field"><label for="aufFrist">Frist</label><input id="aufFrist" type="date"></div><div class="field"><label for="aufStatus">Status</label><select id="aufStatus" class="sel"><option value="offen">offen</option><option value="in_arbeit">in Arbeit</option><option value="erledigt">erledigt</option></select></div></div>
+    <div class="field"><label for="aufQuelle">Bezug zur Sitzung (optional)</label><input id="aufQuelle" placeholder="z. B. st_2026-06-01"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn primary" id="aufSave">Speichern</button><button class="btn" id="aufReset">Formular leeren</button><span class="msg" id="aufMsg"></span></div>
+    <div class="sec-h" role="heading" aria-level="4" style="margin-top:18px">Aufgabenliste</div>
+    <div class="rech-tools"><select id="aufFilter" class="sel" aria-label="Aufgaben filtern"><option value="offen_arbeit">offen und in Arbeit</option><option value="alle">alle</option><option value="offen">nur offen</option><option value="in_arbeit">nur in Arbeit</option><option value="erledigt">nur erledigt</option></select><select id="aufSort" class="sel" aria-label="Aufgaben sortieren"><option value="frist">nach Frist</option><option value="status">nach Status</option><option value="neu">neueste zuerst</option></select></div>
+    <div id="aufListe"><div class="msg info">Lade…</div></div>
+  </div>
+  <div class="modal-foot"><span class="msg" id="aufMsg2"></span><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovOffenePunkte" hidden role="dialog" aria-modal="true" aria-label="Offene Punkte"><div class="modal modal-wide">
+  <div class="modal-head"><h3>Offene Punkte über alle Sitzungen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body" id="opBody"><div class="msg info">Lade…</div></div>
+  <div class="modal-foot"><span></span><button class="btn" data-close>Schließen</button></div></div></div>
+
 <div class="overlay" id="ovHits" hidden role="dialog" aria-modal="true" aria-label="Fundstellen"><div class="modal">
   <div class="modal-head"><h3>Fundstellen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body" id="hitsBody"></div>
@@ -828,10 +848,11 @@ function renderTab(d){const w=$("#tabwrap");
     h+=block("Offen geblieben",z.offene_fragen,p=>`<div class="kp"><b style="color:var(--gold)">○</b><span>${glossaryWrap(esc(p))}</span>${jumpBtn(p)}</div>`);
     if(state.authed){
       h+=block("Beschlüsse (intern)",z.beschluesse,b=>`<div class="kp"><b style="color:var(--green)">✓</b><span>${esc(b)}</span></div>`);
-      h+=block("Aufgaben (intern)",z.aufgaben,a=>`<div class="kp"><b style="color:var(--gold)">→</b><span>${esc(a&&a.text!=null?a.text:a)}${a&&a.wer?(' <span class="msg info">('+esc(a.wer)+')</span>'):''}</span></div>`);}
+      h+=block("Aufgaben (intern)",z.aufgaben,a=>{const txt=(a&&a.text!=null)?a.text:a;const wer=a&&a.wer?a.wer:"";return `<div class="kp"><b style="color:var(--gold)">→</b><span>${esc(txt)}${wer?(' <span class="msg info">('+esc(wer)+')</span>'):''}</span>${hatRecht("aufgaben")?`<button class="kp-jump" data-aufnehmen="1" data-titel="${esc(txt)}" data-wer="${esc(wer)}" aria-label="Diese Aufgabe in den Aufgaben-Tracker übernehmen">＋ Aufgabe</button>`:""}</div>`;});}
     h+=`<div class="themes">${(d.themen||[]).map(t=>`<span class="t">#${esc(t)}</span>`).join("")}</div>${redezeitHtml(d)}<div class="msg info" style="margin-top:14px">Automatisch erzeugt beziehungsweise redaktionell erstellt, kann Fehler enthalten.</div></div>`;
     w.innerHTML=h;
-    w.querySelectorAll(".kp-jump").forEach(b=>b.onclick=()=>seekAudio(+b.dataset.jt));
+    w.querySelectorAll(".kp-jump[data-jt]").forEach(b=>b.onclick=()=>seekAudio(+b.dataset.jt));
+    w.querySelectorAll("[data-aufnehmen]").forEach(b=>b.onclick=()=>uebernehmeAufgabe(b.dataset.titel,b.dataset.wer,d.id));
     if(state.authed&&$("#sumEdit"))$("#sumEdit").onclick=()=>editSummary(d);}
   else if(state.tab==="transcript"){
     if(d.verarbeitung==="offen"||!(d.transkript||[]).length){w.innerHTML=`<div class="nodata">Das Transkript wird noch erstellt und erscheint hier automatisch, sobald es fertig ist. Audio und Folien sind bereits verfügbar.</div>`;return;}
@@ -1277,6 +1298,8 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
   if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").hidden=!isAdmin();
   if($("#btnVorschlagVorstand"))$("#btnVorschlagVorstand").hidden=!berechtigt;
+  if($("#btnAufgaben"))$("#btnAufgaben").hidden=!(berechtigt&&hatRecht("aufgaben"));
+  if($("#btnOffenePunkte"))$("#btnOffenePunkte").hidden=!isAdmin();
   if(!berechtigt){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
   renderDetail();}
 $("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";$("#loginEmail").value=state.email||"";openModal($("#ovLogin"));};
@@ -1412,6 +1435,61 @@ async function vsDelete(id){const msg=$("#vsMsg");
   catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
 if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").onclick=()=>openVorschlaege();
 if($("#vsTabs"))$("#vsTabs").querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{VS_TAB=b.dataset.vs;$("#vsTabs").querySelectorAll("[data-vs]").forEach(x=>x.classList.toggle("on",x===b));renderVorschlaege();});
+
+/* ---- Phase 4a: Aufgaben-Tracker (Admin oder Recht 'aufgaben') ---- */
+let AUF_DATA=[],AUF_EDIT=null,AUF_FILTER="offen_arbeit",AUF_SORT="frist";
+async function openAufgaben(){if(!hatRecht("aufgaben")){announce("Kein Zugriff auf die Aufgaben.");return;}aufReset();$("#aufMsg").textContent="";$("#aufMsg2").textContent="";openModal($("#ovAufgaben"));await loadAufgaben();}
+async function loadAufgaben(){const box=$("#aufListe");if(!box)return;box.innerHTML='<div class="msg info">Lade…</div>';
+  try{const {data,error}=await supa.from("aufgaben").select("*");if(error)throw error;AUF_DATA=data||[];renderAufgaben();}
+  catch(e){box.innerHTML=`<div class="msg err">Konnte nicht laden: ${esc(e.message||e)}</div>`;}}
+function aufReset(){AUF_EDIT=null;$("#aufFormTitel").textContent="Neue Aufgabe";["aufTitel","aufVer","aufBeschr","aufFrist","aufQuelle"].forEach(id=>{const el=$("#"+id);if(el)el.value="";});$("#aufStatus").value="offen";}
+function aufPrefill(titel,wer,sid){AUF_EDIT=null;$("#aufFormTitel").textContent="Neue Aufgabe (übernommen)";$("#aufTitel").value=titel||"";$("#aufVer").value=wer||"";$("#aufBeschr").value="";$("#aufFrist").value="";$("#aufStatus").value="offen";$("#aufQuelle").value=sid||"";}
+async function uebernehmeAufgabe(titel,wer,sid){if(!hatRecht("aufgaben"))return;openModal($("#ovAufgaben"));await loadAufgaben();aufPrefill(titel,wer,sid);const t=$("#aufTitel");if(t)t.focus();announce("Aufgabe vorbefüllt, bitte prüfen und speichern.");}
+function renderAufgaben(){const box=$("#aufListe");if(!box)return;let rows=AUF_DATA.slice();
+  if(AUF_FILTER==="offen_arbeit")rows=rows.filter(a=>a.status!=="erledigt");
+  else if(AUF_FILTER!=="alle")rows=rows.filter(a=>a.status===AUF_FILTER);
+  const today=new Date().toISOString().slice(0,10),so={offen:0,in_arbeit:1,erledigt:2};
+  if(AUF_SORT==="frist")rows.sort((a,b)=>(a.frist||"9999-99-99").localeCompare(b.frist||"9999-99-99"));
+  else if(AUF_SORT==="status")rows.sort((a,b)=>((so[a.status]??9)-(so[b.status]??9))||((a.frist||"9999-99-99").localeCompare(b.frist||"9999-99-99")));
+  else rows.sort((a,b)=>String(b.erstellt_am||"").localeCompare(String(a.erstellt_am||"")));
+  if(!rows.length){box.innerHTML='<div class="nodata">Keine Aufgaben in dieser Auswahl.</div>';return;}
+  box.innerHTML=rows.map(a=>{const over=a.frist&&a.frist<today&&a.status!=="erledigt";const stLbl=a.status==="in_arbeit"?"in Arbeit":a.status;
+    return `<div class="qrow"><div><b style="${a.status==='erledigt'?'color:var(--muted-2);text-decoration:line-through':'color:var(--gold)'}">${esc(a.titel)}</b> <span class="nv-badge">${esc(stLbl)}</span>${a.verantwortlich?' <span class="msg info">('+esc(a.verantwortlich)+')</span>':''}${a.frist?` <span class="frist ${over?'over':''}">📅 ${fmtDate(a.frist)}${over?' überfällig':''}</span>`:''}${a.beschreibung?`<div class="msg info">${esc(a.beschreibung)}</div>`:''}${a.quelle_sitzung?`<div class="msg info">Bezug: <button class="reset" data-aufgo="${esc(a.quelle_sitzung)}">${esc(a.quelle_sitzung)}</button></div>`:''}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" data-aufst="offen" data-id="${esc(a.id)}" aria-label="Status offen setzen">offen</button><button class="btn small" data-aufst="in_arbeit" data-id="${esc(a.id)}" aria-label="Status in Arbeit setzen">in Arbeit</button><button class="btn small" data-aufst="erledigt" data-id="${esc(a.id)}" aria-label="Status erledigt setzen">erledigt</button><button class="btn small" data-aufedit="${esc(a.id)}">Bearbeiten</button><button class="btn small danger" data-aufdel="${esc(a.id)}" aria-label="Aufgabe löschen">Löschen</button></div></div>`;}).join("");
+  box.querySelectorAll("[data-aufst]").forEach(b=>b.onclick=()=>aufSetStatus(b.dataset.id,b.dataset.aufst));
+  box.querySelectorAll("[data-aufedit]").forEach(b=>b.onclick=()=>aufEdit(b.dataset.aufedit));
+  box.querySelectorAll("[data-aufdel]").forEach(b=>b.onclick=()=>{if(window.confirm("Aufgabe löschen?"))aufDelete(b.dataset.aufdel);});
+  box.querySelectorAll("[data-aufgo]").forEach(b=>b.onclick=()=>{closeModal($("#ovAufgaben"));state.current=b.dataset.aufgo;state.tab="summary";renderList();renderDetail(true);});}
+async function aufSave(){const titel=($("#aufTitel").value||"").trim(),msg=$("#aufMsg");
+  if(titel.length<1){msg.textContent="Bitte einen Titel eingeben.";msg.className="msg err";return;}
+  if(titel.length>500){msg.textContent="Titel zu lang (höchstens 500 Zeichen).";msg.className="msg err";return;}
+  const st=$("#aufStatus").value;
+  const row={titel,beschreibung:($("#aufBeschr").value||"").trim()||null,verantwortlich:($("#aufVer").value||"").trim()||null,frist:$("#aufFrist").value||null,status:st,quelle_sitzung:($("#aufQuelle").value||"").trim()||null};
+  try{if(AUF_EDIT){row.erledigt_am=st==="erledigt"?new Date().toISOString():null;const {error}=await supa.from("aufgaben").update(row).eq("id",AUF_EDIT);if(error)throw error;msg.textContent="Aktualisiert.";}
+    else{row.erstellt_von=state.email;if(st==="erledigt")row.erledigt_am=new Date().toISOString();const {error}=await supa.from("aufgaben").insert(row);if(error)throw error;msg.textContent="Angelegt.";}
+    msg.className="msg ok";announce("Aufgabe gespeichert.");aufReset();await loadAufgaben();
+  }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+function aufEdit(id){const a=AUF_DATA.find(x=>x.id===id);if(!a)return;AUF_EDIT=id;$("#aufFormTitel").textContent="Aufgabe bearbeiten";$("#aufTitel").value=a.titel||"";$("#aufVer").value=a.verantwortlich||"";$("#aufBeschr").value=a.beschreibung||"";$("#aufFrist").value=a.frist||"";$("#aufStatus").value=a.status||"offen";$("#aufQuelle").value=a.quelle_sitzung||"";const t=$("#aufTitel");if(t)t.focus();}
+async function aufSetStatus(id,st){const msg=$("#aufMsg2");
+  try{const {error}=await supa.from("aufgaben").update({status:st,erledigt_am:st==="erledigt"?new Date().toISOString():null}).eq("id",id);if(error)throw error;msg.textContent="Status: "+st;msg.className="msg ok";announce("Status gesetzt: "+st);await loadAufgaben();}
+  catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+async function aufDelete(id){const msg=$("#aufMsg2");
+  try{const {error}=await supa.from("aufgaben").delete().eq("id",id);if(error)throw error;msg.textContent="Gelöscht.";msg.className="msg ok";announce("Aufgabe gelöscht.");await loadAufgaben();}
+  catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+if($("#btnAufgaben"))$("#btnAufgaben").onclick=()=>openAufgaben();
+if($("#aufSave"))$("#aufSave").onclick=()=>aufSave();
+if($("#aufReset"))$("#aufReset").onclick=()=>aufReset();
+if($("#aufFilter"))$("#aufFilter").onchange=e=>{AUF_FILTER=e.target.value;renderAufgaben();};
+if($("#aufSort"))$("#aufSort").onchange=e=>{AUF_SORT=e.target.value;renderAufgaben();};
+
+/* ---- Phase 4b: Offene-Punkte-Dashboard (Admin, nur Lesen) ---- */
+function openOffenePunkte(){if(!isAdmin()){announce("Nur für den Admin.");return;}renderOffenePunkte();openModal($("#ovOffenePunkte"));}
+function renderOffenePunkte(){const box=$("#opBody");if(!box)return;const ent=[...DATA].sort((a,b)=>String(b.datum).localeCompare(String(a.datum)));
+  let rows=[];ent.forEach(d=>{(((d.zusammenfassung||{}).offene_fragen)||[]).forEach(p=>{if(p&&String(p).trim())rows.push({d,p});});});
+  if(!rows.length){box.innerHTML='<div class="nodata">Keine offenen Punkte gefunden.</div>';return;}
+  box.innerHTML=`<div class="msg info">${rows.length} offene Punkte über ${new Set(rows.map(r=>r.d.id)).size} Sitzung(en).</div>`+rows.map(({d,p})=>`<div class="qrow"><div><b style="color:var(--gold)">○ ${esc(p)}</b><div class="msg info">${fmtDate(d.datum)} · <button class="reset" data-opgo="${esc(d.id)}">${esc(d.titel)}</button></div></div></div>`).join("");
+  box.querySelectorAll("[data-opgo]").forEach(b=>b.onclick=()=>{closeModal($("#ovOffenePunkte"));state.current=b.dataset.opgo;state.tab="summary";renderList();renderDetail(true);});}
+if($("#btnOffenePunkte"))$("#btnOffenePunkte").onclick=()=>openOffenePunkte();
 
 /* ---- edit ---- */
 function openEdit(d){editObj=JSON.parse(JSON.stringify(d));editObj.kapitel=editObj.kapitel||[];$("#editMsg").textContent="";renderEdit();openModal($("#ovEdit"));}
