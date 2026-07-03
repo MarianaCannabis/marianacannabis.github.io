@@ -296,6 +296,7 @@
     <button class="btn" id="btnHelp" title="Kurzanleitung">Hilfe</button>
     <button class="btn icon" id="btnMobile" aria-pressed="false" title="Handy-Ansicht" aria-label="Handy-Ansicht umschalten">📱</button>
     <button class="btn icon" id="btnSr" aria-pressed="false" title="Screenreader-Modus" aria-label="Screenreader-Modus umschalten">♿</button>
+    <button class="btn primary" id="btnVorstandLogin">🔒 Vorstand</button>
     <button class="btn gold" id="btnAdmin">Admin</button>
     <button class="btn" id="btnLogout" hidden>Abmelden</button>
   </div>
@@ -328,18 +329,26 @@
   <section class="detail" id="detail" tabindex="-1" aria-label="Stammtisch-Details"><div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Lade Daten…</p></div></section>
 </main>
 
-<div class="overlay" id="ovLogin" hidden role="dialog" aria-modal="true" aria-label="Anmeldung"><div class="modal small">
-  <div class="modal-head"><h3>Anmeldung</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+<div class="overlay" id="ovLogin" hidden role="dialog" aria-modal="true" aria-label="Vorstand anmelden"><div class="modal small">
+  <div class="modal-head"><h3>Vorstand anmelden</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
-    <div class="field"><label for="loginEmail">Vorstands- oder Admin-Adresse</label><input id="loginEmail" type="email" autocomplete="email" placeholder="stadt@mariana-cannabis.de"></div>
+    <p class="msg info">Für den Vorstandsbereich meldest du dich mit deiner E-Mail-Adresse an. Du bekommst einen Anmeldelink per E-Mail (Magic Link). Öffne die E-Mail und klicke auf den Link, danach bist du hier automatisch angemeldet und der Vorstandsbereich steht dir offen. Den Link erhältst du nur, wenn deine Adresse als Vorstand freigeschaltet ist.</p>
+    <div id="loginHinweis"></div>
+    <div class="field"><label for="loginEmail">Deine Vorstands-Adresse</label><input id="loginEmail" type="email" autocomplete="email" placeholder="stadt@mariana-cannabis.de"></div>
     <button class="btn primary" id="loginMagic" style="width:100%;margin-top:6px">Anmeldelink per E-Mail senden</button>
     <div class="msg" id="loginMsg" style="margin-top:8px"></div>
-    <details style="margin-top:12px"><summary style="cursor:pointer;color:var(--muted)">Admin mit Passwort</summary>
-      <div class="field" style="margin-top:8px"><label for="loginPw">Admin-Passwort</label><input id="loginPw" type="password" autocomplete="current-password"></div>
-      <button class="btn" id="loginGo" style="width:100%">Als Admin anmelden</button>
-    </details>
   </div>
-  <div class="modal-foot"><span class="msg info">Der Link führt Sie zurück und meldet Sie automatisch an.</span></div></div></div>
+  <div class="modal-foot"><span class="msg info">Der Link führt dich zurück und meldet dich automatisch an.</span></div></div></div>
+
+<div class="overlay" id="ovAdminLogin" hidden role="dialog" aria-modal="true" aria-label="Admin-Anmeldung"><div class="modal small">
+  <div class="modal-head"><h3>Admin-Anmeldung</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Nur für den Admin. Vorstände melden sich stattdessen über „Vorstand" mit einem Anmeldelink an.</p>
+    <div class="field"><label for="loginPw">Admin-Passwort</label><input id="loginPw" type="password" autocomplete="current-password"></div>
+    <button class="btn primary" id="loginGo" style="width:100%;margin-top:6px">Als Admin anmelden</button>
+    <div class="msg" id="loginMsgAdmin" style="margin-top:8px"></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
 
 <div class="overlay" id="ovDelPw" hidden role="dialog" aria-modal="true" aria-label="Löschen bestätigen"><div class="modal small">
   <div class="modal-head"><h3>Löschen bestätigen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -1333,6 +1342,7 @@ function isAdmin(){return state.authed&&state.email===ADMIN_EMAIL.toLowerCase();
 function hatRecht(r){return state.email===ADMIN_EMAIL.toLowerCase()||(state.rechte||[]).includes(r);}
 function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechtigt;
   $("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!berechtigt;
+  if($("#btnVorstandLogin"))$("#btnVorstandLogin").hidden=berechtigt;
   $("#menuAuswertung").hidden=!berechtigt;$("#menuVerwaltung").hidden=!berechtigt;
   $("#menuVorstand").hidden=!berechtigt;
   if($("#btnRechte"))$("#btnRechte").hidden=!isAdmin();
@@ -1344,7 +1354,12 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnAgenda"))$("#btnAgenda").hidden=!(berechtigt&&hatRecht("agenda"));
   if(!berechtigt){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
   renderDetail();}
-$("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";$("#loginEmail").value=state.email||"";openModal($("#ovLogin"));};
+$("#btnAdmin").onclick=()=>{$("#loginMsgAdmin").textContent="";$("#loginPw").value="";openModal($("#ovAdminLogin"));};
+function openVorstandLogin(){$("#loginMsg").textContent="";$("#loginEmail").value=state.email||"";
+  const hin=$("#loginHinweis");
+  if(hin)hin.innerHTML=(state.email&&!state.internOk)?`<div class="msg err" style="margin-bottom:8px">Du bist als ${esc(state.email)} angemeldet, diese Adresse ist aber nicht als Vorstand freigeschaltet. Melde dich mit deiner freigeschalteten Vorstands-Adresse an oder wende dich an den Admin.</div>`:"";
+  openModal($("#ovLogin"));}
+if($("#btnVorstandLogin"))$("#btnVorstandLogin").onclick=()=>openVorstandLogin();
 $("#btnLogout").onclick=async()=>{await supa.auth.signOut();state.email=null;state.internOk=false;setAuthed(false);announce("Abgemeldet.");};
 $("#loginMagic").onclick=async()=>{const email=($("#loginEmail").value||"").trim().toLowerCase(),msg=$("#loginMsg");
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){msg.textContent="Bitte eine gültige E-Mail-Adresse eingeben.";msg.className="msg err";return;}
@@ -1354,10 +1369,10 @@ $("#loginMagic").onclick=async()=>{const email=($("#loginEmail").value||"").trim
     msg.textContent="Anmeldelink gesendet. Bitte öffne die E-Mail an "+email+" und klicke den Link. Danach bist du automatisch angemeldet.";msg.className="msg info";
   }catch(e){msg.textContent="Konnte keinen Link senden: "+(e.message||e);msg.className="msg err";}};
 $("#loginEmail").addEventListener("keydown",e=>{if(e.key==="Enter")$("#loginMagic").click();});
-$("#loginGo").onclick=async()=>{const pw=$("#loginPw").value,msg=$("#loginMsg");msg.textContent="Anmelden…";msg.className="msg info";
+$("#loginGo").onclick=async()=>{const pw=$("#loginPw").value,msg=$("#loginMsgAdmin");msg.textContent="Anmelden…";msg.className="msg info";
   if(ADMIN_EMAIL==="ADMIN_EMAIL_HIER"){msg.textContent="ADMIN_EMAIL nicht gesetzt.";msg.className="msg err";return;}
   const {error}=await supa.auth.signInWithPassword({email:ADMIN_EMAIL,password:pw});if(error){msg.textContent="Anmeldung fehlgeschlagen.";msg.className="msg err";return;}
-  await refreshAuth();closeModal($("#ovLogin"));announce("Als Admin angemeldet.");};
+  await refreshAuth();closeModal($("#ovAdminLogin"));announce("Als Admin angemeldet.");};
 $("#loginPw").addEventListener("keydown",e=>{if(e.key==="Enter")$("#loginGo").click();});
 
 /* ---- Kopfleisten-Menues (gruppiert) ---- */
