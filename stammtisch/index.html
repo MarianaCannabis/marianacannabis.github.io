@@ -268,6 +268,8 @@
         <button class="btn menu-item" id="btnGesamt">Gesamtprotokoll</button>
         <button class="btn menu-item" id="btnProtokoll">Beschlüsse &amp; Aufgaben</button>
         <button class="btn menu-item" id="btnResearch">🔎 Recherche</button>
+        <button class="btn menu-item" id="btnVorschlaegeAdmin" hidden>💡 Vorschläge</button>
+        <button class="btn menu-item" id="btnOffenePunkte" hidden>Offene Punkte</button>
       </div>
     </div>
     <div class="menu" id="menuVerwaltung" hidden>
@@ -284,6 +286,9 @@
       <button class="btn menu-trigger gold" aria-haspopup="true" aria-expanded="false" aria-controls="panelVorstand">🔒 Vorstand <span class="caret" aria-hidden="true">▾</span></button>
       <div class="menu-panel" id="panelVorstand" role="group" aria-label="Vorstand">
         <button class="btn menu-item" id="btnIntern" title="Interner Vorstandsbereich">Vorstandsbereich öffnen</button>
+        <button class="btn menu-item" id="btnVorschlagVorstand" hidden>💡 Vorschlag einreichen</button>
+        <button class="btn menu-item" id="btnAufgaben" hidden>Aufgaben</button>
+        <button class="btn menu-item" id="btnAgenda" hidden>Agenda-Entwurf</button>
         <button class="btn menu-item" id="btnDocs" hidden>Dokumente</button>
         <button class="btn menu-item" id="btnLog" hidden title="Zugriffsprotokoll (nur Admin)">Zugriffe</button>
       </div>
@@ -303,6 +308,7 @@
   <aside class="rail" aria-label="Suche und Filter">
     <div class="nextmeet" id="nextMeet" hidden></div>
     <div class="nextmeet nextmeet-int" id="nextMeetIntern" hidden></div>
+    <button class="btn" id="btnVorschlagMitglied" style="width:100%;margin-bottom:12px;justify-content:center">💡 Punkt oder Frage einreichen</button>
     <div class="search">
       <div class="search-field"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Alles durchsuchen…" aria-label="Stammtische durchsuchen"></div>
       <div class="filters">
@@ -390,6 +396,20 @@
     <div id="rechteListe"><div class="msg info">Lade…</div></div>
   </div>
   <div class="modal-foot"><span class="msg" id="rechteMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovVorschlag" hidden role="dialog" aria-modal="true" aria-labelledby="vorschlagTitle"><div class="modal">
+  <div class="modal-head"><h3 id="vorschlagTitle">Punkt oder Frage einreichen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info" id="vorschlagHint"></p>
+    <div class="field"><label for="vorschlagText">Dein Punkt oder deine Frage</label><textarea id="vorschlagText" rows="5" maxlength="2000" placeholder="Sachlich formulieren, zum Beispiel: Bitte den Stand zur Abgabe-Regelung besprechen."></textarea></div>
+  </div>
+  <div class="modal-foot"><span class="msg" id="vorschlagMsg"></span><button class="btn primary" id="vorschlagSend">Absenden</button></div></div></div>
+
+<div class="overlay" id="ovVorschlaege" hidden role="dialog" aria-modal="true" aria-label="Vorschläge auswerten"><div class="modal modal-wide">
+  <div class="modal-head"><h3>💡 Vorschläge</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="tabs" role="tablist" id="vsTabs"><button role="tab" data-vs="mitglied" class="on">Von Mitgliedern</button><button role="tab" data-vs="vorstand">Vom Vorstand</button></div>
+  <div class="modal-body" id="vsBody"><div class="msg info">Lade…</div></div>
+  <div class="modal-foot"><span class="msg" id="vsMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
 
 <div class="overlay" id="ovHits" hidden role="dialog" aria-modal="true" aria-label="Fundstellen"><div class="modal">
   <div class="modal-head"><h3>Fundstellen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -1255,6 +1275,8 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   $("#menuVorstand").hidden=!berechtigt;
   if($("#btnRechte"))$("#btnRechte").hidden=!isAdmin();
   if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
+  if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").hidden=!isAdmin();
+  if($("#btnVorschlagVorstand"))$("#btnVorschlagVorstand").hidden=!berechtigt;
   if(!berechtigt){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
   renderDetail();}
 $("#btnAdmin").onclick=()=>{$("#loginMsg").textContent="";$("#loginPw").value="";$("#loginEmail").value=state.email||"";openModal($("#ovLogin"));};
@@ -1337,6 +1359,59 @@ async function rechteToggle(em,recht,on){const msg=$("#rechteMsg");
 if($("#btnRechte"))$("#btnRechte").onclick=()=>openRechte();
 if($("#rechtAdd"))$("#rechtAdd").onclick=()=>rechteAdd();
 if($("#rechtNeu"))$("#rechtNeu").addEventListener("keydown",e=>{if(e.key==="Enter")rechteAdd();});
+
+/* ---- Phase 3: Vorschlagskasten ---- */
+function dtDe(x){try{return new Date(x).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
+let VORSCHLAG_MODE="mitglied";
+function openVorschlag(mode){VORSCHLAG_MODE=(mode==="vorstand"?"vorstand":"mitglied");
+  $("#vorschlagTitle").textContent=VORSCHLAG_MODE==="vorstand"?"Vorschlag einreichen (Vorstand)":"Punkt oder Frage einreichen";
+  $("#vorschlagHint").innerHTML=VORSCHLAG_MODE==="vorstand"
+    ?"Dieser Vorschlag wird intern dem Vorstand zugeordnet und mit deiner E-Mail gespeichert. Sachliche Punkte und Fragen für die nächsten Stammtische."
+    :"Das sind sachliche Punkte oder Fragen für die <b>nächsten</b> Stammtische. Sie werden hier <b>nicht</b> direkt beantwortet, sondern vom Vorstand gesichtet. Bitte formuliere sachlich und ohne persönliche Angaben.";
+  $("#vorschlagText").value="";$("#vorschlagMsg").textContent="";
+  openModal($("#ovVorschlag"));}
+async function vorschlagSend(){const t=($("#vorschlagText").value||"").trim(),msg=$("#vorschlagMsg");
+  if(t.length<3){msg.textContent="Bitte formuliere einen kurzen Satz (mindestens 3 Zeichen).";msg.className="msg err";return;}
+  if(t.length>2000){msg.textContent="Bitte kürzer fassen (höchstens 2000 Zeichen).";msg.className="msg err";return;}
+  const row=VORSCHLAG_MODE==="vorstand"?{quelle:"vorstand",text:t,von:state.email,status:"neu"}:{quelle:"mitglied",text:t,von:null,status:"neu"};
+  msg.textContent="Wird gesendet…";msg.className="msg info";
+  try{const {error}=await supa.from("vorschlaege").insert(row);if(error)throw error;
+    $("#vorschlagText").value="";msg.textContent="Danke, dein Punkt ist eingegangen und wird vom Vorstand gesichtet.";msg.className="msg ok";announce("Vorschlag gesendet. Danke.");
+  }catch(e){msg.textContent="Konnte nicht senden: "+(e.message||e);msg.className="msg err";}}
+if($("#btnVorschlagMitglied"))$("#btnVorschlagMitglied").onclick=()=>openVorschlag("mitglied");
+if($("#btnVorschlagVorstand"))$("#btnVorschlagVorstand").onclick=()=>openVorschlag("vorstand");
+if($("#vorschlagSend"))$("#vorschlagSend").onclick=()=>vorschlagSend();
+
+let VS_TAB="mitglied",VS_DATA=[];
+async function openVorschlaege(){if(!isAdmin()){announce("Nur für den Admin.");return;}$("#vsMsg").textContent="";openModal($("#ovVorschlaege"));await loadVorschlaege();}
+async function loadVorschlaege(){const box=$("#vsBody");if(!box)return;box.innerHTML='<div class="msg info">Lade…</div>';
+  try{const {data,error}=await supa.from("vorschlaege").select("*").order("erstellt_am",{ascending:false});if(error)throw error;VS_DATA=data||[];renderVorschlaege();}
+  catch(e){box.innerHTML=`<div class="msg err">Konnte nicht laden: ${esc(e.message||e)}</div>`;}}
+const VS_STATUS=[["neu","neu"],["aufgenommen","aufgenommen"],["beantwortet","beantwortet"]];
+function renderVorschlaege(){const box=$("#vsBody");if(!box)return;const rows=VS_DATA.filter(v=>v.quelle===VS_TAB);
+  if(!rows.length){box.innerHTML='<div class="msg info">Keine Einträge in diesem Bereich.</div>';return;}
+  box.innerHTML=rows.map(v=>`<div class="vs-row" style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px">
+    <div style="white-space:pre-wrap">${esc(v.text)}</div>
+    <div class="msg info" style="margin:6px 0">${VS_TAB==="vorstand"&&v.von?esc(v.von)+" · ":""}eingereicht ${esc(dtDe(v.erstellt_am))}${v.erledigt_am?" · erledigt "+esc(dtDe(v.erledigt_am)):""}</div>
+    <div class="tx-filter">${VS_STATUS.map(([k,l])=>`<button data-vsst="${k}" data-id="${esc(v.id)}" class="${v.status===k?'on':''}" aria-pressed="${v.status===k}" aria-label="Status ${l} setzen">${l}</button>`).join("")}</div>
+    <label class="field" style="margin-top:8px">Interne Notiz<textarea data-vsnotiz="${esc(v.id)}" rows="2">${esc(v.notiz||"")}</textarea></label>
+    <div style="display:flex;gap:8px;justify-content:space-between;align-items:center"><button class="btn small" data-vssave="${esc(v.id)}">Notiz speichern</button><button class="btn small danger" data-vsdel="${esc(v.id)}" aria-label="Vorschlag löschen">Löschen</button></div>
+  </div>`).join("");
+  box.querySelectorAll("[data-vsst]").forEach(b=>b.onclick=()=>vsSetStatus(b.dataset.id,b.dataset.vsst));
+  box.querySelectorAll("[data-vssave]").forEach(b=>b.onclick=()=>vsSaveNotiz(b.dataset.vssave,box.querySelector(`[data-vsnotiz="${b.dataset.vssave}"]`).value));
+  box.querySelectorAll("[data-vsdel]").forEach(b=>b.onclick=()=>{if(window.confirm("Diesen Vorschlag endgültig löschen?"))vsDelete(b.dataset.vsdel);});}
+async function vsSetStatus(id,st){const msg=$("#vsMsg");
+  try{const patch={status:st,erledigt_am:st==="neu"?null:new Date().toISOString()};const {error}=await supa.from("vorschlaege").update(patch).eq("id",id);if(error)throw error;
+    msg.textContent="Status gesetzt: "+st;msg.className="msg ok";announce("Status gesetzt: "+st);await loadVorschlaege();
+  }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+async function vsSaveNotiz(id,notiz){const msg=$("#vsMsg");
+  try{const {error}=await supa.from("vorschlaege").update({notiz:notiz||null}).eq("id",id);if(error)throw error;msg.textContent="Notiz gespeichert.";msg.className="msg ok";announce("Notiz gespeichert.");}
+  catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+async function vsDelete(id){const msg=$("#vsMsg");
+  try{const {error}=await supa.from("vorschlaege").delete().eq("id",id);if(error)throw error;msg.textContent="Gelöscht.";msg.className="msg ok";announce("Vorschlag gelöscht.");await loadVorschlaege();}
+  catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").onclick=()=>openVorschlaege();
+if($("#vsTabs"))$("#vsTabs").querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{VS_TAB=b.dataset.vs;$("#vsTabs").querySelectorAll("[data-vs]").forEach(x=>x.classList.toggle("on",x===b));renderVorschlaege();});
 
 /* ---- edit ---- */
 function openEdit(d){editObj=JSON.parse(JSON.stringify(d));editObj.kapitel=editObj.kapitel||[];$("#editMsg").textContent="";renderEdit();openModal($("#ovEdit"));}
