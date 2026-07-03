@@ -431,6 +431,15 @@
   <div class="modal-body" id="opBody"><div class="msg info">Lade…</div></div>
   <div class="modal-foot"><span></span><button class="btn" data-close>Schließen</button></div></div></div>
 
+<div class="overlay" id="ovAufbewahrung" hidden role="dialog" aria-modal="true" aria-label="Aufbewahrung"><div class="modal modal-wide">
+  <div class="modal-head"><h3>Aufbewahrung</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Sitzungen, die älter als die eingestellte Frist sind. Markieren setzt nur einen Hinweis für die spätere Prüfung, es wird <b>nichts gelöscht</b>. Die Markierung ist jederzeit zurücknehmbar.</p>
+    <div class="field" style="max-width:280px"><label for="aufbMonate">Älter als (Monate)</label><input id="aufbMonate" type="number" min="0" value="24"></div>
+    <div id="aufbListe"><div class="msg info">Lade…</div></div>
+  </div>
+  <div class="modal-foot"><span class="msg" id="aufbMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
+
 <div class="overlay" id="ovHits" hidden role="dialog" aria-modal="true" aria-label="Fundstellen"><div class="modal">
   <div class="modal-head"><h3>Fundstellen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body" id="hitsBody"></div>
@@ -715,7 +724,8 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
     ${d.verarbeitung==="offen"?'<div class="msg info" style="margin-top:10px;color:var(--gold)">Audio und Folien sind bereits verfügbar. Transkript und Zusammenfassung werden noch erstellt und erscheinen automatisch.</div>':''}
     <div class="personal"><button class="btn small" id="dBook">${isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen'}</button><button class="btn small" id="dNoteToggle">✎ Notiz${(NOTES[d.id]&&NOTES[d.id].trim())?' (vorhanden)':''}</button>${state.authed?'<button class="btn small" id="dShare">🔗 Teilen</button>':''}${(PLAYED[d.id]&&PLAYED[d.id].pos>15)?`<button class="btn small" id="dResume">▶ Fortsetzen bei ${fmt(PLAYED[d.id].pos)}</button>`:''}</div>
     <div id="noteBox" hidden style="margin-top:8px"><textarea id="dNote" placeholder="Persönliche Notiz (nur auf diesem Gerät gespeichert)" style="width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px">${esc(NOTES[d.id]||"")}</textarea></div>
-    ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button><button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
+    ${isAdmin()&&d.aufbewahrung_markiert?`<div class="msg info" style="margin-top:8px;color:var(--gold)">🗄 Zur Aufbewahrungsprüfung markiert${d.markiert_grund?': '+esc(d.markiert_grund):''}</div>`:''}
+    ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button>${isAdmin()?'<button class="btn small" id="dProtokoll">🖨 Protokoll</button>':''}<button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
     ${src?`<div class="miniplayer" id="player">
       <div class="pl-label">🎧 Original-Aufnahme <span>die verlässliche Quelle. Das Transkript hilft nur beim Finden und Einordnen.</span></div>
       <canvas id="wave" class="wave" height="64" title="Klicken zum Springen" aria-hidden="true"></canvas>
@@ -749,7 +759,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   if($("#dResume"))$("#dResume").onclick=()=>seekAudio(PLAYED[d.id].pos);
   if($("#dShare"))$("#dShare").onclick=()=>shareLink(d.id);
   if($("#shareAt"))$("#shareAt").onclick=()=>{const a=$("#aud");shareLink(d.id,a?Math.floor(a.currentTime):0);};
-  if(state.authed){$("#dEdit").onclick=()=>openEdit(d);$("#dExport").onclick=()=>exportEntry(d);$("#dPrint").onclick=()=>printEntries([d]);$("#dDel").onclick=()=>askDelete(d,false);$("#dResum").onclick=()=>reprocess(d,"resummarize");$("#dRetr").onclick=()=>reprocess(d,"retranscribe");}
+  if(state.authed){$("#dEdit").onclick=()=>openEdit(d);$("#dExport").onclick=()=>exportEntry(d);$("#dPrint").onclick=()=>printEntries([d]);if($("#dProtokoll"))$("#dProtokoll").onclick=()=>protokollDruck(d);$("#dDel").onclick=()=>askDelete(d,false);$("#dResum").onclick=()=>reprocess(d,"resummarize");$("#dRetr").onclick=()=>reprocess(d,"retranscribe");}
   if(focusIt){det.focus();announce(`${d.titel} geöffnet.`);}}
 function renderTabBar(){$("#tabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.tab===state.tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.onclick=()=>{state.tab=b.dataset.tab;state.txQ="";state.txSp=null;state.hits=[];state.hit=-1;renderTabBar();renderTab(DATA.find(x=>x.id===state.current));};});}
 function setupPlayer(d){const a=$("#aud");if(!a)return;
@@ -957,6 +967,28 @@ function printEntries(list){if(!list.length){alert("Keine Einträge im Zeitraum.
   const w=window.open("","_blank");if(!w){alert("Bitte Pop-ups für diese Seite erlauben.");return;}
   const css="body{font-family:Georgia,serif;color:#111;max-width:800px;margin:24px auto;padding:0 16px;line-height:1.5}h1{font-size:20px;margin:0 0 2px}h2{font-size:15px;border-bottom:1px solid #ccc;margin-top:22px}h3{font-size:13px;margin-top:14px}.meta{color:#666;font-size:12px;margin:0 0 8px}section{page-break-after:always}p{margin:4px 0}ul{margin:4px 0 8px 18px}";
   w.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Stammtisch-Protokoll</title><style>${css}</style></head><body>${list.map(entryPrintHtml).join("")}<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script></body></html>`);
+  w.document.close();}
+/* ---- Phase 5a: Protokoll im klassischen Vereinsformat (Druckansicht -> PDF) ---- */
+function protokollPrintHtml(d){const z=d.zusammenfassung||{};
+  const li=(arr,r)=>arr&&arr.length?("<ul>"+arr.map(r).join("")+"</ul>"):'<p class="leer">— keine —</p>';
+  const anwes=(d.sprecher||[]).filter(s=>s&&s.trim());
+  const sach=(z.sachstand&&z.sachstand.length)?z.sachstand:(z.punkte||[]);
+  return `<section class="prot">
+    <div class="verein">Mariana Cannabis, Anbauvereinigung</div><h1>Sitzungsprotokoll</h1>
+    <table class="kopf"><tbody><tr><th>Datum</th><td>${fmtDate(d.datum)}</td><th>Ort</th><td>${esc(d.ort||"—")}</td></tr>
+      <tr><th>Titel</th><td colspan="3">${esc(d.titel||"")}</td></tr>
+      <tr><th>Beginn</th><td>19:00 Uhr</td><th>Dauer</th><td>${fmt(d.dauer)}</td></tr></tbody></table>
+    <h2>Anwesenheit</h2>${anwes.length?`<p>${anwes.map(esc).join(", ")}</p>`:'<p class="leer">Teilnehmende siehe gesonderte Anwesenheitsliste.</p>'}
+    <h2>Zusammenfassung</h2><p>${esc(z.lead||"—")}</p>
+    <h2>Besprochene Punkte</h2>${li(sach,p=>`<li>${esc(p)}</li>`)}
+    <h2>Beschlüsse</h2>${li(z.beschluesse,b=>`<li>${esc(b)}</li>`)}
+    <h2>Aufgaben</h2>${li(z.aufgaben,a=>`<li>${esc(a&&a.text!=null?a.text:a)}${a&&a.wer?(" — "+esc(a.wer)):""}${a&&a.frist?(" (Frist "+fmtDate(a.frist)+")"):""}</li>`)}
+    <h2>Offen geblieben</h2>${li(z.offene_fragen,q=>`<li>${esc(q)}</li>`)}
+    <div class="sign"><div class="sigbox"><div class="sigline"></div><div class="siglbl">Ort, Datum</div></div><div class="sigbox"><div class="sigline"></div><div class="siglbl">Protokollführung</div></div><div class="sigbox"><div class="sigline"></div><div class="siglbl">Vorsitz</div></div></div>
+  </section>`;}
+function protokollDruck(d){const w=window.open("","_blank");if(!w){alert("Bitte Pop-ups für diese Seite erlauben.");return;}
+  const css="body{font-family:Georgia,serif;color:#111;max-width:800px;margin:22px auto;padding:0 18px;line-height:1.5}.verein{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:#555}h1{font-size:22px;margin:2px 0 14px}h2{font-size:14px;border-bottom:1px solid #bbb;margin-top:20px;padding-bottom:2px}.kopf{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0}.kopf th,.kopf td{border:1px solid #ccc;padding:5px 8px;text-align:left;vertical-align:top}.kopf th{background:#f3f3f3;width:70px;white-space:nowrap}ul{margin:4px 0 8px 18px}li{margin:3px 0}.leer{color:#888;font-style:italic;margin:4px 0}.sign{display:flex;gap:24px;margin-top:52px}.sigbox{flex:1;text-align:center}.sigline{border-top:1px solid #333;margin-bottom:4px;height:1px}.siglbl{font-size:11px;color:#555}@media print{.sign{margin-top:64px}}";
+  w.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Protokoll ${esc(d.titel||"")}</title><style>${css}</style></head><body>${protokollPrintHtml(d)}<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script></body></html>`);
   w.document.close();}
 
 /* ---- verwaltung (admin) ---- */
@@ -1490,6 +1522,34 @@ function renderOffenePunkte(){const box=$("#opBody");if(!box)return;const ent=[.
   box.innerHTML=`<div class="msg info">${rows.length} offene Punkte über ${new Set(rows.map(r=>r.d.id)).size} Sitzung(en).</div>`+rows.map(({d,p})=>`<div class="qrow"><div><b style="color:var(--gold)">○ ${esc(p)}</b><div class="msg info">${fmtDate(d.datum)} · <button class="reset" data-opgo="${esc(d.id)}">${esc(d.titel)}</button></div></div></div>`).join("");
   box.querySelectorAll("[data-opgo]").forEach(b=>b.onclick=()=>{closeModal($("#ovOffenePunkte"));state.current=b.dataset.opgo;state.tab="summary";renderList();renderDetail(true);});}
 if($("#btnOffenePunkte"))$("#btnOffenePunkte").onclick=()=>openOffenePunkte();
+
+/* ---- Phase 5b: Aufbewahrungs-Werkzeug (Admin, nur markieren) ---- */
+let AUFB_MONATE=24;
+function aufbTable(){return state.mode==="int"?"stammtische_intern":"stammtische";}
+function openAufbewahrung(){if(!isAdmin()){announce("Nur für den Admin.");return;}$("#aufbMsg").textContent="";const el=$("#aufbMonate");if(el)el.value=AUFB_MONATE;renderAufbewahrung();openModal($("#ovAufbewahrung"));}
+function renderAufbewahrung(){const box=$("#aufbListe");if(!box)return;
+  const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-(AUFB_MONATE||0));const cut=cutoff.toISOString().slice(0,10);
+  const rows=[...DATA].filter(d=>d.datum&&d.datum<cut).sort((a,b)=>String(a.datum).localeCompare(String(b.datum)));
+  const marked=DATA.filter(d=>d.aufbewahrung_markiert).length;
+  box.innerHTML=`<div class="msg info">${rows.length} Sitzung(en) älter als ${AUFB_MONATE} Monate (vor ${fmtDate(cut)}). Aktuell markiert: ${marked}.</div>`+
+    (rows.length?rows.map(aufbRow).join(""):'<div class="nodata">Keine Sitzungen in diesem Zeitraum.</div>');
+  box.querySelectorAll("[data-aufbmark]").forEach(b=>b.onclick=()=>{const g=box.querySelector(`[data-aufbgrund="${b.dataset.aufbmark}"]`);aufbMark(b.dataset.aufbmark,g?g.value:"");});
+  box.querySelectorAll("[data-aufbunmark]").forEach(b=>b.onclick=()=>aufbUnmark(b.dataset.aufbunmark));}
+function aufbRow(d){const m=d.aufbewahrung_markiert;
+  return `<div class="qrow"><div><b>${fmtDate(d.datum)}</b> · ${esc(d.titel)} ${m?'<span class="nv-badge">markiert</span>':''}${m&&d.markiert_grund?` <span class="msg info">(${esc(d.markiert_grund)})</span>`:''}</div>
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${m?`<button class="btn small" data-aufbunmark="${esc(d.id)}">Markierung zurücknehmen</button>`:`<input data-aufbgrund="${esc(d.id)}" placeholder="Grund (optional)" style="font-size:12px;max-width:180px"><button class="btn small" data-aufbmark="${esc(d.id)}" aria-label="Sitzung zur Aufbewahrungsprüfung markieren">Markieren</button>`}</div></div>`;}
+async function aufbMark(id,grund){const msg=$("#aufbMsg");
+  try{const {error}=await supa.from(aufbTable()).update({aufbewahrung_markiert:true,markiert_am:new Date().toISOString(),markiert_grund:(grund||"").trim()||null}).eq("id",id);if(error)throw error;
+    const d=DATA.find(x=>x.id===id);if(d){d.aufbewahrung_markiert=true;d.markiert_grund=(grund||"").trim()||null;}
+    msg.textContent="Markiert.";msg.className="msg ok";announce("Sitzung zur Aufbewahrungsprüfung markiert.");renderAufbewahrung();
+  }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+async function aufbUnmark(id){const msg=$("#aufbMsg");
+  try{const {error}=await supa.from(aufbTable()).update({aufbewahrung_markiert:false,markiert_am:null,markiert_grund:null}).eq("id",id);if(error)throw error;
+    const d=DATA.find(x=>x.id===id);if(d){d.aufbewahrung_markiert=false;d.markiert_grund=null;}
+    msg.textContent="Markierung zurückgenommen.";msg.className="msg ok";announce("Markierung zurückgenommen.");renderAufbewahrung();
+  }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
+if($("#btnAufbewahrung"))$("#btnAufbewahrung").onclick=()=>openAufbewahrung();
+if($("#aufbMonate"))$("#aufbMonate").onchange=e=>{AUFB_MONATE=Math.max(0,parseInt(e.target.value)||0);renderAufbewahrung();};
 
 /* ---- edit ---- */
 function openEdit(d){editObj=JSON.parse(JSON.stringify(d));editObj.kapitel=editObj.kapitel||[];$("#editMsg").textContent="";renderEdit();openModal($("#ovEdit"));}
