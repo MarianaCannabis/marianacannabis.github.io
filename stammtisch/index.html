@@ -164,7 +164,7 @@
   .ki-bar{height:7px;border-radius:5px;background:var(--bg);border:1px solid var(--line);overflow:hidden;margin:10px 0 8px}
   .ki-bar>div{height:100%;width:35%;border-radius:5px;background:linear-gradient(90deg,var(--gold),var(--green));animation:kislide 1.3s ease-in-out infinite}
   @keyframes kislide{0%{margin-left:-38%}100%{margin-left:100%}}
-  body.sr-mode .ki-bar>div,@media(prefers-reduced-motion:reduce){.ki-bar>div{animation:none;width:100%;opacity:.5}}
+  body.sr-mode .ki-bar>div{animation:none;width:100%;opacity:.5}@media(prefers-reduced-motion:reduce){.ki-bar>div{animation:none;width:100%;opacity:.5}}
   .nextmeet{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;background:var(--panel)}
   .nextmeet .nm-ico{font-size:18px}
   .nextmeet .nm-txt{display:flex;flex-direction:column;line-height:1.25;flex:1;min-width:0}
@@ -184,7 +184,7 @@
   .menu-panel{position:absolute;top:calc(100% + 6px);right:0;min-width:210px;background:var(--panel-solid);border:1px solid var(--line);border-radius:12px;padding:6px;display:none;flex-direction:column;gap:3px;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.45)}
   .menu.open .menu-panel{display:flex}
   /* Handy: Menues volle Breite (Akkordeon), groessere Touch-Flaechen, kompaktere Modale */
-  body.mobile .menu,@media(max-width:880px){.menu{display:block;width:100%}}
+  body.mobile .menu{display:block;width:100%}@media(max-width:880px){.menu{display:block;width:100%}}
   body.mobile .menu-trigger{width:100%;justify-content:space-between}
   body.mobile .menu-panel{position:static;width:100%;min-width:0;margin-top:6px;box-shadow:none}
   body.mobile .btn.small{padding:9px 12px;font-size:13px}
@@ -209,7 +209,7 @@
   .wz-target{padding:9px 12px;border-radius:9px;font-size:13px;margin-bottom:12px;border:1px solid var(--line)}
   .wz-target.pub{background:rgba(76,175,106,.12);border-color:var(--green)}
   .wz-target.intern{background:rgba(249,199,79,.12);border-color:var(--gold)}
-  body.mobile .intern-banner,@media(max-width:880px){.intern-banner{padding:10px 14px}}
+  body.mobile .intern-banner{padding:10px 14px}@media(max-width:880px){.intern-banner{padding:10px 14px}}
   .doc-item{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin:7px 0;background:rgba(255,255,255,.02)}
   .doc-meta{font-size:11.5px;color:var(--muted-2);margin-top:2px}
   .doc-beschr{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.5}
@@ -1344,8 +1344,7 @@ function hatRecht(r){return state.email===ADMIN_EMAIL.toLowerCase()||(state.rech
 function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechtigt;
   $("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!berechtigt;
   if($("#btnVorstandLogin"))$("#btnVorstandLogin").hidden=berechtigt;
-  $("#menuAuswertung").hidden=!berechtigt;$("#menuVerwaltung").hidden=!berechtigt;
-  $("#menuVorstand").hidden=!berechtigt;
+  ["#menuAuswertung","#menuVerwaltung","#menuVorstand"].forEach(sel=>{const el=$(sel);if(el){el.hidden=!berechtigt;el.style.display=berechtigt?"":"none";}});
   if($("#btnRechte"))$("#btnRechte").hidden=!isAdmin();
   if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
   if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").hidden=!isAdmin();
