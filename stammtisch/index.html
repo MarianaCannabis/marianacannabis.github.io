@@ -206,6 +206,16 @@
   .menu-item:hover{background:rgba(255,255,255,.05);border-color:var(--line)}
   .menu-item[hidden]{display:none}
   .menu[hidden]{display:none!important}
+  .topic-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:20px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:12px;cursor:pointer;margin:2px 3px 0 0;font-family:inherit}
+  .topic-chip.on{border-color:var(--gold);color:var(--gold)}
+  .topic-chip:hover{border-color:var(--green-dim)}
+  .card.heard{opacity:.82}
+  .ovrow{padding:9px 0;border-bottom:1px solid var(--line)}
+  .ovrow-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .ovsub{color:var(--muted);font-size:12px;margin:4px 0}
+  .ovchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .ovchip{font-size:12px;padding:2px 9px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);cursor:pointer}
+  .ovchip:hover{border-color:var(--gold)}
   .wz-target{padding:9px 12px;border-radius:9px;font-size:13px;margin-bottom:12px;border:1px solid var(--line)}
   .wz-target.pub{background:rgba(76,175,106,.12);border-color:var(--green)}
   .wz-target.intern{background:rgba(249,199,79,.12);border-color:var(--gold)}
@@ -268,6 +278,8 @@
       <div class="menu-panel" id="panelAuswertung" role="group" aria-label="Auswertung">
         <button class="btn menu-item" id="btnGesamt">Gesamtprotokoll</button>
         <button class="btn menu-item" id="btnProtokoll">Beschlüsse &amp; Aufgaben</button>
+        <button class="btn menu-item" id="btnSprecher">🗣 Sprecher-Übersicht</button>
+        <button class="btn menu-item" id="btnThemen">🏷 Themen-Übersicht</button>
         <button class="btn menu-item" id="btnResearch">🔎 Recherche</button>
         <button class="btn menu-item" id="btnVorschlaegeAdmin" hidden>💡 Vorschläge</button>
         <button class="btn menu-item" id="btnOffenePunkte" hidden>Offene Punkte</button>
@@ -497,6 +509,24 @@
   </div>
   <div class="modal-foot"><span></span><button class="btn primary" id="introOk">Verstanden, los geht's</button></div></div></div>
 
+<div class="overlay" id="ovSprecher" hidden role="dialog" aria-modal="true" aria-labelledby="spkTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="spkTitel">Sprecher-Übersicht</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Wer hat über die Sitzungen hinweg mitgewirkt, in wie vielen und zu welchen Themen. Ein Klick auf ein Datum öffnet die Sitzung.</p>
+    <div class="field"><label for="spkQ">Sprecher suchen</label><input id="spkQ" type="search" placeholder="Name…" autocomplete="off"></div>
+    <div id="spkBody" style="margin-top:10px"></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovThemen" hidden role="dialog" aria-modal="true" aria-labelledby="thmTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="thmTitel">Themen-Übersicht</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Welche Themen wann und wie oft auf dem Stammtisch waren, mit Zeitspanne. Ein Klick auf ein Datum öffnet die Sitzung.</p>
+    <div class="field"><label for="thmQ">Thema suchen</label><input id="thmQ" type="search" placeholder="Thema…" autocomplete="off"></div>
+    <div id="thmBody" style="margin-top:10px"></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
+
 <div class="overlay" id="ovGesamt" hidden role="dialog" aria-modal="true" aria-label="Gesamtprotokoll"><div class="modal modal-wide">
   <div class="modal-head"><h3>Gesamtprotokoll</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body"><div class="gp-tools"><label>Reihenfolge <select class="sel" id="gpSort"><option value="desc">neueste zuerst</option><option value="asc">älteste zuerst</option></select></label><button class="btn small" id="gpPrint">Drucken / PDF</button></div><div id="gpBody"></div></div>
@@ -595,6 +625,41 @@ function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 let BOOKMARKS=lsGet("st_bookmarks",[]),NOTES=lsGet("st_notes",{}),PLAYED=lsGet("st_played",{});
 function isBookmarked(id){return BOOKMARKS.includes(id);}
 function toggleBookmark(id){const i=BOOKMARKS.indexOf(id);if(i<0)BOOKMARKS.push(id);else BOOKMARKS.splice(i,1);lsSet("st_bookmarks",BOOKMARKS);}
+let HEARD=lsGet("st_heard",[]),WATCH=lsGet("st_watch",[]);
+function isHeard(id){return HEARD.includes(id);}
+function toggleHeard(id){const i=HEARD.indexOf(id);if(i<0)HEARD.push(id);else HEARD.splice(i,1);lsSet("st_heard",HEARD);}
+function markHeard(id){if(!HEARD.includes(id)){HEARD.push(id);lsSet("st_heard",HEARD);}}
+function isWatched(t){return WATCH.includes(t);}
+function toggleWatch(t){const i=WATCH.indexOf(t);if(i<0)WATCH.push(t);else WATCH.splice(i,1);lsSet("st_watch",WATCH);}
+function hasWatchedTopic(d){return (d.themen||[]).some(t=>WATCH.includes(t));}
+/* Vorlesen ueber die eingebaute Browser-Sprachausgabe, komplett lokal, kein externer Dienst */
+let SPEAKING=null;
+function summaryToSpeech(d){const z=d.zusammenfassung||{};const p=[];
+  p.push(`Zusammenfassung des Stammtischs vom ${fmtDate(d.datum)}. ${d.titel}.`);
+  if(z.lead)p.push("Kernaussage. "+z.lead);
+  const sach=(z.sachstand&&z.sachstand.length?z.sachstand:(z.punkte||[]));
+  if(sach.length)p.push("Sachstand und besprochene Punkte. "+sach.join(". "));
+  if((z.fragen||[]).length)p.push("Fragen und Reaktionen aus der Mitgliedschaft. "+z.fragen.join(". "));
+  if((z.offene_fragen||[]).length)p.push("Offen geblieben. "+z.offene_fragen.join(". "));
+  if((z.beschluesse||[]).length)p.push("Beschlüsse. "+z.beschluesse.join(". "));
+  if((z.aufgaben||[]).length)p.push("Aufgaben. "+z.aufgaben.join(". "));
+  return p.join(" ");}
+function hasSummary(d){const z=d.zusammenfassung||{};return !!(z.lead||(z.sachstand&&z.sachstand.length)||(z.punkte&&z.punkte.length)||(z.beschluesse&&z.beschluesse.length));}
+function speakSummary(d){
+  if(!("speechSynthesis" in window)){announce("Vorlesen wird von diesem Browser nicht unterstützt.");return;}
+  const txt=summaryToSpeech(d);if(!txt.trim())return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(txt);u.lang="de-DE";u.rate=0.98;
+  const vs=window.speechSynthesis.getVoices()||[];const v=vs.find(x=>/^de/i.test(x.lang));if(v)u.voice=v;
+  u.onend=()=>{if(SPEAKING===d.id)SPEAKING=null;updateReadBtn();};
+  u.onerror=()=>{if(SPEAKING===d.id)SPEAKING=null;updateReadBtn();};
+  SPEAKING=d.id;window.speechSynthesis.speak(u);updateReadBtn();announce("Vorlesen gestartet.");}
+function stopSpeak(){if("speechSynthesis" in window)window.speechSynthesis.cancel();SPEAKING=null;updateReadBtn();}
+function updateReadBtn(){const b=$("#dRead");if(!b)return;const on=SPEAKING===state.current;
+  b.innerHTML=on?'⏹ Vorlesen stoppen':'🔊 Vorlesen';
+  b.setAttribute("aria-label",on?"Vorlesen stoppen":"Zusammenfassung vorlesen");
+  b.setAttribute("aria-pressed",on?"true":"false");}
+if("speechSynthesis" in window){window.addEventListener("beforeunload",()=>{try{window.speechSynthesis.cancel();}catch(e){}});}
 function applyMobile(on){document.body.classList.toggle("mobile",on);$("#btnMobile").classList.toggle("on",on);$("#btnMobile").setAttribute("aria-pressed",on);sp_("st_mobile",on);}
 function applySr(on){document.body.classList.toggle("sr-mode",on);$("#btnSr").classList.toggle("on",on);$("#btnSr").setAttribute("aria-pressed",on);sp_("st_sr",on);if(on)announce("Screenreader-Modus ein.");}
 $("#btnMobile").onclick=()=>applyMobile(!document.body.classList.contains("mobile"));
@@ -699,8 +764,11 @@ function cardHtml(d){const offen=d.verarbeitung==="offen";const tags=[];
   if(d.audio_pfad)tags.push('<span class="has">🎧 Audio</span>');
   if(d.folien&&d.folien.length)tags.push('<span class="has">📄 Folien</span>');
   tags.push(offen?'<span class="pending">⏳ Transkript folgt</span>':'<span class="has">📝 Transkript</span>');
+  const watched=hasWatchedTopic(d),heard=isHeard(d.id);
+  if(watched)tags.push('<span class="has" style="color:var(--gold)">★ Dein Thema</span>');
+  if(heard)tags.push('<span class="has" style="opacity:.6">✓ gehört</span>');
   const bm=isBookmarked(d.id);
-  return `<button class="card ${state.current===d.id?'active':''}" role="listitem" data-id="${esc(d.id)}" aria-current="${state.current===d.id}" aria-label="${esc(d.titel)}, ${fmtDate(d.datum)}${offen?', Transkript in Arbeit':''}">${offen?'<span class="newbadge" style="background:var(--gold);color:#1c1606">in Arbeit</span>':(isNew(d)?'<span class="newbadge">Neu</span>':'')}
+  return `<button class="card ${state.current===d.id?'active':''}${heard?' heard':''}" role="listitem" data-id="${esc(d.id)}" aria-current="${state.current===d.id}" aria-label="${esc(d.titel)}, ${fmtDate(d.datum)}${offen?', Transkript in Arbeit':''}${watched?', dein Thema':''}${heard?', gehört':''}">${offen?'<span class="newbadge" style="background:var(--gold);color:#1c1606">in Arbeit</span>':(isNew(d)?'<span class="newbadge">Neu</span>':'')}
     <span class="date">${fmtDate(d.datum)}</span><h3>${bm?'<span title="Lesezeichen" style="color:var(--gold)">★ </span>':''}${hl(d.titel,state.q)}</h3>
     <div class="meta"><span>📍 ${hl(d.ort||"–",state.q)}</span><span>· ${fmt(d.dauer)}</span><span>· ${(d.sprecher||[]).length} Sprecher</span></div>
     <div class="ic">${tags.join("")}</div>${snippetFor(d)}${offen?`<div class="cardprog" data-prog-id="${esc(d.id)}"></div>`:''}</button>`;}
@@ -727,6 +795,7 @@ $("#list").addEventListener("keydown",e=>{if(e.key!=="ArrowDown"&&e.key!=="Arrow
 
 /* ---- detail (mit persistentem Player) ---- */
 function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$("#detail");
+  if(SPEAKING&&SPEAKING!==state.current)stopSpeak();
   if(!d){det.innerHTML=`<div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Wähle links einen Stammtisch.</p></div>`;return;}
   if(state.tab==="slides"&&!(d.folien&&d.folien.length))state.tab="summary";
   const src=d.audio_pfad?(state.mode==="int"?null:pubUrl("audio",d.audio_pfad)):null;
@@ -734,10 +803,10 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   const order=filtered();const oIdx=order.findIndex(x=>x.id===d.id);const oN=order.length;
   const nav=`<div class="dnav"><button class="btn small" id="dPrev" ${oIdx<=0?'disabled':''} title="Vorheriger Stammtisch">◀ Vorheriger</button><span class="dnav-pos">${oIdx>=0?`${oIdx+1} / ${oN}`:""}</span><button class="btn small" id="dNext" ${(oIdx<0||oIdx>=oN-1)?'disabled':''} title="Nächster Stammtisch">Nächster ▶</button></div>`;
   det.innerHTML=`<div class="dhead">${nav}<span class="date">${fmtDate(d.datum)} ${isNew(d)?'· <span style="color:var(--green)">Neu</span>':''}</span><h2>${esc(d.titel)}</h2>
-    <div class="sub"><span><b>Ort</b> ${esc(d.ort)}</span><span><b>Dauer</b> ${fmt(d.dauer)}</span><span><b>Themen</b> ${(d.themen||[]).join(", ")||"–"}</span></div>
+    <div class="sub"><span><b>Ort</b> ${esc(d.ort)}</span><span><b>Dauer</b> ${fmt(d.dauer)}</span><span><b>Themen</b> ${(d.themen||[]).length?(d.themen||[]).map(t=>`<button class="topic-chip${isWatched(t)?' on':''}" data-watch="${esc(t)}" aria-pressed="${isWatched(t)}" aria-label="${isWatched(t)?('Thema '+esc(t)+' nicht mehr merken'):('Thema '+esc(t)+' merken')}">${isWatched(t)?'★':'☆'} ${esc(t)}</button>`).join(" "):"–"}</span></div>
     <div class="speakers">${(d.sprecher||[]).map((s,i)=>`<span class="sp-tag"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</span>`).join("")}</div>
     ${d.verarbeitung==="offen"?'<div class="msg info" style="margin-top:10px;color:var(--gold)">Audio und Folien sind bereits verfügbar. Transkript und Zusammenfassung werden noch erstellt und erscheinen automatisch.</div>':''}
-    <div class="personal"><button class="btn small" id="dBook">${isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen'}</button><button class="btn small" id="dNoteToggle">✎ Notiz${(NOTES[d.id]&&NOTES[d.id].trim())?' (vorhanden)':''}</button>${state.authed?'<button class="btn small" id="dShare">🔗 Teilen</button>':''}${(PLAYED[d.id]&&PLAYED[d.id].pos>15)?`<button class="btn small" id="dResume">▶ Fortsetzen bei ${fmt(PLAYED[d.id].pos)}</button>`:''}</div>
+    <div class="personal"><button class="btn small" id="dBook">${isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen'}</button>${hasSummary(d)?'<button class="btn small" id="dRead" aria-pressed="false" aria-label="Zusammenfassung vorlesen">🔊 Vorlesen</button>':''}<button class="btn small" id="dHeard" aria-pressed="${isHeard(d.id)}">${isHeard(d.id)?'✓ Als gehört markiert':'○ Als gehört markieren'}</button><button class="btn small" id="dNoteToggle">✎ Notiz${(NOTES[d.id]&&NOTES[d.id].trim())?' (vorhanden)':''}</button>${state.authed?'<button class="btn small" id="dShare">🔗 Teilen</button>':''}${(PLAYED[d.id]&&PLAYED[d.id].pos>15)?`<button class="btn small" id="dResume">▶ Fortsetzen bei ${fmt(PLAYED[d.id].pos)}</button>`:''}</div>
     <div id="noteBox" hidden style="margin-top:8px"><textarea id="dNote" aria-label="Persönliche Notiz zu dieser Sitzung" placeholder="Persönliche Notiz (nur auf diesem Gerät gespeichert)" style="width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px">${esc(NOTES[d.id]||"")}</textarea></div>
     ${isAdmin()&&d.aufbewahrung_markiert?`<div class="msg info" style="margin-top:8px;color:var(--gold)">🗄 Zur Aufbewahrungsprüfung markiert${d.markiert_grund?': '+esc(d.markiert_grund):''}</div>`:''}
     ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button>${isAdmin()?'<button class="btn small" id="dProtokoll">🖨 Protokoll</button>':''}<button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
@@ -769,6 +838,10 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   if($("#dPrev"))$("#dPrev").onclick=()=>stepEntry(-1);
   if($("#dNext"))$("#dNext").onclick=()=>stepEntry(1);
   $("#dBook").onclick=()=>{toggleBookmark(d.id);$("#dBook").textContent=isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen';renderList();};
+  if($("#dRead"))$("#dRead").onclick=()=>{if(SPEAKING===d.id)stopSpeak();else speakSummary(d);};
+  updateReadBtn();
+  if($("#dHeard"))$("#dHeard").onclick=()=>{toggleHeard(d.id);const on=isHeard(d.id);$("#dHeard").textContent=on?'✓ Als gehört markiert':'○ Als gehört markieren';$("#dHeard").setAttribute("aria-pressed",on);renderList();announce(on?"Als gehört markiert.":"Markierung entfernt.");};
+  det.querySelectorAll("[data-watch]").forEach(b=>b.onclick=()=>{const t=b.dataset.watch;toggleWatch(t);const on=isWatched(t);b.classList.toggle("on",on);b.setAttribute("aria-pressed",on);b.setAttribute("aria-label",on?('Thema '+t+' nicht mehr merken'):('Thema '+t+' merken'));b.textContent=(on?'★ ':'☆ ')+t;renderList();announce(on?("Thema "+t+" gemerkt."):("Thema "+t+" entfernt."));});
   $("#dNoteToggle").onclick=()=>{const nb=$("#noteBox");nb.hidden=!nb.hidden;if(!nb.hidden)$("#dNote").focus();};
   $("#dNote").oninput=e=>{NOTES[d.id]=e.target.value;lsSet("st_notes",NOTES);};
   if($("#dResume"))$("#dResume").onclick=()=>seekAudio(PLAYED[d.id].pos);
@@ -828,7 +901,7 @@ function setupPlayer(d){const a=$("#aud");if(!a)return;
     highlightCurrentLine(d);
     if(!raf)drawWave();
     if(follow&&follow.checked&&now-lastFollow>1500){lastFollow=now;scrollToCurrentLine(d,false);}};
-  a.onended=()=>{if(PLAYED[d.id]){PLAYED[d.id].pos=0;lsSet("st_played",PLAYED);}if(raf){cancelAnimationFrame(raf);raf=null;}drawWave();};
+  a.onended=()=>{if(PLAYED[d.id]){PLAYED[d.id].pos=0;lsSet("st_played",PLAYED);}if(!isHeard(d.id)){markHeard(d.id);const hb=$("#dHeard");if(hb){hb.textContent='✓ Als gehört markiert';hb.setAttribute("aria-pressed","true");}renderList();}if(raf){cancelAnimationFrame(raf);raf=null;}drawWave();};
   abUpdate();drawWave();setTimeout(drawWave,60);}
 function currentLineIdx(d){const a=$("#aud");if(!a||!(d.transkript||[]).length)return -1;const t=a.currentTime;let idx=-1;for(let i=0;i<d.transkript.length;i++){if((d.transkript[i].t||0)<=t+0.01)idx=i;else break;}return idx;}
 function highlightCurrentLine(d){const box=$("#txlines");if(!box)return;const idx=currentLineIdx(d);const prev=box.querySelector(".line.playing");if(prev){if(+prev.dataset.idx===idx)return;prev.classList.remove("playing");}if(idx>=0){const el=box.querySelector(`.line[data-idx="${idx}"]`);if(el)el.classList.add("playing");}}
@@ -1261,6 +1334,28 @@ function gpEntryHtml(d){const z=d.zusammenfassung||{};const sach=(z.sachstand&&z
     ${(z.fragen||[]).length?`<h4>Fragen und Reaktionen aus der Mitgliedschaft</h4>${li(z.fragen)}`:""}
     ${(z.offene_fragen||[]).length?`<h4>Offen geblieben</h4>${li(z.offene_fragen)}`:""}</section>`;}
 function gpRender(){const list=gpList();$("#gpMsg").textContent=`${list.length} Sitzungen`;$("#gpBody").innerHTML=list.map(gpEntryHtml).join("")||'<div class="msg info">Noch keine Protokolle vorhanden.</div>';}
+/* ---- Sprecher- und Themen-Uebersichten (Aggregation ueber DATA) ---- */
+function shortDate(iso){return iso?iso.split("-").reverse().join("."):"";}
+function wireGotoOv(box){box.querySelectorAll("[data-goto]").forEach(b=>b.onclick=()=>{const ov=b.closest(".overlay");if(ov)closeModal(ov);state.current=b.dataset.goto;state.tab="summary";state.txSp=null;state.hits=[];state.hit=-1;renderList();renderDetail(true);});}
+function aggSprecher(){const m={};DATA.forEach(d=>{(d.sprecher||[]).forEach(s=>{if(!m[s])m[s]={name:s,sessions:[],topics:new Set()};m[s].sessions.push(d);(d.themen||[]).forEach(t=>m[s].topics.add(t));});});
+  return Object.values(m).map(x=>({name:x.name,sessions:x.sessions.slice().sort((a,b)=>b.datum.localeCompare(a.datum)),topics:[...x.topics]})).sort((a,b)=>b.sessions.length-a.sessions.length||a.name.localeCompare(b.name,"de"));}
+function aggThemen(){const m={};DATA.forEach(d=>{(d.themen||[]).forEach(t=>{if(!m[t])m[t]={name:t,sessions:[]};m[t].sessions.push(d);});});
+  return Object.values(m).map(x=>{const ss=x.sessions.slice().sort((a,b)=>a.datum.localeCompare(b.datum));return {name:x.name,sessions:ss.slice().reverse(),von:ss[0].datum,bis:ss[ss.length-1].datum};}).sort((a,b)=>b.sessions.length-a.sessions.length||a.name.localeCompare(b.name,"de"));}
+function chipsFor(list){return list.map(d=>`<button class="reset ovchip" data-goto="${esc(d.id)}" title="${esc(d.titel)}">${shortDate(d.datum)}</button>`).join(" ");}
+function renderSprecher(){const body=$("#spkBody");if(!body)return;const q=(($("#spkQ")&&$("#spkQ").value)||"").trim().toLowerCase();
+  let list=aggSprecher();if(q)list=list.filter(x=>x.name.toLowerCase().includes(q));
+  if(!list.length){body.innerHTML='<div class="msg info">Keine Sprecher gefunden.</div>';return;}
+  body.innerHTML=`<div class="msg info" style="margin-bottom:8px">${list.length} Sprecher</div>`+list.map(x=>`<div class="ovrow"><div class="ovrow-h"><b>${esc(x.name)}</b><span class="grp-count">${x.sessions.length} Sitzung${x.sessions.length===1?'':'en'}</span></div>${x.topics.length?`<div class="ovsub">Themen: ${x.topics.map(esc).join(", ")}</div>`:''}<div class="ovchips">${chipsFor(x.sessions)}</div></div>`).join("");
+  wireGotoOv(body);}
+function renderThemen(){const body=$("#thmBody");if(!body)return;const q=(($("#thmQ")&&$("#thmQ").value)||"").trim().toLowerCase();
+  let list=aggThemen();if(q)list=list.filter(x=>x.name.toLowerCase().includes(q));
+  if(!list.length){body.innerHTML='<div class="msg info">Keine Themen gefunden.</div>';return;}
+  body.innerHTML=`<div class="msg info" style="margin-bottom:8px">${list.length} Themen</div>`+list.map(x=>`<div class="ovrow"><div class="ovrow-h"><b>${esc(x.name)}</b><span class="grp-count">${x.sessions.length} Sitzung${x.sessions.length===1?'':'en'}</span>${x.von!==x.bis?`<span class="ovsub" style="margin:0">${shortDate(x.von)} bis ${shortDate(x.bis)}</span>`:`<span class="ovsub" style="margin:0">${shortDate(x.von)}</span>`}</div><div class="ovchips">${chipsFor(x.sessions)}</div></div>`).join("");
+  wireGotoOv(body);}
+$("#btnSprecher").onclick=()=>{if($("#spkQ"))$("#spkQ").value="";renderSprecher();openModal($("#ovSprecher"));};
+$("#btnThemen").onclick=()=>{if($("#thmQ"))$("#thmQ").value="";renderThemen();openModal($("#ovThemen"));};
+if($("#spkQ"))$("#spkQ").oninput=renderSprecher;
+if($("#thmQ"))$("#thmQ").oninput=renderThemen;
 $("#btnGesamt").onclick=()=>{state.gpSort=state.gpSort||"desc";$("#gpSort").value=state.gpSort;gpRender();openModal($("#ovGesamt"));};
 $("#gpSort").onchange=e=>{state.gpSort=e.target.value;gpRender();};
 $("#gpPrint").onclick=()=>{const list=gpList();if(!list.length)return;const w=window.open("","_blank");if(!w){$("#gpMsg").textContent="Bitte Pop-ups erlauben.";return;}
