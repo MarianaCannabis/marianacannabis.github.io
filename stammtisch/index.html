@@ -216,6 +216,10 @@
   .ovchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   .ovchip{font-size:12px;padding:2px 9px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);cursor:pointer}
   .ovchip:hover{border-color:var(--gold)}
+  .semrow{display:block;position:relative;width:100%;text-align:left;padding:8px 10px;margin:5px 0;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);cursor:pointer;overflow:hidden}
+  .semrow:hover{border-color:var(--gold)}
+  .semscore{position:absolute;left:0;top:0;bottom:0;background:rgba(76,175,106,.16);z-index:0}
+  .semrow-t{position:relative;z-index:1}
   .wz-target{padding:9px 12px;border-radius:9px;font-size:13px;margin-bottom:12px;border:1px solid var(--line)}
   .wz-target.pub{background:rgba(76,175,106,.12);border-color:var(--green)}
   .wz-target.intern{background:rgba(249,199,79,.12);border-color:var(--gold)}
@@ -1163,22 +1167,76 @@ function rechSummaryHtml(results,raw,total){
 function research(){if(!state.authed)return;const raw=$("#rechQ").value.trim();
   if(!raw){$("#rechBody").innerHTML='<div class="msg info">Gib oben einen Begriff ein…</div>';$("#rechScope").textContent="";return;}
   const {results,total}=computeResearch(raw,$("#rechSort").value);
-  $("#rechScope").textContent=`${total} Fundstellen in ${results.length} Sitzungen für „${raw}".`;
-  if(!results.length){$("#rechBody").innerHTML='<div class="msg info">Keine Fundstellen.</div>';return;}
-  const modes=`<div class="rech-modes"><button class="btn small ${rechMode==='details'?'on':''}" data-rmode="details" aria-pressed="${rechMode==='details'}">Fundstellen</button><button class="btn small ${rechMode==='summary'?'on':''}" data-rmode="summary" aria-pressed="${rechMode==='summary'}">Zusammenfassung</button><button class="btn small ${rechMode==='ki'?'on':''}" data-rmode="ki" aria-pressed="${rechMode==='ki'}">🧠 KI-Zusammenfassung</button></div>`;
-  $("#rechBody").innerHTML=modes+(rechMode==="summary"?rechSummaryHtml(results,raw,total):rechMode==="ki"?kiPanelHtml(raw,results,total):rechDetailsHtml(results,raw));
+  $("#rechScope").textContent=results.length?`${total} Fundstellen in ${results.length} Sitzungen für „${raw}".`:`Keine wörtlichen Fundstellen für „${raw}". Sinngemäße Suche über „Ähnliche Sitzungen" möglich.`;
+  const M=(m,l)=>`<button class="btn small ${rechMode===m?'on':''}" data-rmode="${m}" aria-pressed="${rechMode===m}">${l}</button>`;
+  const modes=`<div class="rech-modes">${M('details','Fundstellen')}${M('summary','Zusammenfassung')}${M('ki','🧠 KI-Zusammenfassung')}${M('semantic','🧭 Ähnliche Sitzungen')}</div>`;
+  let body;
+  if(rechMode==="semantic")body=semPanelHtml(raw);
+  else if(!results.length)body='<div class="msg info">Keine wörtlichen Fundstellen. Versuch die sinngemäße Suche über „🧭 Ähnliche Sitzungen".</div>';
+  else body=(rechMode==="summary"?rechSummaryHtml(results,raw,total):rechMode==="ki"?kiPanelHtml(raw,results,total):rechDetailsHtml(results,raw));
+  $("#rechBody").innerHTML=modes+body;
   $("#rechBody").querySelectorAll("[data-rmode]").forEach(b=>b.onclick=()=>{rechMode=b.dataset.rmode;research();});
-  $("#rechBody").querySelectorAll(".rech-hit").forEach(el=>el.onclick=()=>rechJump(el.dataset,raw));
-  $("#rechBody").querySelectorAll("[data-open]").forEach(b=>b.onclick=e=>{e.stopPropagation();rechJump({id:b.dataset.open,kind:"Titel"},raw);});
+  if(rechMode!=="semantic"&&results.length){
+    $("#rechBody").querySelectorAll(".rech-hit").forEach(el=>el.onclick=()=>rechJump(el.dataset,raw));
+    $("#rechBody").querySelectorAll("[data-open]").forEach(b=>b.onclick=e=>{e.stopPropagation();rechJump({id:b.dataset.open,kind:"Titel"},raw);});
+  }
   const kb=$("#kiStart");if(kb)kb.onclick=()=>startKiJob(raw,results);
   const kr=$("#kiRedo");if(kr)kr.onclick=()=>{kiStop();kiState.status=null;startKiJob(raw,results);};
-  if(rechMode==="ki"){kiCheckWorker();if(!kiState.timer&&!(kiState.query===raw&&kiState.scope===state.mode))kiMaybeAttach(raw,results);}}
+  if(rechMode==="ki"){kiCheckWorker();if(!kiState.timer&&!(kiState.query===raw&&kiState.scope===state.mode))kiMaybeAttach(raw,results);}
+  if(rechMode==="semantic"){semCheckWorker();const sb=$("#semStart");if(sb)sb.onclick=()=>startSemJob(raw);$("#rechBody").querySelectorAll("[data-semgoto]").forEach(b=>b.onclick=()=>rechJump({id:b.dataset.semgoto,kind:"Titel"},""));}}
 function rechJump(ds,raw){closeModal($("#ovResearch"));state.current=ds.id;state.txSp=null;state.hits=[];state.hit=-1;state.autohit=null;
   if(ds.kind==="Transkript"){state.tab="transcript";state.txQ=raw||"";}
   else if(ds.kind==="Folientext"){state.tab="slides";state.txQ=raw||"";}
   else{state.tab="summary";state.txQ="";}
   renderList();renderDetail(true);
   setTimeout(()=>{if(ds.idx!=null){const el=$("#txlines")&&$("#txlines").querySelector(`.line[data-idx="${ds.idx}"]`);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("playing");}}if(ds.t!=null)seekAudio(parseInt(ds.t));},320);}
+/* ---- Semantische Suche: Query-Vektor lokal per Ollama, Rangordnung lokal im Browser ---- */
+let semState={query:null,scope:null,status:null,phase:null,ranked:[],fehler:null,id:null,timer:null,tick:null,startedAt:0};
+let semEmbCache={pub:null,int:null};
+let semWorkerSeen=undefined,semWorkerDetail="",semWorkerCheckedAt=0;
+function semStop(){if(semState.timer){clearInterval(semState.timer);semState.timer=null;}if(semState.tick){clearInterval(semState.tick);semState.tick=null;}}
+function cosine(a,b){if(!a||!b||a.length!==b.length)return -1;let d=0,na=0,nb=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];na+=a[i]*a[i];nb+=b[i]*b[i];}const n=Math.sqrt(na)*Math.sqrt(nb);return n?d/n:-1;}
+async function loadEmbeddings(scope){if(semEmbCache[scope])return semEmbCache[scope];const tbl=scope==="int"?"stammtische_intern":"stammtische";const m={};try{const {data}=await supa.from(tbl).select("id,embedding");(data||[]).forEach(r=>{if(Array.isArray(r.embedding))m[r.id]=r.embedding;});}catch(e){}if(Object.keys(m).length)semEmbCache[scope]=m;return m;}
+async function semCheckWorker(force){if(!supa)return;if(!force&&Date.now()-semWorkerCheckedAt<15000)return;semWorkerCheckedAt=Date.now();
+  try{const {data}=await supa.from("dienst_status").select("last_seen,detail").eq("dienst","embed").maybeSingle();
+    semWorkerSeen=(data&&data.last_seen)?(Date.now()-Date.parse(data.last_seen))/1000:Infinity;semWorkerDetail=(data&&data.detail)||"";}catch(e){semWorkerSeen=undefined;}
+  if(rechMode==="semantic"&&$("#ovResearch")&&!$("#ovResearch").hidden)research();}
+function semOfflineNote(){if(semWorkerSeen===undefined)return "";
+  if(semWorkerSeen>60)return `<div class="msg err" role="alert" style="margin-bottom:10px">⚠️ Der Suchdienst meldet sich gerade nicht (er läuft auf dem Vereinsrechner). Sinngemäße Suche ist erst wieder möglich, wenn der Rechner läuft.</div>`;
+  if(semWorkerDetail==="ollama_down")return `<div class="msg err" role="alert" style="margin-bottom:10px">⚠️ Der Suchdienst läuft, aber die lokale KI (Ollama) ist gerade nicht gestartet. Sinngemäße Suche ist erst wieder möglich, wenn Ollama läuft.</div>`;
+  return "";}
+function semRenderProg(){const el=$("#semProg");if(!el||semState.status!=="laeuft")return;const s=Math.max(0,Math.round((Date.now()-semState.startedAt)/1000));const t=`Der Suchvektor wird lokal berechnet … läuft seit ${kiFmtDur(s)}`;el.textContent=t;const bar=$("#semBar");if(bar)bar.setAttribute("aria-valuetext",t);}
+function semPanelHtml(raw){const ready=semState.query===raw&&semState.scope===state.mode;const off=semOfflineNote();
+  if(ready&&semState.status==="laeuft")return off+`<div class="msg info" style="margin-bottom:2px">🧭 Sinngemäße Suche läuft, der Bedeutungsvektor wird lokal auf deinem Rechner berechnet.</div><div class="ki-bar" id="semBar" role="progressbar" aria-label="Sinngemäße Suche läuft" aria-valuetext="läuft"><div></div></div><div class="msg info" id="semProg" aria-hidden="true">…</div>`;
+  if(ready&&semState.status==="fehler")return off+`<div class="msg err">Konnte nicht ausgeführt werden: ${esc(semState.fehler||"unbekannt")}</div><button class="btn small" id="semStart">Erneut versuchen</button>`;
+  if(ready&&semState.status==="leer")return off+`<div class="msg info">Die Sitzungen werden noch für die sinngemäße Suche vorbereitet, der lokale Rechner berechnet die Bedeutungsvektoren nach und nach. Bitte später erneut.</div><button class="btn small" id="semStart">Erneut versuchen</button>`;
+  if(ready&&semState.status==="fertig"){
+    if(!semState.ranked.length)return off+`<div class="msg info">Keine ähnlichen Sitzungen gefunden.</div><button class="btn small" id="semStart">Erneut suchen</button>`;
+    return off+`<div class="msg info" style="margin-bottom:8px">Sinngemäß am ähnlichsten zu „${esc(raw)}":</div>`+semState.ranked.map(r=>`<button class="reset semrow" data-semgoto="${esc(r.id)}" aria-label="${esc(r.titel)}, ${Math.round(r.score*100)} Prozent ähnlich"><span class="semscore" style="width:${Math.max(6,Math.round(r.score*100))}%" aria-hidden="true"></span><span class="semrow-t"><b>${esc(r.titel)}</b> <span class="ovsub" style="margin:0">${shortDate(r.datum)} · ${Math.round(r.score*100)}% ähnlich</span></span></button>`).join("");
+  }
+  return off+`<div class="msg info">Findet Sitzungen sinngemäß, auch wenn andere Worte fallen als in „${esc(raw)}". Die Bedeutung wird lokal über Ollama auf deinem Rechner berechnet, kein Text verlässt eure Infrastruktur.</div><button class="btn primary" id="semStart" style="margin-top:10px">🧭 Ähnliche Sitzungen finden</button>`;}
+async function startSemJob(raw){
+  if(!supa||!state.email){semState.status="fehler";semState.fehler="Nicht angemeldet.";research();return;}
+  semStop();const id="ej_"+Date.now()+"_"+Math.random().toString(36).slice(2,6);
+  semState={query:raw,scope:state.mode,status:"laeuft",phase:"offen",ranked:[],fehler:null,id,timer:null,tick:null,startedAt:Date.now()};
+  research();announce("Sinngemäße Suche gestartet.");
+  try{const {error}=await supa.from("embed_jobs").insert({id,query:raw,scope:state.mode,status:"offen",angefordert_von:state.email});if(error)throw error;semBeginPolling(id,raw,state.mode);}
+  catch(e){semStop();semState.status="fehler";semState.fehler=e.message||(""+e);research();}}
+function semBeginPolling(id,raw,scope){
+  semStop();semState.tick=setInterval(semRenderProg,1000);semRenderProg();let tries=0;
+  semState.timer=setInterval(async()=>{tries++;
+    try{const {data}=await supa.from("embed_jobs").select("status,ergebnis,fehler").eq("id",id).maybeSingle();
+      if(data&&data.status==="fertig"){semStop();if(semState.id===id){await semRank(data.ergebnis,raw,scope);}}
+      else if(data&&data.status==="fehler"){semStop();if(semState.id===id){semState.status="fehler";semState.fehler=data.fehler||"unbekannt";if(!$("#ovResearch").hidden)research();}}
+    }catch(e){}
+    if(tries>=150){semStop();if(semState.id===id&&semState.status==="laeuft"){semState.status="fehler";semState.fehler="Zeitüberschreitung. Läuft der lokale Rechner?";if(!$("#ovResearch").hidden)research();}}
+  },4000);}
+async function semRank(vec,raw,scope){
+  if(!Array.isArray(vec)){semState.status="fehler";semState.fehler="Kein gültiger Suchvektor erhalten.";if(!$("#ovResearch").hidden)research();return;}
+  const emb=await loadEmbeddings(scope);const ids=Object.keys(emb);
+  if(!ids.length){semState.status="leer";if(!$("#ovResearch").hidden)research();return;}
+  const scored=DATA.map(d=>({id:d.id,titel:d.titel,datum:d.datum,score:emb[d.id]?cosine(vec,emb[d.id]):-1})).filter(x=>x.score>=0).sort((a,b)=>b.score-a.score).slice(0,10);
+  semState.status="fertig";semState.ranked=scored;announce(`${scored.length} sinngemäß ähnliche Sitzungen gefunden.`);if(!$("#ovResearch").hidden)research();}
 let kiState={query:null,scope:null,status:null,phase:null,text:null,fehler:null,id:null,timer:null,tick:null,startedAt:0};
 function kiStop(){if(kiState.timer){clearInterval(kiState.timer);kiState.timer=null;}if(kiState.tick){clearInterval(kiState.tick);kiState.tick=null;}}
 let kiWorkerSeen=undefined,kiWorkerDetail="",kiWorkerCheckedAt=0;
