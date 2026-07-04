@@ -1008,7 +1008,7 @@ function renderLines(d){const box=$("#txlines"),q=state.txQ.trim().toLowerCase()
     box.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editLine(d,+b.dataset.edit));
   } else box.querySelectorAll("[data-report]").forEach(b=>b.onclick=()=>reportTypo(d,+b.dataset.report));
   highlightCurrentLine(d);}
-async function saveTranskript(d){try{await supa.from("stammtische").update({transkript:d.transkript,volltext:volltext(d)}).eq("id",d.id);}catch(e){alert("Speichern fehlgeschlagen: "+(e.message||e));}}
+async function saveTranskript(d){try{await supa.from(aufbTable()).update({transkript:d.transkript,volltext:volltext(d),embedding:null}).eq("id",d.id);d.embedding=null;semEmbCache={pub:null,int:null};}catch(e){alert("Speichern fehlgeschlagen: "+(e.message||e));}}
 function editLine(d,idx){const said=$(`[data-said="${idx}"]`);if(!said)return;const cur=d.transkript[idx].text;
   said.innerHTML=`<textarea class="lnedit">${esc(cur)}</textarea><div class="lnedit-act"><button class="btn small" data-ok>Speichern</button><button class="btn small ghost" data-cancel>Abbrechen</button></div>`;
   const ta=said.querySelector("textarea");ta.focus();
@@ -1033,7 +1033,7 @@ function editSummary(d){const w=$("#tabwrap");const z=d.zusammenfassung||{};cons
   $("#esCancel").onclick=()=>renderTab(d);
   $("#esSave").onclick=async()=>{
     d.zusammenfassung=Object.assign({},z,{lead:$("#esLead").value.trim(),sachstand:lines($("#esSach").value),fragen:lines($("#esFrag").value),offene_fragen:lines($("#esOffen").value)});
-    try{await supa.from("stammtische").update({zusammenfassung:d.zusammenfassung,volltext:volltext(d)}).eq("id",d.id);announce("Zusammenfassung gespeichert.");renderTab(d);}
+    try{await supa.from(aufbTable()).update({zusammenfassung:d.zusammenfassung,volltext:volltext(d),embedding:null}).eq("id",d.id);d.embedding=null;semEmbCache={pub:null,int:null};announce("Zusammenfassung gespeichert.");renderTab(d);}
     catch(e){$("#esMsg").className="msg err";$("#esMsg").textContent="Fehler: "+(e.message||e);}};}
 
 /* ---- inline Sprecher benennen (admin) ---- */
@@ -1804,8 +1804,8 @@ $("#editSave").onclick=async()=>{syncEdit();const d=editObj,msg=$("#editMsg");ms
   try{const af=$("#eAudio").files[0],ff=$("#eFolien").files[0];
     if(af){const p=`${d.id}/audio.${(af.name.split(".").pop()||"m4a").toLowerCase()}`;const u=await supa.storage.from("audio").upload(p,af,{upsert:true});if(u.error)throw u.error;d.audio_pfad=p;}
     if(ff){const p=`${d.id}/folien.pdf`;const u=await supa.storage.from("folien").upload(p,ff,{upsert:true});if(u.error)throw u.error;d.folien=[{n:1,titel:"Foliensatz",note:d.titel,pfad:p}];}
-    const row={datum:d.datum,titel:d.titel,ort:d.ort,sprecher:d.sprecher,themen:d.themen,zusammenfassung:{lead:d.zusammenfassung.lead,punkte:(d.zusammenfassung.punkte||[]).filter(x=>x.trim())},transkript:d.transkript,folien:d.folien,audio_pfad:d.audio_pfad,kapitel:(d.kapitel||[]).filter(k=>k.titel.trim()),volltext:volltext(d)};
-    const {error}=await supa.from("stammtische").update(row).eq("id",d.id);if(error)throw error;
+    const row={datum:d.datum,titel:d.titel,ort:d.ort,sprecher:d.sprecher,themen:d.themen,zusammenfassung:{lead:d.zusammenfassung.lead,punkte:(d.zusammenfassung.punkte||[]).filter(x=>x.trim())},transkript:d.transkript,folien:d.folien,audio_pfad:d.audio_pfad,kapitel:(d.kapitel||[]).filter(k=>k.titel.trim()),volltext:volltext(d),embedding:null};
+    const {error}=await supa.from("stammtische").update(row).eq("id",d.id);if(error)throw error;semEmbCache={pub:null,int:null};
     msg.textContent="Gespeichert.";msg.className="msg ok";announce("Gespeichert.");DATA=await loadData();buildFacets();renderFacets();renderList();state.current=d.id;renderDetail();setTimeout(()=>closeModal($("#ovEdit")),500);
   }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}};
 $("#editDelete").onclick=()=>askDelete(editObj,true);
