@@ -765,10 +765,11 @@ function cardHtml(d){const offen=d.verarbeitung==="offen";const tags=[];
   if(d.folien&&d.folien.length)tags.push('<span class="has">📄 Folien</span>');
   tags.push(offen?'<span class="pending">⏳ Transkript folgt</span>':'<span class="has">📝 Transkript</span>');
   const watched=hasWatchedTopic(d),heard=isHeard(d.id);
+  if(d.ist_testdaten)tags.push('<span class="has" style="color:var(--gold);border:1px solid var(--gold)">🧪 Test</span>');
   if(watched)tags.push('<span class="has" style="color:var(--gold)">★ Dein Thema</span>');
   if(heard)tags.push('<span class="has" style="opacity:.6">✓ gehört</span>');
   const bm=isBookmarked(d.id);
-  return `<button class="card ${state.current===d.id?'active':''}${heard?' heard':''}" role="listitem" data-id="${esc(d.id)}" aria-current="${state.current===d.id}" aria-label="${esc(d.titel)}, ${fmtDate(d.datum)}${offen?', Transkript in Arbeit':''}${watched?', dein Thema':''}${heard?', gehört':''}">${offen?'<span class="newbadge" style="background:var(--gold);color:#1c1606">in Arbeit</span>':(isNew(d)?'<span class="newbadge">Neu</span>':'')}
+  return `<button class="card ${state.current===d.id?'active':''}${heard?' heard':''}" role="listitem" data-id="${esc(d.id)}" aria-current="${state.current===d.id}" aria-label="${esc(d.titel)}, ${fmtDate(d.datum)}${d.ist_testdaten?', Testdaten':''}${offen?', Transkript in Arbeit':''}${watched?', dein Thema':''}${heard?', gehört':''}">${offen?'<span class="newbadge" style="background:var(--gold);color:#1c1606">in Arbeit</span>':(isNew(d)?'<span class="newbadge">Neu</span>':'')}
     <span class="date">${fmtDate(d.datum)}</span><h3>${bm?'<span title="Lesezeichen" style="color:var(--gold)">★ </span>':''}${hl(d.titel,state.q)}</h3>
     <div class="meta"><span>📍 ${hl(d.ort||"–",state.q)}</span><span>· ${fmt(d.dauer)}</span><span>· ${(d.sprecher||[]).length} Sprecher</span></div>
     <div class="ic">${tags.join("")}</div>${snippetFor(d)}${offen?`<div class="cardprog" data-prog-id="${esc(d.id)}"></div>`:''}</button>`;}
@@ -798,11 +799,11 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   if(SPEAKING&&SPEAKING!==state.current)stopSpeak();
   if(!d){det.innerHTML=`<div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Wähle links einen Stammtisch.</p></div>`;return;}
   if(state.tab==="slides"&&!(d.folien&&d.folien.length))state.tab="summary";
-  const src=d.audio_pfad?(state.mode==="int"?null:pubUrl("audio",d.audio_pfad)):null;
+  const src=d.audio_pfad?((state.mode==="int"&&!d.ist_testdaten)?null:pubUrl("audio",d.audio_pfad)):null;
   const noDL=state.authed?"":'controlslist="nodownload noplaybackrate" oncontextmenu="return false"';
   const order=filtered();const oIdx=order.findIndex(x=>x.id===d.id);const oN=order.length;
   const nav=`<div class="dnav"><button class="btn small" id="dPrev" ${oIdx<=0?'disabled':''} title="Vorheriger Stammtisch">◀ Vorheriger</button><span class="dnav-pos">${oIdx>=0?`${oIdx+1} / ${oN}`:""}</span><button class="btn small" id="dNext" ${(oIdx<0||oIdx>=oN-1)?'disabled':''} title="Nächster Stammtisch">Nächster ▶</button></div>`;
-  det.innerHTML=`<div class="dhead">${nav}<span class="date">${fmtDate(d.datum)} ${isNew(d)?'· <span style="color:var(--green)">Neu</span>':''}</span><h2>${esc(d.titel)}</h2>
+  det.innerHTML=`<div class="dhead">${nav}<span class="date">${fmtDate(d.datum)} ${isNew(d)?'· <span style="color:var(--green)">Neu</span>':''}</span><h2>${esc(d.titel)}</h2>${d.ist_testdaten?'<div class="msg" role="note" style="margin:8px 0;padding:10px 12px;border:1px solid var(--gold);border-radius:9px;background:rgba(249,199,79,.12);color:var(--gold)"><b>🧪 Testdaten</b> — Diese Sitzung ist nicht echt. Sie dient nur zum Ausprobieren des Vorstandsbereichs und kann jederzeit gelöscht werden.</div>':''}
     <div class="sub"><span><b>Ort</b> ${esc(d.ort)}</span><span><b>Dauer</b> ${fmt(d.dauer)}</span><span><b>Themen</b> ${(d.themen||[]).length?(d.themen||[]).map(t=>`<button class="topic-chip${isWatched(t)?' on':''}" data-watch="${esc(t)}" aria-pressed="${isWatched(t)}" aria-label="${isWatched(t)?('Thema '+esc(t)+' nicht mehr merken'):('Thema '+esc(t)+' merken')}">${isWatched(t)?'★':'☆'} ${esc(t)}</button>`).join(" "):"–"}</span></div>
     <div class="speakers">${(d.sprecher||[]).map((s,i)=>`<span class="sp-tag"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</span>`).join("")}</div>
     ${d.verarbeitung==="offen"?'<div class="msg info" style="margin-top:10px;color:var(--gold)">Audio und Folien sind bereits verfügbar. Transkript und Zusammenfassung werden noch erstellt und erscheinen automatisch.</div>':''}
@@ -833,7 +834,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   setupPlayer(d);renderTabBar();renderTab(d);
   if(state.mode==="int"){
     logIntern("sitzung_geoeffnet",d.id,d.titel||null);
-    if(d.audio_pfad&&supa){supa.storage.from("audio-intern").createSignedUrl(d.audio_pfad,3600).then(r=>{const a=$("#aud");if(a&&r&&r.data&&r.data.signedUrl){a.src=r.data.signedUrl;a.addEventListener("play",()=>logIntern("audio_gestartet",d.id,null),{once:true});}}).catch(()=>{});}
+    if(d.audio_pfad&&supa&&!d.ist_testdaten){supa.storage.from("audio-intern").createSignedUrl(d.audio_pfad,3600).then(r=>{const a=$("#aud");if(a&&r&&r.data&&r.data.signedUrl){a.src=r.data.signedUrl;a.addEventListener("play",()=>logIntern("audio_gestartet",d.id,null),{once:true});}}).catch(()=>{});}
   }
   if($("#dPrev"))$("#dPrev").onclick=()=>stepEntry(-1);
   if($("#dNext"))$("#dNext").onclick=()=>stepEntry(1);
