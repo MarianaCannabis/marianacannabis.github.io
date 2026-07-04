@@ -1720,6 +1720,9 @@ if($("#btnOffenePunkte"))$("#btnOffenePunkte").onclick=()=>openOffenePunkte();
 /* ---- Phase 5b: Aufbewahrungs-Werkzeug (Admin, nur markieren) ---- */
 let AUFB_MONATE=24;
 function aufbTable(){return state.mode==="int"?"stammtische_intern":"stammtische";}
+function audioBucket(){return state.mode==="int"?"audio-intern":"audio";}
+function folienBucket(){return state.mode==="int"?"folien-intern":"folien";}
+async function reloadActive(){if(state.mode==="int"){DATA_INT=null;DATA=await loadIntern();}else{DATA=await loadData();}}
 function openAufbewahrung(){if(!isAdmin()){announce("Nur für den Admin.");return;}$("#aufbMsg").textContent="";const el=$("#aufbMonate");if(el)el.value=AUFB_MONATE;renderAufbewahrung();openModal($("#ovAufbewahrung"));}
 function renderAufbewahrung(){const box=$("#aufbListe");if(!box)return;
   const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-(AUFB_MONATE||0));const cut=cutoff.toISOString().slice(0,10);
@@ -1817,11 +1820,11 @@ function syncEdit(){const d=editObj;d.datum=$("#eDatum").value;d.ort=$("#eOrt").
   $("#eTx").querySelectorAll("[data-tsi]").forEach(i=>{d.transkript[+i.dataset.tsi].sp=+i.value;});}
 $("#editSave").onclick=async()=>{syncEdit();const d=editObj,msg=$("#editMsg");msg.textContent="Speichern…";msg.className="msg info";
   try{const af=$("#eAudio").files[0],ff=$("#eFolien").files[0];
-    if(af){const p=`${d.id}/audio.${(af.name.split(".").pop()||"m4a").toLowerCase()}`;const u=await supa.storage.from("audio").upload(p,af,{upsert:true});if(u.error)throw u.error;d.audio_pfad=p;}
-    if(ff){const p=`${d.id}/folien.pdf`;const u=await supa.storage.from("folien").upload(p,ff,{upsert:true});if(u.error)throw u.error;d.folien=[{n:1,titel:"Foliensatz",note:d.titel,pfad:p}];}
+    if(af){const p=`${d.id}/audio.${(af.name.split(".").pop()||"m4a").toLowerCase()}`;const u=await supa.storage.from(audioBucket()).upload(p,af,{upsert:true});if(u.error)throw u.error;d.audio_pfad=p;}
+    if(ff){const p=`${d.id}/folien.pdf`;const u=await supa.storage.from(folienBucket()).upload(p,ff,{upsert:true});if(u.error)throw u.error;d.folien=[{n:1,titel:"Foliensatz",note:d.titel,pfad:p}];}
     const row={datum:d.datum,titel:d.titel,ort:d.ort,sprecher:d.sprecher,themen:d.themen,zusammenfassung:{lead:d.zusammenfassung.lead,punkte:(d.zusammenfassung.punkte||[]).filter(x=>x.trim())},transkript:d.transkript,folien:d.folien,audio_pfad:d.audio_pfad,kapitel:(d.kapitel||[]).filter(k=>k.titel.trim()),volltext:volltext(d),embedding:null};
-    const {error}=await supa.from("stammtische").update(row).eq("id",d.id);if(error)throw error;semEmbCache={pub:null,int:null};
-    msg.textContent="Gespeichert.";msg.className="msg ok";announce("Gespeichert.");DATA=await loadData();buildFacets();renderFacets();renderList();state.current=d.id;renderDetail();setTimeout(()=>closeModal($("#ovEdit")),500);
+    const {error}=await supa.from(aufbTable()).update(row).eq("id",d.id);if(error)throw error;semEmbCache={pub:null,int:null};
+    msg.textContent="Gespeichert.";msg.className="msg ok";announce("Gespeichert.");await reloadActive();buildFacets();renderFacets();renderList();state.current=d.id;renderDetail();setTimeout(()=>closeModal($("#ovEdit")),500);
   }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}};
 $("#editDelete").onclick=()=>askDelete(editObj,true);
 
@@ -1830,9 +1833,9 @@ function askDelete(d,fromEdit){pendingDelete={d,fromEdit};$("#delWhat").textCont
 $("#delPw").addEventListener("keydown",e=>{if(e.key==="Enter")$("#delGo").click();});
 $("#delGo").onclick=async()=>{if(!pendingDelete)return;const msg=$("#delMsg");msg.textContent="Prüfe Passwort…";msg.className="msg info";
   const {error:ae}=await supa.auth.signInWithPassword({email:ADMIN_EMAIL,password:$("#delPw").value});if(ae){msg.textContent="Passwort falsch, nicht gelöscht.";msg.className="msg err";return;}
-  const d=pendingDelete.d;try{if(d.audio_pfad)await supa.storage.from("audio").remove([d.audio_pfad]);if(d.folien&&d.folien[0]&&d.folien[0].pfad)await supa.storage.from("folien").remove([d.folien[0].pfad]);
-    const {error}=await supa.from("stammtische").delete().eq("id",d.id);if(error)throw error;closeModal($("#ovDelPw"));if(pendingDelete.fromEdit)closeModal($("#ovEdit"));
-    state.current=null;DATA=await loadData();buildFacets();renderFacets();renderList();renderDetail();announce("Gelöscht.");pendingDelete=null;
+  const d=pendingDelete.d;try{if(d.audio_pfad)await supa.storage.from(audioBucket()).remove([d.audio_pfad]);if(d.folien&&d.folien[0]&&d.folien[0].pfad)await supa.storage.from(folienBucket()).remove([d.folien[0].pfad]);
+    const {error}=await supa.from(aufbTable()).delete().eq("id",d.id);if(error)throw error;closeModal($("#ovDelPw"));if(pendingDelete.fromEdit)closeModal($("#ovEdit"));
+    state.current=null;await reloadActive();buildFacets();renderFacets();renderList();renderDetail();announce("Gelöscht.");pendingDelete=null;
   }catch(e){msg.textContent="Löschen fehlgeschlagen: "+(e.message||e);msg.className="msg err";}};
 
 /* ---- wizard (mehrfach) ---- */
