@@ -1901,36 +1901,52 @@ function updateCardProgress(){const d=(LIVE_STATUS&&LIVE_STATUS.detail)||{};cons
     else{el.innerHTML=`<span class="cp-txt">in der Warteschlange</span>`;}});}
 async function openQueue(){openModal($("#ovQueue"));await renderStatusPanel();await loadQueue();}
 async function getWatchdog(){if(!supa)return null;try{const {data}=await supa.from("processing_status").select("*").eq("id","watchdog").maybeSingle();return data;}catch(e){return null;}}
-async function renderStatusPanel(){const s=await getStatus();const wd=await getWatchdog();const p=$("#statusPanel");
-  let h="";
-  if(s&&(s.active||s.total||s.scope==="ingest")){const d=s.detail||{};const pct=s.total?Math.round((s.done||0)/s.total*100):0;const cp=d.cur_progress;
-    h+=`<div class="sec-h">Aktuelle Datei</div>`;
-    h+=`<div style="font-size:14px;margin-bottom:4px"><b>${esc(s.current_titel||"–")}</b>${s.current_datum?(" · "+fmtDate(s.current_datum)):""}</div>`;
-    h+=`<div class="msg info">Phase: ${esc(d.phase||s.phase||"–")}${s.scope==="ingest"?" · Einzelverarbeitung":""}</div>`;
-    h+=phaseStepHtml(d.phase||s.phase);
-    if(cp!=null){h+=`<div class="progress"><div style="width:${cp}%"></div></div><div class="msg info">${cp}% · ${esc(d.cur_elapsed||"?")} von geschätzt ${esc(d.cur_len||"?")} · ${esc(d.cur_remaining||"")}${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</div>`;}
-    else{h+=`<div class="msg info">${esc(d.cur_len?("Länge "+d.cur_len):"")} ${esc(d.cur_elapsed?("· läuft seit "+d.cur_elapsed):"")}</div>`;}
-    const elMin=parseMin(d.cur_elapsed),lenMin=parseMin(d.cur_len);
-    const haengt=elMin!=null&&lenMin>0&&elMin>Math.max(lenMin*4,lenMin+120);
-    if(haengt){h+=`<div class="msg err" style="margin-top:6px">⚠ Läuft ungewöhnlich lange (${esc(d.cur_elapsed)} statt geschätzt ${esc(d.cur_len)}). Die Datei hängt vermutlich, etwa in der Sprechertrennung. Bitte diesen Eintrag prüfen oder überspringen.</div>`;}
-    else if(cp!=null&&lenMin>=60){h+=`<div class="msg info" style="margin-top:6px">🕑 Große Aufnahme (${esc(d.cur_len)}). Die Verarbeitung läuft und dauert entsprechend, hier kann längere Zeit keine neue Datei fertig werden.</div>`;}
-    if(d.rtf)h+=`<div class="msg info">Tempo: ${esc(d.rtf)}</div>`;
-    if(s.scope!=="ingest"){h+=`<div class="sec-h" style="margin-top:16px">Gesamter Batch</div><div><b>${s.active?"läuft":"pausiert"}</b> · ${s.done||0} von ${s.total||0} fertig${s.eta?(" · voraussichtlich fertig "+esc(s.eta)):""}</div><div class="progress"><div style="width:${pct}%"></div></div>`;
-      if(!s.active){
-        if(cp!=null)h+=`<div class="msg info" style="margin-top:4px">Die aktuelle Datei wird gerade noch verarbeitet (${cp}%). Der Batch ist als gestoppt markiert und läuft nach dieser Datei nicht von selbst weiter, bis du ihn fortsetzt.</div>`;
-        else h+=`<div class="msg err" style="margin-top:4px">Der Lauf ist derzeit gestoppt und wird nicht fortgesetzt, bis er wieder gestartet wird.</div>`;
-      }}
+async function getIngest(){if(!supa)return null;try{const {data}=await supa.from("processing_status").select("*").eq("id","ingest").maybeSingle();return data;}catch(e){return null;}}
+function curFileHtml(s){const d=s.detail||{};const cp=d.cur_progress;let h="";
+  h+=`<div style="font-size:14px;margin-bottom:4px"><b>${esc(s.current_titel||d.cur_titel||"–")}</b>${s.current_datum?(" · "+fmtDate(s.current_datum)):""}</div>`;
+  h+=`<div class="msg info">Phase: ${esc(d.phase||s.phase||"–")}</div>`;
+  h+=phaseStepHtml(d.phase||s.phase);
+  if(cp!=null){h+=`<div class="progress"><div style="width:${cp}%"></div></div><div class="msg info">${cp}% · ${esc(d.cur_elapsed||"?")} von geschätzt ${esc(d.cur_len||"?")} · ${esc(d.cur_remaining||"")}${d.cur_finish?(" · fertig gegen "+esc(d.cur_finish)+" Uhr"):""}</div>`;}
+  else{h+=`<div class="msg info">${esc(d.cur_len?("Länge "+d.cur_len):"")} ${esc(d.cur_elapsed?("· läuft seit "+d.cur_elapsed):"")}</div>`;}
+  const elMin=parseMin(d.cur_elapsed),lenMin=parseMin(d.cur_len);
+  const haengt=elMin!=null&&lenMin>0&&elMin>Math.max(lenMin*4,lenMin+120);
+  if(haengt){h+=`<div class="msg err" style="margin-top:6px">⚠ Läuft ungewöhnlich lange (${esc(d.cur_elapsed)} statt geschätzt ${esc(d.cur_len)}). Die Datei hängt vermutlich, etwa in der Sprechertrennung. Bitte diesen Eintrag prüfen oder überspringen.</div>`;}
+  else if(cp!=null&&lenMin>=60){h+=`<div class="msg info" style="margin-top:6px">🕑 Große Aufnahme (${esc(d.cur_len)}). Die Verarbeitung läuft und dauert entsprechend.</div>`;}
+  if(d.rtf)h+=`<div class="msg info">Tempo: ${esc(d.rtf)}</div>`;
+  return h;}
+async function renderStatusPanel(){const s=await getStatus();const ing=await getIngest();const wd=await getWatchdog();const p=$("#statusPanel");let h="";
+  const ingActive=ing&&(ing.active||(ing.detail&&ing.detail.cur_id));
+  const batchActive=s&&(s.active||s.total);
+  if(ingActive){
+    h+=`<div class="sec-h">Einzelverarbeitung · Upload</div>`;
+    h+=curFileHtml(ing);
+    h+=`<div class="msg info" style="margin-top:6px">Stand: ${ing.updated_at?new Date(ing.updated_at).toLocaleString("de-DE"):"–"}${ing.message?(" · "+esc(ing.message)):""}</div>`;
+    if(state.authed){h+=`<div class="sec-h" style="margin-top:10px">Steuerung Einzeldatei</div>
+      <div class="steuerrow">
+        <button class="btn small" data-fill="neu">↻ Neu starten</button>
+        <button class="btn small" data-fill="ueberspringen">⏭ Überspringen</button>
+        <button class="btn small danger" data-fill="loeschen">🗑 Upload löschen</button>
+      </div><div class="msg info" id="fillMsg">Diese Aktionen betreffen nur die gerade hochgeladene Einzeldatei. Der Upload-Verarbeiter führt sie in Kürze aus.</div>`;}
+  }
+  if(batchActive){const d=s.detail||{};const pct=s.total?Math.round((s.done||0)/s.total*100):0;const cp=d.cur_progress;
+    h+=`<div class="sec-h" style="margin-top:${ingActive?'18px':'0'}">Aktuelle Datei${ingActive?" · Batch":""}</div>`;
+    h+=curFileHtml(s);
+    h+=`<div class="sec-h" style="margin-top:16px">Gesamter Batch</div><div><b>${s.active?"läuft":"pausiert"}</b> · ${s.done||0} von ${s.total||0} fertig${s.eta?(" · voraussichtlich fertig "+esc(s.eta)):""}</div><div class="progress"><div style="width:${pct}%"></div></div>`;
+    if(!s.active){
+      if(cp!=null)h+=`<div class="msg info" style="margin-top:4px">Die aktuelle Datei wird gerade noch verarbeitet (${cp}%). Der Batch ist als gestoppt markiert und läuft nach dieser Datei nicht von selbst weiter, bis du ihn fortsetzt.</div>`;
+      else h+=`<div class="msg err" style="margin-top:4px">Der Lauf ist derzeit gestoppt und wird nicht fortgesetzt, bis er wieder gestartet wird.</div>`;
+    }
     if(d.fehler&&d.fehler.length){h+=`<div class="sec-h" style="margin-top:16px;color:var(--red)">Fehlgeschlagen (${d.fehler.length})</div>`+d.fehler.map(f=>`<div class="qrow"><div><b>${esc(f.titel||f.id)}</b><div class="msg err">${esc(f.msg||"Fehler")}</div></div><span class="qstatus error">fehler</span></div>`).join("");}
     h+=`<div class="msg info" style="margin-top:8px">Stand: ${s.updated_at?new Date(s.updated_at).toLocaleString("de-DE"):"–"}${s.message?(" · "+esc(s.message)):""}</div>`;
-    if(state.authed&&s.scope!=="ingest"){h+=`<div class="sec-h" style="margin-top:16px">Steuerung</div>
+    if(state.authed){h+=`<div class="sec-h" style="margin-top:16px">Steuerung Batch</div>
       <div class="steuerrow">
         <button class="btn small" data-steuer="fortsetzen">▶ Lauf fortsetzen</button>
         <button class="btn small" data-steuer="ueberspringen">⏭ Aktuelle Datei überspringen</button>
         <button class="btn small danger" data-steuer="ignorieren">⛔ Datei dauerhaft ignorieren</button>
         <button class="btn small" data-steuer="fehler_neu">↻ Fehler &amp; Ignoriert zurücksetzen</button>
       </div><div class="msg info" id="steuerMsg">Der Wachhund führt einen Befehl bei seiner nächsten Prüfung aus (in der Regel innerhalb einer Minute). „Ignorieren" schließt die aktuelle Datei dauerhaft aus, „Fehler &amp; Ignoriert zurücksetzen" macht das wieder rückgängig.</div>`;}
-  } else {h+=`<div class="msg info">Gerade läuft keine Verarbeitung.</div>`;}
-  // Dienste-Ueberwachung (Wachhund)
+  }
+  if(!ingActive&&!batchActive){h+=`<div class="msg info">Gerade läuft keine Verarbeitung.</div>`;}
   h+=`<div class="sec-h" style="margin-top:18px">Dienste-Überwachung</div>`;
   if(wd&&wd.detail&&wd.detail.services){const wdage=wd.updated_at?Math.round((Date.now()-new Date(wd.updated_at).getTime())/60000):null;
     h+=wd.detail.services.map(sv=>`<div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0"><span style="width:9px;height:9px;border-radius:50%;background:${sv.ok?'var(--green)':'var(--red)'}"></span>${esc(sv.name)} <span class="msg info" style="margin-left:auto">${sv.ok?'läuft':'war ausgefallen'}</span></div>`).join("");
@@ -1939,7 +1955,8 @@ async function renderStatusPanel(){const s=await getStatus();const wd=await getW
     h+=`<div class="msg info">Letzte Prüfung: ${esc((wd.detail.checked_at)||"–")}${wdage!=null&&wdage>15?` · Achtung: Wachhund meldet seit ${wdage} min nichts`:""}</div>`;}
   else{h+=`<div class="msg info">Noch keine Meldung vom Wachhund. Läuft die Aufgabe StammtischArchivWatchdog?</div>`;}
   p.innerHTML=h;
-  p.querySelectorAll("[data-steuer]").forEach(b=>b.onclick=()=>steuerBefehl(b.dataset.steuer));}
+  p.querySelectorAll("[data-steuer]").forEach(b=>b.onclick=()=>steuerBefehl(b.dataset.steuer));
+  p.querySelectorAll("[data-fill]").forEach(b=>b.onclick=()=>fillBefehl(b.dataset.fill));}
 function phaseStepHtml(phase){const p=(phase||"").toLowerCase();let cur=0;
   if(/upload|hochgel|veröff|veroff/.test(p))cur=3;else if(/zusammen|protokoll/.test(p))cur=2;else if(/transk|ausricht|sprecher|diaris/.test(p))cur=1;else cur=0;
   const steps=["Audio vorbereiten","Transkription & Sprechertrennung","Zusammenfassung","Veröffentlichen"];
@@ -1957,6 +1974,16 @@ async function steuerBefehl(befehl){const m=$("#steuerMsg");const namen={fortset
   try{const {error}=await supa.from("steuerung").insert({befehl,ziel,angefordert_am:new Date().toISOString(),erledigt:false});if(error)throw error;
     if(m){m.className="msg ok";m.textContent=`„${namen[befehl]||befehl}" gesendet. Der Wachhund führt das in Kürze aus.`;}announce("Befehl gesendet.");}
   catch(e){if(m){m.className="msg err";m.textContent="Steuerung ist noch nicht eingerichtet (Tabelle steuerung fehlt). "+(e.message||e);}}}
+async function fillBefehl(befehl){const m=$("#fillMsg");const namen={neu:"neu starten",ueberspringen:"überspringen",loeschen:"Upload löschen"};
+  const ing=await getIngest();const ziel=(ing&&ing.detail&&ing.detail.cur_id)||null;
+  if(!ziel){if(m){m.className="msg err";m.textContent="Keine laufende Einzeldatei erkannt.";}return;}
+  if(befehl==="neu"&&!confirm("Die Verarbeitung dieser Einzeldatei von vorn beginnen? Der aktuelle Fortschritt geht verloren."))return;
+  if(befehl==="ueberspringen"&&!confirm("Die gerade verarbeitete Einzeldatei überspringen? Die bisherige Rechenzeit geht verloren."))return;
+  if(befehl==="loeschen"&&!confirm("Diesen Upload samt Eintrag löschen? Das kann nicht rückgängig gemacht werden."))return;
+  if(m){m.className="msg info";m.textContent="Sende Befehl…";}
+  try{const {error}=await supa.from("steuerung").insert({befehl:"fill_"+befehl,ziel,angefordert_am:new Date().toISOString(),erledigt:false});if(error)throw error;
+    if(m){m.className="msg ok";m.textContent=`„${namen[befehl]||befehl}" gesendet. Der Upload-Verarbeiter führt das in Kürze aus.`;}announce("Befehl gesendet.");}
+  catch(e){if(m){m.className="msg err";m.textContent="Konnte nicht senden: "+(e.message||e);}}}
 async function loadQueue(){const box=$("#queueList");box.innerHTML='<div class="msg info">Lade…</div>';
   try{const {data,error}=await supa.from("ingest").select("*").order("created",{ascending:false});if(error)throw error;
     box.innerHTML=data.length?data.map(q=>`<div class="qrow"><div><b>${esc(q.titel||q.id)}</b><div class="msg info">${esc(q.mode||"new")} · ${esc(q.datum||"")} ${q.message?("· "+esc(q.message)):""}</div></div><span class="qstatus ${q.status}">${q.status}</span></div>`).join(""):'<div class="nodata">Warteschlange leer.</div>';
