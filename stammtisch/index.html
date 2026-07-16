@@ -19,6 +19,21 @@
   .brand-mark{width:34px;height:34px;border-radius:9px;flex:none;background:radial-gradient(circle at 30% 25%,var(--green),#154a2b 70%);display:grid;place-items:center;color:#04150b;font-weight:800;font-size:18px;box-shadow:0 0 0 1px #2a5238 inset}
   .brand-txt b{font-size:16px}.brand-txt span{display:block;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
   .spacer{flex:1}
+  /* Kopfleiste: am Desktop fliessen die Bedienknoepfe wie bisher (display:contents = kein Kasten),
+     am Handy klappen sie hinter dem ☰-Knopf als Ueberlagerung auf, damit die klebende Leiste niedrig bleibt. */
+  .topbar-controls{display:contents}
+  .btn.nav-toggle{display:none}
+  @media (max-width:768px),(pointer:coarse){
+    .btn.nav-toggle{display:inline-flex}
+    .topbar-controls{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;
+      background:var(--panel-solid);border-bottom:1px solid var(--line);box-shadow:0 12px 28px rgba(0,0,0,.5);
+      padding:10px 14px;gap:8px;max-height:76vh;overflow-y:auto;overflow-x:hidden;z-index:39}
+    .topbar.nav-open .topbar-controls{display:flex}
+    .topbar-controls>.btn{width:100%;justify-content:center}
+    .topbar-controls .menu{width:100%}
+    .topbar-controls .menu-trigger{width:100%;justify-content:space-between}
+    .topbar-controls .menu-panel{position:static;width:100%;min-width:0;margin-top:6px;box-shadow:none}
+  }
   .btn{border:1px solid var(--line);background:var(--bg-2);color:var(--text);padding:8px 13px;border-radius:9px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px}
   .btn:hover{border-color:var(--green-dim)}.btn.primary{background:var(--green);color:#04150b;border-color:var(--green)}.btn.gold{background:var(--gold);color:#1c1606;border-color:var(--gold)}.btn.danger{color:var(--red);border-color:#5a2f24}.btn.danger:hover{background:rgba(217,105,78,.12)}.btn[hidden]{display:none}.btn.small{padding:5px 10px;font-size:12px}.btn.icon{padding:8px 11px}.btn.on{background:rgba(76,175,106,.18);border-color:var(--green-dim);color:var(--green)}
   .kbd-help{display:none;max-width:var(--maxw);margin:10px auto 0;padding:0 22px}body.sr-mode .kbd-help{display:block}
@@ -305,6 +320,8 @@
   <div class="topbar-in">
     <div class="brand"><div class="brand-mark" aria-hidden="true">V</div><div class="brand-txt"><b>Vereinsarchiv</b><span>Mariana Cannabis</span></div></div>
     <div class="spacer"></div>
+    <button class="btn icon nav-toggle" id="navToggle" aria-expanded="false" aria-controls="topbarControls" aria-label="Menü öffnen" title="Menü"><span aria-hidden="true">☰</span></button>
+    <div class="topbar-controls" id="topbarControls">
     <button class="btn" id="btnStats">Statistik</button>
     <button class="btn primary" id="btnWizard" hidden>＋ Hochladen</button>
     <div class="menu" id="menuAuswertung" hidden>
@@ -348,6 +365,7 @@
     <button class="btn primary" id="btnVorstandLogin" aria-label="Als Vorstand anmelden"><span aria-hidden="true">🔒</span> Vorstand</button>
     <button class="btn gold" id="btnAdmin">Admin</button>
     <button class="btn" id="btnLogout" hidden>Abmelden</button>
+    </div>
   </div>
   <div class="kbd-help"><div>Tastatur: <kbd>Tab</kbd> wechselt zwischen Suche, Filtern und Liste. In der Liste mit <kbd>Pfeil hoch</kbd>/<kbd>runter</kbd> blättern, <kbd>Enter</kbd> öffnet. In Dialogen schließt <kbd>Esc</kbd>. In der Transkriptsuche springt <kbd>Enter</kbd> zum nächsten Treffer.</div></div>
 </header>
@@ -693,7 +711,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-16-6";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-16-7";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1737,6 +1755,12 @@ document.querySelectorAll(".menu .menu-trigger").forEach(tr=>{tr.onclick=e=>{e.s
 document.querySelectorAll(".menu-panel .menu-item").forEach(b=>b.addEventListener("click",()=>closeMenus()));
 document.addEventListener("click",e=>{if(!e.target.closest(".menu"))closeMenus();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.querySelector(".menu.open"))closeMenus(null,true);});
+/* ---- Kopfleisten-Menue am Handy (☰) ---- */
+function closeNav(){const t=document.querySelector(".topbar");if(t&&t.classList.contains("nav-open")){t.classList.remove("nav-open");const b=$("#navToggle");if(b){b.setAttribute("aria-expanded","false");b.setAttribute("aria-label","Menü öffnen");}}}
+if($("#navToggle"))$("#navToggle").onclick=e=>{e.stopPropagation();const t=document.querySelector(".topbar"),b=$("#navToggle");const open=t.classList.toggle("nav-open");b.setAttribute("aria-expanded",open?"true":"false");b.setAttribute("aria-label",open?"Menü schließen":"Menü öffnen");if(open){closeMenus();}else{closeMenus();}};
+if($("#topbarControls"))$("#topbarControls").addEventListener("click",e=>{const b=e.target.closest("button");if(b&&!b.classList.contains("menu-trigger"))closeNav();});
+document.addEventListener("click",e=>{if(!e.target.closest(".topbar"))closeNav();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeNav();});
 function internBanner(show){return;/* ersetzt durch den Vorstandsbereichs-Rahmen (vbKopf) */ let b=$("#internBanner");
   if(show){if(!b){b=document.createElement("div");b.id="internBanner";b.className="intern-banner";document.querySelector(".wrap").before(b);}b.innerHTML='🔒 Interner Vorstandsbereich · Inhalte sind nur für Vorstand und Admin sichtbar. <button class="btn small" id="internBack">Zurück zum öffentlichen Archiv</button>';$("#internBack").onclick=()=>setMode("pub");}
   else if(b){b.remove();}}
