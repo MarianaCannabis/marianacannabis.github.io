@@ -43,6 +43,11 @@
   .banner .pulse{width:9px;height:9px;border-radius:50%;background:var(--sp3);flex:none;animation:pulse 1.6s infinite}
   @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
   .wrap{max-width:var(--maxw);margin:0 auto;padding:22px;display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+  /* Wer im CSS ein eigenes display bekommt, schlaegt die Browserregel fuer das hidden-Attribut.
+     Ohne diese Zeile wirkt element.hidden=true nicht. Genau daran blieb die Stammtischliste in
+     jeder anderen Ebene stehen, und die oeffentliche Terminkarte im Vorstandsbereich.
+     Neuer umschaltbarer Bereich mit eigenem display: HIER eintragen. */
+  .wrap[hidden],.vb-bald[hidden],.vb-dok[hidden],.nextmeet[hidden]{display:none!important}
   @media(max-width:880px){.wrap{grid-template-columns:1fr;padding:14px;gap:14px}.rail{position:static!important;max-height:none;overflow:visible}.rail .search{position:static}}
   body.mobile .wrap{grid-template-columns:1fr;gap:14px}body.mobile .rail{position:static;max-height:none;overflow:visible}body.mobile .rail .search{position:static}body.mobile .btn{padding:11px 15px;font-size:14px}body.mobile .card{padding:17px}body.mobile .card h3{font-size:16px}body.mobile .tabs button{padding:15px 15px;font-size:14px}body.mobile .line{padding:12px 0}body.mobile .line .said{font-size:15px}
   .rail{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow-y:auto;overflow-x:hidden;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
@@ -264,7 +269,7 @@
     background:var(--panel-solid);border:2px solid var(--gold);border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--text);box-shadow:0 10px 28px rgba(0,0,0,.5);max-width:min(94vw,620px)}
   @media (max-width:768px),(pointer:coarse){ .ver-banner{bottom:8px;padding:12px} .ver-banner .btn{min-height:44px} }
   /* Vorstandsbereich: deutlich abgegrenzter Rahmen mit Ebenen-Umschalter */
-  .vb-kopf,.vb-bald,.wrap{scroll-margin-top:96px}
+  .vb-kopf,.vb-bald,.vb-dok,.wrap{scroll-margin-top:96px}
   .vb-kopf{max-width:var(--maxw);margin:0 auto 14px;padding:12px 14px;border:2px solid var(--gold);border-radius:var(--radius);background:linear-gradient(180deg,#1a1607 0%,var(--panel-solid) 70%)}
   .vb-zeile{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .vb-titel{font-weight:700;color:var(--gold);font-size:15px}
@@ -278,7 +283,7 @@
   .vb-bald{max-width:var(--maxw);margin:0 auto;padding:26px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--panel-solid);text-align:center}
   .vb-bald h3{color:var(--gold);margin-bottom:6px}
   .vb-bald p{color:var(--muted);font-size:13.5px;margin:4px 0}
-  @media (max-width:768px),(pointer:coarse){ .vb-ebene{min-height:44px} .vb-kopf,.vb-bald,.wrap{scroll-margin-top:78px} }
+  @media (max-width:768px),(pointer:coarse){ .vb-ebene{min-height:44px} .vb-kopf,.vb-bald,.vb-dok,.wrap{scroll-margin-top:78px} }
   /* Touch-Flaechen >= 44px auf kleinen Schirmen und Touch-Geraeten (WCAG 2.5.8) */
   @media (max-width:768px),(pointer:coarse){
     .btn,.chip,.topic-chip,.facet-h,.mgrp-head,.grp-head,.sel,select,
@@ -310,14 +315,19 @@
   .steps .step.done{color:var(--muted)}.steps .step.done .dot2{background:rgba(76,175,106,.18);color:var(--green);border-color:transparent}
   .steps .step.active{color:var(--text);font-weight:600}.steps .step.active .dot2{background:var(--green);color:#08100b;border-color:transparent}
   /* Ebene Dokumente */
-  .vb-dok{max-width:1200px;margin:0 auto;padding:16px}
-  .dok-kopf{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px}
-  .dok-zeile{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+  .vb-dok{max-width:var(--maxw);margin:0 auto;padding:22px}
+  .dok-kopf{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:6px}
+  .dok-kopf .field{margin-bottom:0}
+  .dok-zeile{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--panel-solid);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:border-color .15s,box-shadow .15s}
+  .dok-zeile:hover{border-color:var(--green-dim)}
+  .dok-zeile.dok-neu{border-color:var(--green);box-shadow:0 0 0 2px rgba(76,175,106,.22)}
   .dok-haupt{flex:1 1 260px;min-width:0}
-  .dok-titel{font-weight:600;word-break:break-word}
-  .dok-meta{font-size:.85rem;color:var(--muted);margin-top:2px}
+  .dok-titel{font-weight:650;letter-spacing:-.01em;word-break:break-word}
+  .dok-meta{font-size:12px;color:var(--muted);margin-top:3px}
   .dok-knoepfe{display:flex;flex-wrap:wrap;gap:6px}
-  .dok-fassungen{flex-basis:100%;margin-top:6px;padding:8px 10px;border-left:3px solid var(--line);font-size:.85rem;color:var(--muted)}
+  .dok-fassungen{flex-basis:100%;margin-top:8px;padding:10px 12px;background:var(--bg-2);border:1px solid var(--line);border-radius:9px;font-size:12px;color:var(--muted)}
+  .dok-fassungen div+div{margin-top:5px}
+  @media(max-width:880px){.vb-dok{padding:14px}.dok-kopf{gap:10px}.dok-knoepfe{width:100%}}
   .dok-buehne{position:relative;display:inline-block;max-width:100%;touch-action:none}
   .dok-buehne canvas{max-width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px;background:#fff}
   .dok-marke{position:absolute;border:2px dashed var(--gold);border-radius:4px;pointer-events:none}
@@ -408,7 +418,8 @@
     <div class="field" style="flex:0 1 220px" id="dokVFilterBox" hidden><label for="dokVFilter">Verein</label><select id="dokVFilter"><option value="">alle</option></select></div>
     <button class="btn primary" id="dokNeu" style="align-self:flex-end">Unterlage hochladen</button>
   </div>
-  <div class="msg info" id="dokHinweis" role="status"></div>
+  <div class="msg ok" id="dokMeldung" hidden role="status" style="margin-bottom:10px"></div>
+  <div class="msg info" id="dokHinweis" role="status" style="margin-bottom:12px"></div>
   <div id="dokListe"><div class="msg info">Lade…</div></div>
 </div>
 <main class="wrap">
@@ -816,7 +827,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-16-10";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-16-11";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1918,7 +1929,7 @@ async function setEbene(e,vb){
   if(state.vb&&ebenePrivat())logIntern("bereich_geoeffnet",null,null);
   state.current=null;state.q="";if($("#q"))$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
   vbRender();
-  if(state.vb&&e==="dok"){renderDok();logIntern("dok_bereich_geoeffnet",null,null);}
+  if(state.vb&&e==="dok"){dokMelde("");renderDok();logIntern("dok_bereich_geoeffnet",null,null);}
   else if(!(state.vb&&EBENEN_BALD[e])){buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();}
   else{renderTermine();}
   announce(state.vb?("Vorstandsbereich. Ebene "+EBENEN[e]+"."):"Öffentliches Archiv.");
@@ -2141,7 +2152,7 @@ const DOK_KATEGORIEN=["Satzung","Protokoll","Vertrag","Behörde","Finanzen","Vor
 const PDFJS_URL="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
 const PDFJS_WORKER="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
 const PDFLIB_URL="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js";
-let DOK_DATA=[],DOK_VEREINE=[],DOK_Q="",DOK_KAT="",DOK_VF="",DOK_OFFEN=new Set();
+let DOK_DATA=[],DOK_VEREINE=[],DOK_Q="",DOK_KAT="",DOK_VF="",DOK_OFFEN=new Set(),DOK_NEU=null;
 let PDFJS_BEREIT=false,PDFLIB_BEREIT=false;
 
 /* Beide Bibliotheken erst laden, wenn jemand die Ebene wirklich oeffnet. Mitglieder
@@ -2164,6 +2175,17 @@ function darfDokLoeschen(d){if(state.rolle==="admin")return true;return darfDokS
 function darfDokUnterschreiben(){return state.rolle==="admin"||state.rolle==="vorstand";}
 function dokGroesse(n){if(!n)return "";const mb=n/1048576;return mb>=1?(mb.toFixed(1)+" MB"):(Math.round(n/1024)+" kB");}
 
+function dokMelde(text){const m=$("#dokMeldung");if(!m)return;
+  m.textContent=text||"";m.hidden=!text;}
+/* Die Kopfleiste klebt und ist verschieden hoch, deshalb wird ihre Hoehe gemessen und als
+   scroll-margin-top gesetzt. Ohne das landet die neue Zeile hinter der Leiste. */
+function dokZeigeNeu(){
+  if(!DOK_NEU)return;
+  const el=document.querySelector(`[data-dok-zeile="${DOK_NEU}"]`);if(!el)return;
+  const bar=document.querySelector(".topbar");
+  el.style.scrollMarginTop=((bar?bar.getBoundingClientRect().height:0)+12)+"px";
+  try{el.scrollIntoView({block:"start",behavior:"smooth"});}catch(e){el.scrollIntoView();}
+  setTimeout(()=>{const w=document.querySelector(".dok-neu");if(w)w.classList.remove("dok-neu");DOK_NEU=null;},6000);}
 async function loadDok(){
   try{
     if(!DOK_VEREINE.length){const v=await supa.from("vereine").select("id,schluessel,name,stadt").order("stadt");
@@ -2205,13 +2227,15 @@ function renderDok(){
     ? "Als Admin siehst du die Unterlagen aller Vereine und die gemeinsamen. Nur du darfst gemeinsame Unterlagen anlegen und herunterladen."
     : "Du siehst die Unterlagen deines Vereins und die gemeinsamen Vorlagen. Ansehen, bearbeiten und unterschreiben geht direkt hier, ein Herunterladen ist nicht vorgesehen.";
   const ketten=dokKetten();
+  if(hin&&DOK_DATA.length){const gem=DOK_DATA.filter(d=>dokGemeinsam(d)&&d.ist_aktuell).length;
+    hin.textContent=`${ketten.length} ${ketten.length===1?"Unterlage":"Unterlagen"}${gem?(", davon "+gem+" gemeinsam"):""}. `+hin.textContent;}
   if(!ketten.length){box.innerHTML=`<div class="nodata">${DOK_DATA.length?"Keine Unterlage passt zur Suche.":"Noch keine Unterlagen abgelegt."}</div>`;return;}
   box.innerHTML=ketten.map(({w,neu:d,alle})=>{
     const v=dokVerein(d.verein_id);
     const wo=v?`${esc(v.name)}`:'<span style="color:var(--gold)">gemeinsame Unterlage</span>';
     const unt=d.unterschrieben_am?`<span class="qstatus done">unterschrieben</span>`:"";
     const off=DOK_OFFEN.has(w);
-    return `<div class="dok-zeile">
+    return `<div class="dok-zeile${DOK_NEU===d.id?" dok-neu":""}" data-dok-zeile="${d.id}">
       <div class="dok-haupt"><div class="dok-titel">${esc(d.titel)}</div>
         <div class="dok-meta">${esc(d.kategorie||"Sonstiges")} · ${wo}${d.dok_datum?(" · "+fmtDate(d.dok_datum)):""}${d.groesse?(" · "+dokGroesse(d.groesse)):""} · Fassung ${d.fassung||1}${alle.length>1?(" von "+alle.length):""}</div>
         ${d.beschreibung?`<div class="dok-meta">${esc(d.beschreibung)}</div>`:""}</div>
@@ -2323,7 +2347,9 @@ async function dokUpSave(){
     if(uz.error)throw uz.error;
     m.className="msg ok";m.textContent="Hochgeladen.";announce("Unterlage hochgeladen.");
     logIntern("dok_hochgeladen",null,titel);
-    closeModal($("#ovDokUp"));await loadDok();renderDok();
+    DOK_NEU=neu.id;
+    dokMelde(`„${titel}" wurde hochgeladen und steht jetzt in der Liste.`);
+    closeModal($("#ovDokUp"));await loadDok();renderDok();dokZeigeNeu();
   }catch(e){
     if(neu){try{await supa.from("dokumente_intern").delete().eq("id",neu.id);}catch(x){}}
     m.className="msg err";m.textContent="Nicht hochgeladen: "+(e.message||e);}}
@@ -2518,8 +2544,12 @@ async function dokSSave(){
     m.className="msg ok";m.textContent="Unterschrieben und als neue Fassung gespeichert.";
     announce("Unterschrift gespeichert.");
     logIntern("dok_unterschrieben",null,(SIG_D.titel||"")+" → Fassung "+(neu.fassung||1));
+    DOK_NEU=neu.id;
+    dokMelde(dokGemeinsam(SIG_D)
+      ? `„${SIG_D.titel}" wurde unterschrieben. Die unterschriebene Fassung gehört jetzt deinem Verein, die gemeinsame Vorlage selbst ist unverändert geblieben.`
+      : `„${SIG_D.titel}" wurde unterschrieben. Neue Fassung ${neu.fassung}, das Original bleibt über „Fassungen" erreichbar.`);
     closeModal($("#ovDokSign"));
-    await loadDok();renderDok();
+    await loadDok();renderDok();dokZeigeNeu();
   }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}}
 
 if($("#dokNeu"))$("#dokNeu").onclick=()=>dokUpOeffnen();
