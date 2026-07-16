@@ -323,6 +323,7 @@
         <button class="btn menu-item" id="btnRechte" hidden>Rechte &amp; Vorstand</button>
         <button class="btn menu-item" id="btnAufbewahrung" hidden>Aufbewahrung</button>
         <button class="btn menu-item" id="btnAdmins" hidden>Admins verwalten</button>
+        <button class="btn menu-item" id="btnTermine" hidden>Termine verwalten</button>
       </div>
     </div>
     <div class="menu" id="menuVorstand" hidden>
@@ -367,6 +368,7 @@
   <aside class="rail" aria-label="Suche und Filter">
     <div class="nextmeet" id="nextMeet" hidden></div>
     <div class="nextmeet nextmeet-int" id="nextMeetIntern" hidden></div>
+    <div id="nextMeetTermine" hidden></div>
     <button class="btn" id="btnVorschlagMitglied" style="width:100%;margin-bottom:12px;justify-content:center">💡 Punkt oder Frage einreichen</button>
     <div class="search">
       <div class="search-field"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Alles durchsuchen…" aria-label="Stammtische durchsuchen"></div>
@@ -498,6 +500,34 @@
   <div class="modal-head"><h3>Offene Punkte über alle Sitzungen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body" id="opBody"><div class="msg info">Lade…</div></div>
   <div class="modal-foot"><span></span><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovTermine" hidden role="dialog" aria-modal="true" aria-labelledby="tmTitel"><div class="modal">
+  <div class="modal-head"><h3 id="tmTitel">Termine verwalten</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Termine erscheinen in der jeweiligen Ebene als Hinweis. Wöchentliche Termine wiederholen sich automatisch, einmalige verschwinden nach ihrem Datum. Die fest eingebauten Hinweise zum Stammtisch bleiben davon unberührt.</p>
+    <div class="sec-h">Neuen Termin anlegen</div>
+    <div class="field"><label for="tmEbene">Bereich</label><select id="tmEbene">
+      <option value="pub">Stammtische (auch für Mitglieder sichtbar)</option>
+      <option value="int">Interne Stammtische</option>
+      <option value="mit" selected>Mitgliederabend</option>
+      <option value="dat">Vereinsdaten</option>
+      <option value="dok">Dokumente</option></select></div>
+    <div class="field"><label for="tmTitelIn">Titel</label><input id="tmTitelIn" type="text" maxlength="120" placeholder="z. B. Mitgliederabend"></div>
+    <div class="field"><label for="tmArt">Wiederholung</label><select id="tmArt">
+      <option value="woechentlich" selected>Jede Woche</option>
+      <option value="einmalig">Einmalig</option></select></div>
+    <div class="field" id="tmWtagFeld"><label for="tmWtag">Wochentag</label><select id="tmWtag">
+      <option value="1">Montag</option><option value="2">Dienstag</option><option value="3">Mittwoch</option>
+      <option value="4" selected>Donnerstag</option><option value="5">Freitag</option><option value="6">Samstag</option><option value="0">Sonntag</option></select></div>
+    <div class="field" id="tmDatumFeld" hidden><label for="tmDatum">Datum</label><input id="tmDatum" type="date"></div>
+    <div class="field"><label for="tmZeit">Uhrzeit</label><input id="tmZeit" type="time" value="19:00"></div>
+    <div class="field"><label for="tmNotiz">Hinweis (optional)</label><input id="tmNotiz" type="text" maxlength="500"></div>
+    <button class="btn primary" id="tmAdd" style="margin-top:6px">Termin anlegen</button>
+    <div class="msg" id="tmMsg" role="status" style="margin-top:8px"></div>
+    <div class="sec-h" style="margin-top:16px">Vorhandene Termine</div>
+    <div id="tmListe"><div class="msg info">Lade…</div></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
 
 <div class="overlay" id="ovAdmins" hidden role="dialog" aria-modal="true" aria-labelledby="admsTitel"><div class="modal">
   <div class="modal-head"><h3 id="admsTitel">Admins verwalten</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -761,7 +791,80 @@ function ladeICS(text,name){
     const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);announce("Kalendereintrag heruntergeladen.");}catch(e){}}
 const WTAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+let TERMINE=null;
+async function loadTermine(force){if(TERMINE&&!force)return TERMINE;if(!supa){TERMINE=[];return TERMINE;}
+  try{const {data,error}=await supa.from("termine").select("*").order("titel");if(error)throw error;TERMINE=data||[];}
+  catch(e){TERMINE=[];}
+  return TERMINE;}
+function naechsterVorkommen(t){const heute=new Date();heute.setHours(0,0,0,0);
+  if(t.art==="einmalig"){if(!t.datum)return null;const d=new Date(t.datum+"T00:00:00");return d>=heute?d:null;}
+  if(t.wochentag==null)return null;
+  const bis=((t.wochentag-heute.getDay())+7)%7;
+  return new Date(heute.getTime()+bis*86400000);}
+function terminIcsName(t){return (t.titel||"termin").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+".ics";}
+async function renderTermine(){
+  const eb=state.vb?state.mode:"pub";
+  const alle=await loadTermine();
+  const liste=(alle||[]).filter(t=>t.ebene===eb&&t.aktiv)
+    .map(t=>({t,dt:naechsterVorkommen(t)})).filter(x=>x.dt)
+    .sort((a,b)=>a.dt-b.dt);
+  const html=liste.map(({t,dt},i)=>{const zeit=(t.uhrzeit||"19:00").slice(0,5);
+    return `<div class="nextmeet ${eb==="pub"?"":"nextmeet-int"}" style="margin-bottom:8px">
+      <span class="nm-ico" aria-hidden="true">📌</span>
+      <div class="nm-txt"><span class="nm-lbl">${esc(t.titel)}</span><b>${WTAGE[dt.getDay()]}, ${fmtDate(isoOf(dt))}, ${esc(zeit)} Uhr</b>${t.notiz?`<span class="nm-lbl">${esc(t.notiz)}</span>`:""}</div>
+      <button class="btn small" data-tm-ics="${i}" aria-label="${esc(t.titel)} als Kalendereintrag herunterladen">Kalender</button></div>`;}).join("");
+  // In Platzhalter-Ebenen ist die Seitenleiste ausgeblendet, dort gehoeren die Termine in die Tafel.
+  const platzhalter=!!(state.vb&&EBENEN_BALD[eb]);
+  const box=$("#nextMeetTermine"), pbox=$("#vbBaldTermine");
+  if(box){box.innerHTML=platzhalter?"":html;box.hidden=platzhalter||!liste.length;}
+  if(pbox){pbox.innerHTML=platzhalter?html:"";pbox.hidden=!platzhalter||!liste.length;}
+  const ziel=platzhalter?pbox:box;
+  if(ziel)ziel.querySelectorAll("[data-tm-ics]").forEach(b=>b.onclick=()=>{const {t,dt}=liste[+b.dataset.tmIcs];
+    const zeit=(t.uhrzeit||"19:00").slice(0,5).replace(":","")+"00";
+    const ics=buildICS({dt,uid:"termin-"+t.id,summary:t.titel,desc:t.notiz||t.titel,
+      rrule:t.art==="woechentlich"?("FREQ=WEEKLY;BYDAY="+["SU","MO","TU","WE","TH","FR","SA"][t.wochentag]):""})
+      .replace(/T190000/g,"T"+zeit);
+    ladeICS(ics,terminIcsName(t));});}
+/* ---- Termin-Verwaltung (Admin) ---- */
+async function openTermine(){if(!isAdmin()){announce("Nur für Admins.");return;}
+  $("#tmMsg").textContent="";$("#tmTitelIn").value="";$("#tmNotiz").value="";
+  openModal($("#ovTermine"));await renderTermineListe();}
+function tmArtUmschalten(){const a=$("#tmArt").value;
+  $("#tmWtagFeld").hidden=a!=="woechentlich";$("#tmDatumFeld").hidden=a!=="einmalig";}
+if($("#tmArt"))$("#tmArt").onchange=tmArtUmschalten;
+async function renderTermineListe(){const box=$("#tmListe");if(!box)return;
+  box.innerHTML='<div class="msg info">Lade…</div>';
+  const alle=await loadTermine(true);
+  if(!alle.length){box.innerHTML='<div class="nodata">Noch keine Termine angelegt.</div>';return;}
+  box.innerHTML=alle.map(t=>{const dt=naechsterVorkommen(t);
+    const wann=t.art==="woechentlich"?("jede Woche "+WTAGE[t.wochentag]):("einmalig am "+fmtDate(t.datum));
+    const naechst=dt?(" · nächster Termin "+fmtDate(isoOf(dt))):" · liegt in der Vergangenheit";
+    return `<div class="qrow"><div><b>${esc(t.titel)}</b><div class="msg info">${esc(EBENEN[t.ebene]||t.ebene)} · ${esc(wann)}, ${esc((t.uhrzeit||"").slice(0,5))} Uhr${esc(naechst)}</div>${t.notiz?`<div class="msg info">${esc(t.notiz)}</div>`:""}</div>
+      <button class="btn small danger" data-tm-del="${esc(t.id)}" aria-label="Termin ${esc(t.titel)} löschen">Löschen</button></div>`;}).join("");
+  box.querySelectorAll("[data-tm-del]").forEach(b=>b.onclick=()=>tmLoeschen(b.dataset.tmDel));}
+async function tmLoeschen(id){const t=(TERMINE||[]).find(x=>x.id===id);const m=$("#tmMsg");
+  if(!confirm(`Termin „${t?t.titel:id}" wirklich löschen?`))return;
+  m.className="msg info";m.textContent="Lösche…";
+  try{const {error}=await supa.from("termine").delete().eq("id",id);if(error)throw error;
+    m.className="msg ok";m.textContent="Termin gelöscht.";announce("Termin gelöscht.");
+    await renderTermineListe();await renderTermine();
+  }catch(e){m.className="msg err";m.textContent="Nicht gelöscht: "+(e.message||e);}}
+if($("#tmAdd"))$("#tmAdd").onclick=async()=>{const m=$("#tmMsg");
+  const titel=($("#tmTitelIn").value||"").trim(),art=$("#tmArt").value,ebene=$("#tmEbene").value;
+  if(!titel){m.className="msg err";m.textContent="Bitte einen Titel angeben.";return;}
+  const row={ebene,titel,art,uhrzeit:$("#tmZeit").value||"19:00",notiz:($("#tmNotiz").value||"").trim()||null,
+    wochentag:art==="woechentlich"?+$("#tmWtag").value:null,datum:art==="einmalig"?($("#tmDatum").value||null):null,
+    angelegt_von:state.email};
+  if(art==="einmalig"&&!row.datum){m.className="msg err";m.textContent="Bitte ein Datum angeben.";return;}
+  m.className="msg info";m.textContent="Speichern…";
+  try{const {error}=await supa.from("termine").insert(row);if(error)throw error;
+    m.className="msg ok";m.textContent="Termin angelegt.";announce("Termin angelegt.");
+    $("#tmTitelIn").value="";$("#tmNotiz").value="";
+    await renderTermineListe();await renderTermine();
+  }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}};
+if($("#btnTermine"))$("#btnTermine").onclick=()=>openTermine();
 function renderNextMeet(){
+  renderTermine();
   const el=$("#nextMeet");
   if(el){const dt=naechsterStammtisch();
     el.innerHTML=`<span class="nm-ico" aria-hidden="true">📅</span><div class="nm-txt"><span class="nm-lbl">Nächster Stammtisch</span><b>${WTAGE[dt.getDay()]}, ${fmtDate(isoOf(dt))}, 19:00 Uhr</b></div><button class="btn small" id="nmIcs" aria-label="Nächsten Stammtisch als Kalendereintrag herunterladen">Kalender</button>`;
@@ -1567,6 +1670,7 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnRechte"))$("#btnRechte").hidden=!isAdmin();
   if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
   if($("#btnAdmins"))$("#btnAdmins").hidden=!isAdmin();
+  if($("#btnTermine"))$("#btnTermine").hidden=!isAdmin();
   if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").hidden=!isAdmin();
   if($("#btnVorschlagVorstand"))$("#btnVorschlagVorstand").hidden=!berechtigt;
   if($("#btnAufgaben"))$("#btnAufgaben").hidden=!(berechtigt&&hatRecht("aufgaben"));
@@ -1628,7 +1732,7 @@ function vbRender(){const kopf=$("#vbKopf"),bald=$("#vbBald"),wrap=document.quer
     $("#vbWer").textContent=state.email?("Angemeldet als "+state.email):"Nur für Vorstand und Admin sichtbar";
   }
   const info=state.vb?EBENEN_BALD[state.mode]:null;
-  if(info){bald.hidden=false;wrap.hidden=true;bald.innerHTML=`<h3>${esc(info.t)}</h3>`+info.p.map(x=>`<p>${esc(x)}</p>`).join("");}
+  if(info){bald.hidden=false;wrap.hidden=true;bald.innerHTML=`<h3>${esc(info.t)}</h3>`+info.p.map(x=>`<p>${esc(x)}</p>`).join("")+`<div id="vbBaldTermine" style="margin-top:16px;text-align:left"></div>`;}
   else{bald.hidden=true;wrap.hidden=false;}}
 async function setEbene(e,vb){
   if(vb&&!state.internOk){announce("Kein Zugriff auf den Vorstandsbereich.");return;}
@@ -1642,6 +1746,7 @@ async function setEbene(e,vb){
   state.current=null;state.q="";if($("#q"))$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
   vbRender();
   if(!(state.vb&&EBENEN_BALD[e])){buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();}
+  else{renderTermine();}
   announce(state.vb?("Vorstandsbereich. Ebene "+EBENEN[e]+"."):"Öffentliches Archiv.");
   const ziel=(state.vb&&EBENEN_BALD[e])?$("#vbBald"):document.querySelector(".wrap");
   if(ziel&&ziel.scrollIntoView)ziel.scrollIntoView({block:"start"});}
