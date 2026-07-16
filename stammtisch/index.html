@@ -416,7 +416,7 @@
   <div class="modal-body"><div class="msg info" id="delWhat"></div><div class="field" style="margin-top:12px"><label for="delPw">Zur Sicherheit das Admin-Passwort eingeben</label><input id="delPw" type="password" autocomplete="current-password"></div><div class="msg" id="delMsg"></div></div>
   <div class="modal-foot"><span></span><button class="btn danger" id="delGo">Endgültig löschen</button></div></div></div>
 
-<div class="overlay" id="ovWizard" hidden role="dialog" aria-modal="true" aria-label="Stammtisch hochladen"><div class="modal">
+<div class="overlay" id="ovWizard" hidden role="dialog" aria-modal="true" aria-labelledby="wzTitle"><div class="modal">
   <div class="modal-head"><h3 id="wzTitle">Stammtisch hochladen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body"><div id="wzTarget" class="wz-target"></div><div class="steps" aria-hidden="true"><div id="stp1"></div><div id="stp2"></div><div id="stp3"></div></div><div id="wzBody"></div><div class="msg" id="wzMsg"></div></div>
   <div class="modal-foot"><button class="btn" id="wzBack">Zurück</button><button class="btn primary" id="wzNext">Weiter</button></div></div></div>
@@ -2067,10 +2067,19 @@ $("#delGo").onclick=async()=>{if(!pendingDelete)return;const msg=$("#delMsg");ms
   }catch(e){msg.textContent="Löschen fehlgeschlagen: "+(e.message||e);msg.className="msg err";}};
 
 /* ---- wizard (mehrfach) ---- */
-function openWizard(){wz={step:1,files:[],folien:null,ort:"",ebene:(state.vb?state.mode:"pub"),intern:state.mode==="int"};$("#wzMsg").textContent="";
-  const t=$("#wzTarget");
-  if(wz.intern){t.className="wz-target intern";t.innerHTML="🔒 <b>Interner Upload.</b> Diese Aufnahme(n) landen im Vorstandsbereich und sind nur für Vorstand und Admin sichtbar.";$("#wzTitle").textContent="Interne Aufnahme hochladen";}
-  else{t.className="wz-target pub";t.innerHTML="🌐 <b>Öffentlicher Upload.</b> Diese Aufnahme(n) sind nach dem Hochladen für alle Besucher sichtbar.";$("#wzTitle").textContent="Stammtisch hochladen";}
+const WZ_ZIEL={
+  pub:{cls:"pub",   titel:"Stammtisch hochladen",
+       txt:'🌐 <b>Öffentlicher Upload · Stammtisch.</b> Diese Aufnahme(n) sind nach dem Hochladen für alle Besucher sichtbar.'},
+  int:{cls:"intern",titel:"Internen Stammtisch hochladen",
+       txt:'🔒 <b>Interner Upload · Interner Stammtisch.</b> Diese Aufnahme(n) landen im Vorstandsbereich und sind nur für Vorstand und Admin sichtbar.'},
+  mit:{cls:"intern",titel:"Mitgliederabend hochladen",
+       txt:'🔒 <b>Interner Upload · Mitgliederabend.</b> Diese Aufnahme(n) landen in der Ebene Mitgliederabend und sind nur für Vorstand und Admin sichtbar.'}
+};
+function openWizard(){const eb=state.vb?state.mode:"pub";const ziel=WZ_ZIEL[eb];
+  if(!ziel){announce("In dieser Ebene können keine Aufnahmen hochgeladen werden.");return;}
+  wz={step:1,files:[],folien:null,ort:"",ebene:eb,intern:eb!=="pub"};$("#wzMsg").textContent="";
+  const t=$("#wzTarget");t.className="wz-target "+ziel.cls;t.innerHTML=ziel.txt;
+  $("#wzTitle").textContent=ziel.titel;
   renderWizard();openModal($("#ovWizard"));}
 function renderWizard(){["stp1","stp2","stp3"].forEach((id,i)=>$("#"+id).className=wz.step>=i+1?"on":"");const b=$("#wzBody");
   if(wz.step===1){const noDate=wz.files.filter(f=>!f.datum).length;
