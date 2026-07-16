@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: https://odggiivgoaficsyekfmd.supabase.co; connect-src 'self' https://odggiivgoaficsyekfmd.supabase.co wss://odggiivgoaficsyekfmd.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: https://odggiivgoaficsyekfmd.supabase.co; connect-src 'self' https://odggiivgoaficsyekfmd.supabase.co wss://odggiivgoaficsyekfmd.supabase.co; font-src 'self'; worker-src blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="robots" content="noindex,nofollow">
 <title>Vereinsarchiv</title>
 <style>
@@ -309,6 +309,19 @@
   .steps .step .dot2{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;background:rgba(255,255,255,.05);color:var(--muted-2);border:1px solid var(--line);flex:0 0 auto}
   .steps .step.done{color:var(--muted)}.steps .step.done .dot2{background:rgba(76,175,106,.18);color:var(--green);border-color:transparent}
   .steps .step.active{color:var(--text);font-weight:600}.steps .step.active .dot2{background:var(--green);color:#08100b;border-color:transparent}
+  /* Ebene Dokumente */
+  .vb-dok{max-width:1200px;margin:0 auto;padding:16px}
+  .dok-kopf{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px}
+  .dok-zeile{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+  .dok-haupt{flex:1 1 260px;min-width:0}
+  .dok-titel{font-weight:600;word-break:break-word}
+  .dok-meta{font-size:.85rem;color:var(--muted);margin-top:2px}
+  .dok-knoepfe{display:flex;flex-wrap:wrap;gap:6px}
+  .dok-fassungen{flex-basis:100%;margin-top:6px;padding:8px 10px;border-left:3px solid var(--line);font-size:.85rem;color:var(--muted)}
+  .dok-buehne{position:relative;display:inline-block;max-width:100%;touch-action:none}
+  .dok-buehne canvas{max-width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .dok-marke{position:absolute;border:2px dashed var(--gold);border-radius:4px;pointer-events:none}
+  #sigPad{width:100%;max-width:460px;height:150px;border:1px dashed var(--line);border-radius:8px;background:#fff;touch-action:none;display:block}
 </style>
 </head>
 <body>
@@ -388,6 +401,16 @@
   </div>
 </div>
 <div class="vb-bald" id="vbBald" hidden role="region" aria-label="Ebene in Arbeit"></div>
+<div class="vb-dok" id="vbDok" hidden role="region" aria-label="Dokumente">
+  <div class="dok-kopf">
+    <div class="field" style="flex:1 1 220px"><label for="dokQ">Suchen</label><input id="dokQ" type="search" placeholder="Titel, Beschreibung…" autocomplete="off"></div>
+    <div class="field" style="flex:0 1 180px"><label for="dokKat">Kategorie</label><select id="dokKat"><option value="">alle</option></select></div>
+    <div class="field" style="flex:0 1 220px" id="dokVFilterBox" hidden><label for="dokVFilter">Verein</label><select id="dokVFilter"><option value="">alle</option></select></div>
+    <button class="btn primary" id="dokNeu" style="align-self:flex-end">Unterlage hochladen</button>
+  </div>
+  <div class="msg info" id="dokHinweis" role="status"></div>
+  <div id="dokListe"><div class="msg info">Lade…</div></div>
+</div>
 <main class="wrap">
   <aside class="rail" aria-label="Suche und Filter">
     <div class="nextmeet" id="nextMeet" hidden></div>
@@ -567,6 +590,63 @@
   </div>
   <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
 
+<div class="overlay" id="ovDokUp" hidden role="dialog" aria-modal="true" aria-labelledby="dokUpTitel"><div class="modal">
+  <div class="modal-head"><h3 id="dokUpTitel">Unterlage hochladen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Nur PDF. Die Unterlage landet im Ordner deines Vereins und ist für keinen anderen Verein sichtbar.</p>
+    <div class="field"><label for="dokUpDatei">PDF-Datei</label><input id="dokUpDatei" type="file" accept="application/pdf"></div>
+    <div class="field"><label for="dokUpTitelF">Titel</label><input id="dokUpTitelF" type="text" placeholder="Satzung 2026"></div>
+    <div class="field"><label for="dokUpKat">Kategorie</label><select id="dokUpKat"></select></div>
+    <div class="field" id="dokUpVBox" hidden><label for="dokUpV">Verein</label><select id="dokUpV"></select></div>
+    <div class="field"><label for="dokUpDatum">Datum der Unterlage (freiwillig)</label><input id="dokUpDatum" type="date"></div>
+    <div class="field"><label for="dokUpBeschr">Beschreibung (freiwillig)</label><textarea id="dokUpBeschr" rows="2"></textarea></div>
+    <button class="btn primary" id="dokUpSave" style="margin-top:6px">Hochladen</button>
+    <div class="msg" id="dokUpMsg" role="status" style="margin-top:8px"></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovDokView" hidden role="dialog" aria-modal="true" aria-labelledby="dokVTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="dokVTitel">Unterlage</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body" style="text-align:center">
+    <div class="msg" id="dokVMsg" role="status"></div>
+    <div style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn small" id="dokVPrev">Vorherige Seite</button>
+      <span class="msg info" id="dokVSeite" role="status"></span>
+      <button class="btn small" id="dokVNext">Nächste Seite</button>
+      <button class="btn small" id="dokVDown" hidden>Herunterladen</button>
+    </div>
+    <div class="dok-buehne"><canvas id="dokVCanvas" aria-label="Seitenansicht der Unterlage"></canvas></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovDokSign" hidden role="dialog" aria-modal="true" aria-labelledby="dokSTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="dokSTitel">Jetzt unterschreiben</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Die Unterschrift wird fest in die PDF eingesetzt. Es entsteht eine <b>neue Fassung</b>, das Original bleibt erhalten. Jede Unterschrift wird protokolliert.</p>
+    <div class="field" id="dokSVBox" hidden><label for="dokSV">Für welchen Verein unterschreibst du?</label><select id="dokSV"></select>
+      <div class="msg info">Das ist eine gemeinsame Vorlage. Die unterschriebene Fassung gehört danach dem gewählten Verein, die Vorlage selbst bleibt unberührt.</div></div>
+    <div class="sec-h">1. Unterschrift erzeugen</div>
+    <p>Zeichne mit dem Finger oder der Maus, oder lade ein Bild deiner Unterschrift hoch.</p>
+    <canvas id="sigPad" aria-label="Feld zum Zeichnen der Unterschrift"></canvas>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center">
+      <button class="btn small" id="sigClear">Zeichnung löschen</button>
+      <button class="btn small" id="sigBildBtn">Bild hochladen</button>
+      <input id="sigBild" type="file" accept="image/png,image/jpeg" hidden>
+      <span class="msg info" id="sigMsg" role="status"></span>
+    </div>
+    <div class="sec-h" style="margin-top:14px">2. Stelle wählen</div>
+    <p>Blättere zur richtigen Seite und tippe auf die Stelle, an der die Unterschrift stehen soll.</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn small" id="dokSPrev">Vorherige Seite</button>
+      <span class="msg info" id="dokSSeite" role="status"></span>
+      <button class="btn small" id="dokSNext">Nächste Seite</button>
+      <label for="dokSBreite">Breite</label><input id="dokSBreite" type="range" min="60" max="320" value="160" style="max-width:160px">
+    </div>
+    <div class="dok-buehne" id="dokSBuehne"><canvas id="dokSCanvas" aria-label="Seitenansicht, tippe auf die Stelle für die Unterschrift"></canvas><div class="dok-marke" id="dokSMarke" hidden></div></div>
+    <div class="msg" id="dokSMsg" role="status" style="margin-top:8px"></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="dokSSave">Unterschrift einsetzen und speichern</button></div></div></div>
+
 <div class="overlay" id="ovAdressen" hidden role="dialog" aria-modal="true" aria-labelledby="adrTitel"><div class="modal modal-wide">
   <div class="modal-head"><h3 id="adrTitel">Adressen verwalten</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
@@ -736,7 +816,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-16-9";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-16-10";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1808,7 +1888,6 @@ const EBENEN={pub:"Stammtische",int:"Interne Stammtische",mit:"Mitgliederabend",
 const EBENEN_BALD={
 
   dat:{t:"Vereinsdaten",p:["Diese Ebene wird gerade gebaut.","Hier siehst du künftig die Kennzahlen deines Vereins mit Verlauf über die Stichtage, dazu Durchschnitte über alle Vereine zum Vergleich. Jeder Vorstand sieht dabei nur die Zahlen seines eigenen Vereins."]},
-  dok:{t:"Dokumente",p:["Diese Ebene wird gerade gebaut.","Hier kommen die Unterlagen deines Vereins hin. Ansehen, bearbeiten und unterschreiben soll direkt hier möglich sein, ohne Umweg über den Rechner."]}
 };
 function vbRender(){const kopf=$("#vbKopf"),bald=$("#vbBald"),wrap=document.querySelector(".wrap");
   kopf.hidden=!state.vb;
@@ -1820,8 +1899,11 @@ function vbRender(){const kopf=$("#vbKopf"),bald=$("#vbBald"),wrap=document.quer
     const rw=ROLLE_WORT[state.rolle]||"";
     $("#vbWer").textContent=state.email?("Angemeldet als "+state.email+(rw?(" · "+rw+(state.verein?(", "+state.verein):"")):"")):"Nur für Vorstand und Admin sichtbar";
   }
-  const info=state.vb?EBENEN_BALD[state.mode]:null;
-  if(info){bald.hidden=false;wrap.hidden=true;bald.innerHTML=`<h3>${esc(info.t)}</h3>`+info.p.map(x=>`<p>${esc(x)}</p>`).join("")+`<div id="vbBaldTermine" style="margin-top:16px;text-align:left"></div>`;}
+  const dokAn=!!(state.vb&&state.mode==="dok");
+  const dokBox=$("#vbDok");if(dokBox)dokBox.hidden=!dokAn;
+  const info=(state.vb&&!dokAn)?EBENEN_BALD[state.mode]:null;
+  if(dokAn){bald.hidden=true;wrap.hidden=true;}
+  else if(info){bald.hidden=false;wrap.hidden=true;bald.innerHTML=`<h3>${esc(info.t)}</h3>`+info.p.map(x=>`<p>${esc(x)}</p>`).join("")+`<div id="vbBaldTermine" style="margin-top:16px;text-align:left"></div>`;}
   else{bald.hidden=true;wrap.hidden=false;}}
 async function setEbene(e,vb){
   if(vb&&!state.internOk){announce("Kein Zugriff auf den Vorstandsbereich.");return;}
@@ -1829,13 +1911,15 @@ async function setEbene(e,vb){
   if(vb&&!darfEbene(e)){announce(EBENEN[e]+": dafür fehlt dir die Berechtigung.");e="pub";}
   state.vb=!!vb;state.mode=e;
   if(e==="int"){DATA=await loadIntern();}else if(e==="mit"){DATA=await loadMitglieder();}else if(e==="pub"){DATA=DATA_PUB;}else{DATA=[];}
+  if(state.vb&&e==="dok"){await loadDok();}
   $("#btnDocs").hidden=!(state.vb&&ebenePrivat());
   $("#btnLog").hidden=!(state.vb&&isAdmin());
   $("#btnIntern").textContent=state.vb?"Zum öffentlichen Archiv":"Vorstandsbereich öffnen";
   if(state.vb&&ebenePrivat())logIntern("bereich_geoeffnet",null,null);
   state.current=null;state.q="";if($("#q"))$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
   vbRender();
-  if(!(state.vb&&EBENEN_BALD[e])){buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();}
+  if(state.vb&&e==="dok"){renderDok();logIntern("dok_bereich_geoeffnet",null,null);}
+  else if(!(state.vb&&EBENEN_BALD[e])){buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();}
   else{renderTermine();}
   announce(state.vb?("Vorstandsbereich. Ebene "+EBENEN[e]+"."):"Öffentliches Archiv.");
   const ziel=state.vb?$("#vbKopf"):document.querySelector(".wrap");
@@ -2048,6 +2132,402 @@ $("#admAdd").onclick=async()=>{const email=($("#admEmail").value||"").trim().toL
     announce("Admin hinzugefügt.");$("#admEmail").value="";$("#admName").value="";await renderAdmins();
   }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}};
 if($("#btnAdmins"))$("#btnAdmins").onclick=()=>openAdmins();
+
+/* ---- Ebene Dokumente ----
+   Ablage: <vereinsschluessel>/<wurzel-id>/<fassung>.pdf, gemeinsame unter gemeinsam/...
+   Rechte: massgeblich sind darf_dok() und darf_dok_schreiben() im Backend. Das hier ist die Anzeige. */
+const DOK_BUCKET="dokumente-intern";
+const DOK_KATEGORIEN=["Satzung","Protokoll","Vertrag","Behörde","Finanzen","Vorlage","Sonstiges"];
+const PDFJS_URL="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
+const PDFJS_WORKER="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+const PDFLIB_URL="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js";
+let DOK_DATA=[],DOK_VEREINE=[],DOK_Q="",DOK_KAT="",DOK_VF="",DOK_OFFEN=new Set();
+let PDFJS_BEREIT=false,PDFLIB_BEREIT=false;
+
+/* Beide Bibliotheken erst laden, wenn jemand die Ebene wirklich oeffnet. Mitglieder
+   und Ansprechpersonen sollen dafuer nichts herunterladen. */
+function ladeSkript(url){return new Promise((res,rej)=>{
+  const el=document.createElement("script");el.src=url;el.onload=()=>res();
+  el.onerror=()=>rej(new Error("Die PDF-Bibliothek konnte nicht geladen werden."));
+  document.head.appendChild(el);});}
+async function pdfJs(){if(!PDFJS_BEREIT){await ladeSkript(PDFJS_URL);
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_WORKER;PDFJS_BEREIT=true;}return window.pdfjsLib;}
+async function pdfLib(){if(!PDFLIB_BEREIT){await ladeSkript(PDFLIB_URL);PDFLIB_BEREIT=true;}return window.PDFLib;}
+
+function dokVerein(id){return DOK_VEREINE.find(v=>v.id===id)||null;}
+function dokOrdner(vid){const v=dokVerein(vid);return v?v.schluessel:"gemeinsam";}
+function dokWurzel(d){return d.original_id||d.id;}
+function dokGemeinsam(d){return !d.verein_id;}
+function darfDokSchreiben(d){if(state.rolle==="admin")return true;
+  return state.rolle==="vorstand"&&!!d.verein_id&&d.verein_id===state.vereinId;}
+function darfDokLoeschen(d){if(state.rolle==="admin")return true;return darfDokSchreiben(d)&&d.hochgeladen_von===state.email;}
+function darfDokUnterschreiben(){return state.rolle==="admin"||state.rolle==="vorstand";}
+function dokGroesse(n){if(!n)return "";const mb=n/1048576;return mb>=1?(mb.toFixed(1)+" MB"):(Math.round(n/1024)+" kB");}
+
+async function loadDok(){
+  try{
+    if(!DOK_VEREINE.length){const v=await supa.from("vereine").select("id,schluessel,name,stadt").order("stadt");
+      if(v.error)throw v.error;DOK_VEREINE=v.data||[];}
+    const d=await supa.from("dokumente_intern").select("*").order("hochgeladen_am",{ascending:false});
+    if(d.error)throw d.error;DOK_DATA=d.data||[];
+  }catch(e){DOK_DATA=[];const b=$("#dokListe");
+    if(b)b.innerHTML=`<div class="msg err">Konnte die Unterlagen nicht laden: ${esc(e.message||String(e))}</div>`;}}
+
+function dokKetten(){
+  const map=new Map();
+  DOK_DATA.forEach(d=>{const w=dokWurzel(d);if(!map.has(w))map.set(w,[]);map.get(w).push(d);});
+  const q=(DOK_Q||"").trim().toLowerCase();
+  let k=[...map.entries()].map(([w,f])=>{f.sort((a,b)=>(b.fassung||1)-(a.fassung||1));return {w,neu:f[0],alle:f};});
+  k=k.filter(({neu:d})=>{
+    if(DOK_KAT&&d.kategorie!==DOK_KAT)return false;
+    if(DOK_VF==="__gem"&&d.verein_id)return false;
+    if(DOK_VF&&DOK_VF!=="__gem"&&d.verein_id!==DOK_VF)return false;
+    if(!q)return true;
+    return (d.titel||"").toLowerCase().includes(q)||(d.beschreibung||"").toLowerCase().includes(q)
+      ||(d.dateiname||"").toLowerCase().includes(q);});
+  k.sort((a,b)=>String(b.neu.hochgeladen_am||"").localeCompare(String(a.neu.hochgeladen_am||"")));
+  return k;}
+
+function dokFilterFuellen(){
+  const kat=$("#dokKat");if(kat&&kat.options.length<2)
+    kat.innerHTML='<option value="">alle Kategorien</option>'+DOK_KATEGORIEN.map(x=>`<option>${esc(x)}</option>`).join("");
+  const box=$("#dokVFilterBox"),sel=$("#dokVFilter");
+  if(box)box.hidden=state.rolle!=="admin";
+  if(sel&&state.rolle==="admin"&&sel.options.length<2)
+    sel.innerHTML='<option value="">alle Vereine</option><option value="__gem">gemeinsame Unterlagen</option>'
+      +DOK_VEREINE.map(v=>`<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.stadt)})</option>`).join("");}
+
+function renderDok(){
+  const box=$("#dokListe");if(!box)return;
+  dokFilterFuellen();
+  const hin=$("#dokHinweis");
+  if(hin)hin.textContent=state.rolle==="admin"
+    ? "Als Admin siehst du die Unterlagen aller Vereine und die gemeinsamen. Nur du darfst gemeinsame Unterlagen anlegen und herunterladen."
+    : "Du siehst die Unterlagen deines Vereins und die gemeinsamen Vorlagen. Ansehen, bearbeiten und unterschreiben geht direkt hier, ein Herunterladen ist nicht vorgesehen.";
+  const ketten=dokKetten();
+  if(!ketten.length){box.innerHTML=`<div class="nodata">${DOK_DATA.length?"Keine Unterlage passt zur Suche.":"Noch keine Unterlagen abgelegt."}</div>`;return;}
+  box.innerHTML=ketten.map(({w,neu:d,alle})=>{
+    const v=dokVerein(d.verein_id);
+    const wo=v?`${esc(v.name)}`:'<span style="color:var(--gold)">gemeinsame Unterlage</span>';
+    const unt=d.unterschrieben_am?`<span class="qstatus done">unterschrieben</span>`:"";
+    const off=DOK_OFFEN.has(w);
+    return `<div class="dok-zeile">
+      <div class="dok-haupt"><div class="dok-titel">${esc(d.titel)}</div>
+        <div class="dok-meta">${esc(d.kategorie||"Sonstiges")} · ${wo}${d.dok_datum?(" · "+fmtDate(d.dok_datum)):""}${d.groesse?(" · "+dokGroesse(d.groesse)):""} · Fassung ${d.fassung||1}${alle.length>1?(" von "+alle.length):""}</div>
+        ${d.beschreibung?`<div class="dok-meta">${esc(d.beschreibung)}</div>`:""}</div>
+      ${unt}
+      <div class="dok-knoepfe">
+        <button class="btn small" data-dok-view="${d.id}">Ansehen</button>
+        ${darfDokUnterschreiben()?`<button class="btn small" data-dok-sign="${d.id}">Jetzt unterschreiben</button>`:""}
+        ${darfDokSchreiben(d)?`<button class="btn small" data-dok-edit="${d.id}">Bearbeiten</button>`:""}
+        ${isAdmin()?`<button class="btn small" data-dok-down="${d.id}">Herunterladen</button>`:""}
+        ${alle.length>1?`<button class="btn small" data-dok-hist="${w}" aria-expanded="${off?"true":"false"}">Fassungen (${alle.length})</button>`:""}
+        ${darfDokLoeschen(d)?`<button class="btn small danger" data-dok-del="${d.id}">Löschen</button>`:""}
+      </div>
+      ${off?`<div class="dok-fassungen">${alle.map(f=>`<div>Fassung ${f.fassung||1} · ${f.hochgeladen_am?fmtDate(String(f.hochgeladen_am).slice(0,10)):""} · ${esc(f.hochgeladen_von||"")}${f.unterschrieben_am?" · unterschrieben":""} <button class="reset" data-dok-view="${f.id}">ansehen</button></div>`).join("")}</div>`:""}
+    </div>`;}).join("");
+  box.querySelectorAll("[data-dok-view]").forEach(b=>b.onclick=()=>dokView(+b.dataset.dokView));
+  box.querySelectorAll("[data-dok-sign]").forEach(b=>b.onclick=()=>dokSignOeffnen(+b.dataset.dokSign));
+  box.querySelectorAll("[data-dok-edit]").forEach(b=>b.onclick=()=>dokEdit(+b.dataset.dokEdit));
+  box.querySelectorAll("[data-dok-down]").forEach(b=>b.onclick=()=>dokDownload(+b.dataset.dokDown));
+  box.querySelectorAll("[data-dok-del]").forEach(b=>b.onclick=()=>dokDelete(+b.dataset.dokDel));
+  box.querySelectorAll("[data-dok-hist]").forEach(b=>b.onclick=()=>{const w=+b.dataset.dokHist;
+    if(DOK_OFFEN.has(w))DOK_OFFEN.delete(w);else DOK_OFFEN.add(w);renderDok();});}
+
+async function dokBytes(d){
+  if(!d.pfad)throw new Error("Zu dieser Unterlage ist keine Datei hinterlegt.");
+  const {data,error}=await supa.storage.from(DOK_BUCKET).download(d.pfad);
+  if(error)throw error;
+  return new Uint8Array(await data.arrayBuffer());}
+
+async function dokZeichne(pdf,nr,canvas){
+  const seite=await pdf.getPage(nr);
+  const v1=seite.getViewport({scale:1});
+  const platz=Math.max(320,Math.min(900,(canvas.parentElement&&canvas.parentElement.clientWidth)||700));
+  const massstab=Math.max(0.4,Math.min(2.2,platz/v1.width));
+  const vp=seite.getViewport({scale:massstab});
+  canvas.width=Math.floor(vp.width);canvas.height=Math.floor(vp.height);
+  const ctx=canvas.getContext("2d");ctx.clearRect(0,0,canvas.width,canvas.height);
+  await seite.render({canvasContext:ctx,viewport:vp}).promise;
+  return {breitePt:v1.width,hoehePt:v1.height,drehung:v1.rotation||0};}
+
+/* ---- Ansehen ---- */
+let V_PDF=null,V_D=null,V_SEITE=1;
+async function dokView(id){
+  const d=DOK_DATA.find(x=>x.id===id);if(!d)return;
+  V_D=d;V_SEITE=1;V_PDF=null;
+  $("#dokVTitel").textContent=d.titel||"Unterlage";
+  $("#dokVDown").hidden=!isAdmin();
+  const m=$("#dokVMsg");m.className="msg info";m.textContent="Lade Unterlage…";
+  openModal($("#ovDokView"));
+  try{
+    const bytes=await dokBytes(d);
+    const lib=await pdfJs();
+    V_PDF=await lib.getDocument({data:bytes}).promise;
+    m.textContent="";m.className="msg";
+    await vSeite(1);
+    logIntern("dok_angesehen",null,(d.titel||"")+" (Fassung "+(d.fassung||1)+")");
+  }catch(e){m.className="msg err";m.textContent="Konnte nicht anzeigen: "+(e.message||e);}}
+async function vSeite(nr){
+  if(!V_PDF)return;
+  V_SEITE=Math.max(1,Math.min(V_PDF.numPages,nr));
+  await dokZeichne(V_PDF,V_SEITE,$("#dokVCanvas"));
+  $("#dokVSeite").textContent=`Seite ${V_SEITE} von ${V_PDF.numPages}`;
+  $("#dokVPrev").disabled=V_SEITE<=1;$("#dokVNext").disabled=V_SEITE>=V_PDF.numPages;}
+if($("#dokVPrev"))$("#dokVPrev").onclick=()=>vSeite(V_SEITE-1);
+if($("#dokVNext"))$("#dokVNext").onclick=()=>vSeite(V_SEITE+1);
+if($("#dokVDown"))$("#dokVDown").onclick=()=>{if(V_D)dokDownload(V_D.id);};
+
+async function dokDownload(id){
+  if(!isAdmin()){announce("Herunterladen ist nur für den Admin vorgesehen.");return;}
+  const d=DOK_DATA.find(x=>x.id===id);if(!d)return;
+  try{
+    const bytes=await dokBytes(d);
+    const url=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
+    const a=document.createElement("a");a.href=url;a.download=(d.dateiname||"unterlage.pdf");
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+    logIntern("dok_heruntergeladen",null,d.titel||"");
+  }catch(e){announce("Konnte nicht herunterladen: "+(e.message||e));}}
+
+/* ---- Hochladen ---- */
+function dokUpOeffnen(){
+  const m=$("#dokUpMsg");m.textContent="";m.className="msg";
+  $("#dokUpDatei").value="";$("#dokUpTitelF").value="";$("#dokUpBeschr").value="";$("#dokUpDatum").value="";
+  const kat=$("#dokUpKat");kat.innerHTML=DOK_KATEGORIEN.map(x=>`<option${x==="Sonstiges"?" selected":""}>${esc(x)}</option>`).join("");
+  const box=$("#dokUpVBox"),sel=$("#dokUpV");
+  box.hidden=state.rolle!=="admin";
+  if(state.rolle==="admin")sel.innerHTML='<option value="">gemeinsame Unterlage (alle Vorstände)</option>'
+    +DOK_VEREINE.map(v=>`<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.stadt)})</option>`).join("");
+  openModal($("#ovDokUp"));}
+async function dokUpSave(){
+  const m=$("#dokUpMsg"),f=($("#dokUpDatei").files||[])[0],titel=($("#dokUpTitelF").value||"").trim();
+  if(!f){m.className="msg err";m.textContent="Bitte eine PDF-Datei wählen.";return;}
+  if(f.type!=="application/pdf"){m.className="msg err";m.textContent="Nur PDF. Andere Formate lassen sich hier nicht ansehen und nicht unterschreiben.";return;}
+  if(f.size>25*1048576){m.className="msg err";m.textContent="Die Datei ist größer als 25 MB. Bitte kleiner speichern.";return;}
+  if(!titel){m.className="msg err";m.textContent="Bitte einen Titel eingeben.";return;}
+  const vid=state.rolle==="admin"?($("#dokUpV").value||null):state.vereinId;
+  if(state.rolle!=="admin"&&!vid){m.className="msg err";m.textContent="Dir ist kein Verein zugeordnet. Bitte beim Admin melden.";return;}
+  m.className="msg info";m.textContent="Lade hoch…";
+  let neu=null;
+  try{
+    const zeile={titel,kategorie:$("#dokUpKat").value||"Sonstiges",beschreibung:($("#dokUpBeschr").value||"").trim()||null,
+      dok_datum:$("#dokUpDatum").value||null,verein_id:vid,fassung:1,ist_aktuell:true,
+      dateiname:f.name,typ:"application/pdf",groesse:f.size,hochgeladen_von:state.email};
+    const ins=await supa.from("dokumente_intern").insert(zeile).select("*").single();
+    if(ins.error)throw ins.error;
+    neu=ins.data;
+    const pfad=`${dokOrdner(vid)}/${neu.id}/1.pdf`;
+    const up=await supa.storage.from(DOK_BUCKET).upload(pfad,f,{contentType:"application/pdf",upsert:false});
+    if(up.error)throw up.error;
+    const uz=await supa.from("dokumente_intern").update({pfad}).eq("id",neu.id);
+    if(uz.error)throw uz.error;
+    m.className="msg ok";m.textContent="Hochgeladen.";announce("Unterlage hochgeladen.");
+    logIntern("dok_hochgeladen",null,titel);
+    closeModal($("#ovDokUp"));await loadDok();renderDok();
+  }catch(e){
+    if(neu){try{await supa.from("dokumente_intern").delete().eq("id",neu.id);}catch(x){}}
+    m.className="msg err";m.textContent="Nicht hochgeladen: "+(e.message||e);}}
+
+/* ---- Bearbeiten (nur die Angaben, nicht die Datei) ---- */
+async function dokEdit(id){
+  const d=DOK_DATA.find(x=>x.id===id);if(!d)return;
+  if(!darfDokSchreiben(d)){announce("Diese Unterlage darfst du nicht ändern.");return;}
+  const titel=window.prompt("Titel der Unterlage:",d.titel||"");
+  if(titel===null)return;
+  if(!titel.trim()){announce("Der Titel darf nicht leer sein.");return;}
+  const beschr=window.prompt("Beschreibung (leer lassen für keine):",d.beschreibung||"");
+  if(beschr===null)return;
+  try{
+    const {error}=await supa.from("dokumente_intern")
+      .update({titel:titel.trim(),beschreibung:beschr.trim()||null}).eq("id",id);
+    if(error)throw error;
+    announce("Gespeichert.");logIntern("dok_geaendert",null,titel.trim());
+    await loadDok();renderDok();
+  }catch(e){announce("Nicht gespeichert: "+(e.message||e));}}
+
+async function dokDelete(id){
+  const d=DOK_DATA.find(x=>x.id===id);if(!d)return;
+  if(!darfDokLoeschen(d)){announce("Diese Unterlage darfst du nicht löschen.");return;}
+  if(!confirm(`„${d.titel}" wirklich löschen? Das lässt sich nicht zurücknehmen.`))return;
+  try{
+    if(d.pfad){const sr=await supa.storage.from(DOK_BUCKET).remove([d.pfad]);
+      if(sr.error&&!isAdmin())throw new Error("Die Datei selbst darf nur der Admin entfernen. Bitte dort melden.");}
+    const {error}=await supa.from("dokumente_intern").delete().eq("id",id);
+    if(error)throw error;
+    announce("Gelöscht.");logIntern("dok_geloescht",null,d.titel||"");
+    await loadDok();renderDok();
+  }catch(e){announce("Nicht gelöscht: "+(e.message||e));}}
+
+/* ---- Unterschreiben ---- */
+let SIG_D=null,SIG_BYTES=null,SIG_PDF=null,SIG_SEITE=1,SIG_PNG=null,SIG_ART=null,SIG_POS=null,SIG_MASS=null,SIG_GEZEICHNET=false;
+function sigPadLeeren(){const c=$("#sigPad");if(!c)return;
+  const r=c.getBoundingClientRect();
+  c.width=Math.max(120,Math.floor(r.width||460));c.height=Math.max(80,Math.floor(r.height||150));
+  const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);
+  ctx.lineWidth=2.5;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#111111";
+  SIG_PNG=null;SIG_ART=null;SIG_GEZEICHNET=false;
+  const m=$("#sigMsg");if(m)m.textContent="";}
+function sigPadStart(){
+  const c=$("#sigPad");if(!c||c.dataset.bereit==="1")return;c.dataset.bereit="1";
+  const stelle=e=>{const r=c.getBoundingClientRect();
+    return {x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};};
+  let malt=false;
+  c.addEventListener("pointerdown",e=>{const ctx=c.getContext("2d");malt=true;
+    SIG_ART=(e.pointerType==="touch")?"finger":"maus";
+    const p=stelle(e);ctx.beginPath();ctx.moveTo(p.x,p.y);
+    try{c.setPointerCapture(e.pointerId);}catch(x){}e.preventDefault();});
+  c.addEventListener("pointermove",e=>{if(!malt)return;const ctx=c.getContext("2d");
+    const p=stelle(e);ctx.lineTo(p.x,p.y);ctx.stroke();SIG_GEZEICHNET=true;e.preventDefault();});
+  const ende=()=>{if(!malt)return;malt=false;
+    if(SIG_GEZEICHNET){SIG_PNG=c.toDataURL("image/png");
+      const m=$("#sigMsg");if(m){m.className="msg ok";m.textContent="Unterschrift gezeichnet.";}}};
+  c.addEventListener("pointerup",ende);c.addEventListener("pointercancel",ende);c.addEventListener("pointerleave",ende);}
+
+async function dokSignOeffnen(id){
+  const d=DOK_DATA.find(x=>x.id===id);if(!d)return;
+  if(!darfDokUnterschreiben()){announce("Unterschreiben ist Vorständen und dem Admin vorbehalten.");return;}
+  SIG_D=d;SIG_SEITE=1;SIG_POS=null;SIG_PDF=null;SIG_BYTES=null;
+  $("#dokSTitel").textContent="Jetzt unterschreiben: "+(d.titel||"");
+  $("#dokSMarke").hidden=true;
+  const vbox=$("#dokSVBox"),vsel=$("#dokSV");
+  vbox.hidden=!dokGemeinsam(d);
+  if(dokGemeinsam(d)){
+    if(state.rolle==="admin")vsel.innerHTML='<option value="">Bitte wählen</option>'
+      +DOK_VEREINE.map(v=>`<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.stadt)})</option>`).join("");
+    else{const v=dokVerein(state.vereinId);
+      vsel.innerHTML=v?`<option value="${esc(v.id)}" selected>${esc(v.name)} (${esc(v.stadt)})</option>`:'<option value="">kein Verein zugeordnet</option>';}
+  }
+  const m=$("#dokSMsg");m.className="msg info";m.textContent="Lade Unterlage…";
+  openModal($("#ovDokSign"));
+  sigPadStart();sigPadLeeren();
+  try{
+    const bytes=await dokBytes(d);
+    SIG_BYTES=bytes.slice();
+    SIG_PDF=await (await pdfJs()).getDocument({data:bytes}).promise;
+    await pdfLib();
+    m.textContent="";m.className="msg";
+    await sSeite(1);
+  }catch(e){m.className="msg err";m.textContent="Konnte nicht öffnen: "+(e.message||e);}}
+async function sSeite(nr){
+  if(!SIG_PDF)return;
+  SIG_SEITE=Math.max(1,Math.min(SIG_PDF.numPages,nr));
+  SIG_MASS=await dokZeichne(SIG_PDF,SIG_SEITE,$("#dokSCanvas"));
+  SIG_POS=null;$("#dokSMarke").hidden=true;
+  $("#dokSSeite").textContent=`Seite ${SIG_SEITE} von ${SIG_PDF.numPages}`;
+  $("#dokSPrev").disabled=SIG_SEITE<=1;$("#dokSNext").disabled=SIG_SEITE>=SIG_PDF.numPages;
+  const m=$("#dokSMsg");
+  if(SIG_MASS.drehung){m.className="msg info";
+    m.textContent="Diese Seite ist gedreht. Die Unterschrift landet trotzdem an der getippten Stelle, sieh das Ergebnis danach bitte kurz nach.";}}
+if($("#dokSPrev"))$("#dokSPrev").onclick=()=>sSeite(SIG_SEITE-1);
+if($("#dokSNext"))$("#dokSNext").onclick=()=>sSeite(SIG_SEITE+1);
+function sigMarkeSetzen(){
+  const c=$("#dokSCanvas"),mk=$("#dokSMarke");
+  if(!SIG_POS||!SIG_MASS||!SIG_PNG){mk.hidden=true;return;}
+  const r=c.getBoundingClientRect();
+  const cssProPt=r.width/SIG_MASS.breitePt;
+  const bPt=+$("#dokSBreite").value;
+  const hPt=bPt*(SIG_POS.verh||0.35);
+  mk.style.left=((SIG_POS.x-bPt/2)*cssProPt)+"px";
+  mk.style.top=((SIG_MASS.hoehePt-SIG_POS.y-hPt/2)*cssProPt)+"px";
+  mk.style.width=(bPt*cssProPt)+"px";mk.style.height=(hPt*cssProPt)+"px";
+  mk.hidden=false;}
+if($("#dokSCanvas"))$("#dokSCanvas").onclick=e=>{
+  if(!SIG_MASS)return;
+  if(!SIG_PNG){const m=$("#dokSMsg");m.className="msg err";
+    m.textContent="Zeichne zuerst die Unterschrift oder lade ein Bild hoch, dann tippe auf die Stelle.";return;}
+  const c=$("#dokSCanvas"),r=c.getBoundingClientRect();
+  const ptProCss=SIG_MASS.breitePt/r.width;
+  const x=(e.clientX-r.left)*ptProCss;
+  const y=SIG_MASS.hoehePt-(e.clientY-r.top)*ptProCss;
+  const verh=(SIG_POS&&SIG_POS.verh)||0.35;
+  SIG_POS={x,y,verh};sigMarkeSetzen();
+  const m=$("#dokSMsg");m.className="msg ok";m.textContent="Stelle gewählt. Mit dem Regler stellst du die Breite ein.";};
+if($("#dokSBreite"))$("#dokSBreite").oninput=()=>sigMarkeSetzen();
+if($("#sigClear"))$("#sigClear").onclick=()=>{sigPadLeeren();SIG_POS=null;$("#dokSMarke").hidden=true;};
+if($("#sigBildBtn"))$("#sigBildBtn").onclick=()=>$("#sigBild").click();
+if($("#sigBild"))$("#sigBild").onchange=e=>{
+  const f=(e.target.files||[])[0];if(!f)return;const m=$("#sigMsg");
+  if(!/^image\/(png|jpeg)$/.test(f.type)){m.className="msg err";m.textContent="Nur PNG oder JPG.";return;}
+  const leser=new FileReader();
+  leser.onload=()=>{const bild=new Image();
+    bild.onload=()=>{const c=$("#sigPad"),ctx=c.getContext("2d");
+      ctx.clearRect(0,0,c.width,c.height);
+      const f2=Math.min(c.width/bild.width,c.height/bild.height);
+      const b=bild.width*f2,h=bild.height*f2;
+      ctx.drawImage(bild,(c.width-b)/2,(c.height-h)/2,b,h);
+      /* Immer als PNG weitergeben, pdf-lib bekommt so ein einheitliches Format. */
+      const tmp=document.createElement("canvas");tmp.width=bild.width;tmp.height=bild.height;
+      tmp.getContext("2d").drawImage(bild,0,0);
+      SIG_PNG=tmp.toDataURL("image/png");SIG_ART="bild";SIG_GEZEICHNET=true;
+      if(SIG_POS){SIG_POS.verh=bild.height/bild.width;sigMarkeSetzen();}
+      m.className="msg ok";m.textContent=f.type==="image/jpeg"
+        ? "Bild übernommen. Ein JPG hat keinen durchsichtigen Hintergrund, im PDF steht dann ein weißer Kasten. PNG sieht besser aus."
+        : "Bild übernommen.";};
+    bild.onerror=()=>{m.className="msg err";m.textContent="Das Bild ließ sich nicht lesen.";};
+    bild.src=leser.result;};
+  leser.onerror=()=>{m.className="msg err";m.textContent="Die Datei ließ sich nicht lesen.";};
+  leser.readAsDataURL(f);
+  e.target.value="";};
+
+async function dokNeueFassung(quelle,bytes,art,zielVerein){
+  const gemeinsam=dokGemeinsam(quelle);
+  const wurzel=gemeinsam?null:dokWurzel(quelle);
+  const fassung=gemeinsam?1:(Math.max(...DOK_DATA.filter(x=>dokWurzel(x)===wurzel).map(x=>x.fassung||1))+1);
+  const zeile={titel:gemeinsam?((quelle.titel||"Unterlage")+" (unterschrieben)"):quelle.titel,
+    kategorie:quelle.kategorie||"Sonstiges",beschreibung:quelle.beschreibung||null,dok_datum:quelle.dok_datum||null,
+    verein_id:zielVerein,original_id:wurzel,fassung,ist_aktuell:true,
+    dateiname:quelle.dateiname||"unterlage.pdf",typ:"application/pdf",
+    unterschrieben_am:new Date().toISOString(),unterschrieben_von:state.email,hochgeladen_von:state.email};
+  const ins=await supa.from("dokumente_intern").insert(zeile).select("*").single();
+  if(ins.error)throw ins.error;
+  const neu=ins.data;
+  const pfad=`${dokOrdner(zielVerein)}/${wurzel||neu.id}/${fassung}.pdf`;
+  const blob=new Blob([bytes],{type:"application/pdf"});
+  const up=await supa.storage.from(DOK_BUCKET).upload(pfad,blob,{contentType:"application/pdf",upsert:false});
+  if(up.error){try{await supa.from("dokumente_intern").delete().eq("id",neu.id);}catch(x){}throw up.error;}
+  const uz=await supa.from("dokumente_intern").update({pfad,groesse:blob.size}).eq("id",neu.id);
+  if(uz.error)throw uz.error;
+  /* Nur in derselben Kette die aelteren Fassungen zuruecksetzen. Eine gemeinsame Vorlage
+     bleibt fuer alle anderen Vereine unberuehrt. */
+  if(!gemeinsam){
+    await supa.from("dokumente_intern").update({ist_aktuell:false}).eq("original_id",wurzel).neq("id",neu.id);
+    await supa.from("dokumente_intern").update({ist_aktuell:false}).eq("id",wurzel);}
+  const pr=await supa.from("dok_unterschriften").insert({dokument_id:neu.id,quelle_id:quelle.id,
+    verein_id:zielVerein,email:state.email,art,dateiname:zeile.dateiname});
+  if(pr.error)throw new Error("Die Fassung ist gespeichert, das Protokoll aber nicht: "+pr.error.message);
+  return neu;}
+
+async function dokSSave(){
+  const m=$("#dokSMsg");
+  if(!SIG_D||!SIG_BYTES){m.className="msg err";m.textContent="Die Unterlage ist noch nicht geladen.";return;}
+  if(!SIG_PNG){m.className="msg err";m.textContent="Bitte zuerst unterschreiben oder ein Bild hochladen.";return;}
+  if(!SIG_POS){m.className="msg err";m.textContent="Bitte auf die Stelle tippen, an der die Unterschrift stehen soll.";return;}
+  const zielVerein=dokGemeinsam(SIG_D)?($("#dokSV").value||null):SIG_D.verein_id;
+  if(!zielVerein){m.className="msg err";m.textContent="Bitte den Verein wählen, für den du unterschreibst.";return;}
+  m.className="msg info";m.textContent="Setze die Unterschrift ein…";
+  try{
+    const {PDFDocument}=await pdfLib();
+    const pdf=await PDFDocument.load(SIG_BYTES.slice());
+    const seite=pdf.getPages()[SIG_SEITE-1];
+    const png=await pdf.embedPng(SIG_PNG);
+    const bPt=+$("#dokSBreite").value;
+    const hPt=bPt*(png.height/png.width);
+    seite.drawImage(png,{x:SIG_POS.x-bPt/2,y:SIG_POS.y-hPt/2,width:bPt,height:hPt});
+    const raus=await pdf.save();
+    const neu=await dokNeueFassung(SIG_D,raus,SIG_ART||"maus",zielVerein);
+    m.className="msg ok";m.textContent="Unterschrieben und als neue Fassung gespeichert.";
+    announce("Unterschrift gespeichert.");
+    logIntern("dok_unterschrieben",null,(SIG_D.titel||"")+" → Fassung "+(neu.fassung||1));
+    closeModal($("#ovDokSign"));
+    await loadDok();renderDok();
+  }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}}
+
+if($("#dokNeu"))$("#dokNeu").onclick=()=>dokUpOeffnen();
+if($("#dokUpSave"))$("#dokUpSave").onclick=()=>dokUpSave();
+if($("#dokSSave"))$("#dokSSave").onclick=()=>dokSSave();
+if($("#dokQ"))$("#dokQ").oninput=e=>{DOK_Q=e.target.value;renderDok();};
+if($("#dokKat"))$("#dokKat").onchange=e=>{DOK_KAT=e.target.value;renderDok();};
+if($("#dokVFilter"))$("#dokVFilter").onchange=e=>{DOK_VF=e.target.value;renderDok();};
 
 /* ---- Hilfe und Einfuehrung, rollenabhaengig in vier aufbauenden Stufen ----
    Stufe 0 Mitglied, 1 Ansprechperson, 2 Vorstand, 3 Admin. Jede Stufe sieht alles
