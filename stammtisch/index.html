@@ -245,6 +245,21 @@
   .kp-jump:hover{border-color:var(--green)}
   .kp-jump:focus{outline:2px solid var(--gold);outline-offset:2px}
   body.sr-mode #dRead{display:none}
+  /* Vorstandsbereich: deutlich abgegrenzter Rahmen mit Ebenen-Umschalter */
+  .vb-kopf{max-width:var(--maxw);margin:0 auto 14px;padding:12px 14px;border:2px solid var(--gold);border-radius:var(--radius);background:linear-gradient(180deg,#1a1607 0%,var(--panel-solid) 70%)}
+  .vb-zeile{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .vb-titel{font-weight:700;color:var(--gold);font-size:15px}
+  .vb-sub{color:var(--muted);font-size:12.5px}
+  .vb-raus{margin-left:auto}
+  .vb-ebenen{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+  .vb-ebene{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 12px;font-size:13px;cursor:pointer}
+  .vb-ebene:hover{border-color:var(--green-dim)}
+  .vb-ebene:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .vb-ebene[aria-selected="true"]{background:var(--green);border-color:var(--green);color:#04150b;font-weight:650}
+  .vb-bald{max-width:var(--maxw);margin:0 auto;padding:26px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--panel-solid);text-align:center}
+  .vb-bald h3{color:var(--gold);margin-bottom:6px}
+  .vb-bald p{color:var(--muted);font-size:13.5px;margin:4px 0}
+  @media (max-width:768px),(pointer:coarse){ .vb-ebene{min-height:44px} }
   /* Touch-Flaechen >= 44px auf kleinen Schirmen und Touch-Geraeten (WCAG 2.5.8) */
   @media (max-width:768px),(pointer:coarse){
     .btn,.chip,.topic-chip,.facet-h,.mgrp-head,.grp-head,.sel,select,
@@ -333,6 +348,21 @@
 
 <div class="banner" id="statusBanner" hidden><div><span class="pulse"></span><span id="statusBannerText"></span></div></div>
 
+<div class="vb-kopf" id="vbKopf" hidden>
+  <div class="vb-zeile">
+    <span class="vb-titel">🔒 Vorstandsbereich</span>
+    <span class="vb-sub" id="vbWer">Nur für Vorstand und Admin sichtbar</span>
+    <button class="btn small vb-raus" id="vbRaus">Zurück zum öffentlichen Archiv</button>
+  </div>
+  <div class="vb-ebenen" role="tablist" aria-label="Ebenen im Vorstandsbereich" id="vbEbenen">
+    <button class="vb-ebene" role="tab" data-ebene="pub" aria-selected="false">Stammtische</button>
+    <button class="vb-ebene" role="tab" data-ebene="int" aria-selected="false">Interne Stammtische</button>
+    <button class="vb-ebene" role="tab" data-ebene="mit" aria-selected="false">Mitgliederabend</button>
+    <button class="vb-ebene" role="tab" data-ebene="dat" aria-selected="false">Vereinsdaten</button>
+    <button class="vb-ebene" role="tab" data-ebene="dok" aria-selected="false">Dokumente</button>
+  </div>
+</div>
+<div class="vb-bald" id="vbBald" hidden role="region" aria-label="Ebene in Arbeit"></div>
 <main class="wrap">
   <aside class="rail" aria-label="Suche und Filter">
     <div class="nextmeet" id="nextMeet" hidden></div>
@@ -628,7 +658,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-let state={authed:false,email:null,internOk:false,rechte:[],mode:"pub",q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
+let state={authed:false,email:null,internOk:false,isAdmin:false,vb:false,rechte:[],mode:"pub",q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
 let wz={step:1,files:[],folien:null,ort:""};
 let editObj=null,pendingDelete=null,statusTimer=null,LIVE_STATUS=null;
 
@@ -1535,7 +1565,7 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnAufgaben"))$("#btnAufgaben").hidden=!(berechtigt&&hatRecht("aufgaben"));
   if($("#btnOffenePunkte"))$("#btnOffenePunkte").hidden=!isAdmin();
   if($("#btnAgenda"))$("#btnAgenda").hidden=!(berechtigt&&hatRecht("agenda"));
-  if(!berechtigt){if(state.mode==="int")setMode("pub");$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
+  if(!berechtigt){if(state.vb)setEbene("pub",false);$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
   renderDetail();}
 $("#btnAdmin").onclick=()=>{$("#loginMsgAdmin").textContent="";$("#loginPw").value="";openModal($("#ovAdminLogin"));};
 function openVorstandLogin(){$("#loginMsg").textContent="";$("#loginEmail").value=state.email||"";
@@ -1568,23 +1598,53 @@ document.querySelectorAll(".menu .menu-trigger").forEach(tr=>{tr.onclick=e=>{e.s
 document.querySelectorAll(".menu-panel .menu-item").forEach(b=>b.addEventListener("click",()=>closeMenus()));
 document.addEventListener("click",e=>{if(!e.target.closest(".menu"))closeMenus();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.querySelector(".menu.open"))closeMenus(null,true);});
-function internBanner(show){let b=$("#internBanner");
+function internBanner(show){return;/* ersetzt durch den Vorstandsbereichs-Rahmen (vbKopf) */ let b=$("#internBanner");
   if(show){if(!b){b=document.createElement("div");b.id="internBanner";b.className="intern-banner";document.querySelector(".wrap").before(b);}b.innerHTML='🔒 Interner Vorstandsbereich · Inhalte sind nur für Vorstand und Admin sichtbar. <button class="btn small" id="internBack">Zurück zum öffentlichen Archiv</button>';$("#internBack").onclick=()=>setMode("pub");}
   else if(b){b.remove();}}
 async function loadIntern(){if(DATA_INT)return DATA_INT;if(!supa)return[];
   const {data,error}=await supa.from("stammtische_intern").select("*").order("datum",{ascending:false});
   if(error){console.error(error);return[];}DATA_INT=(data||[]).map(normalizeRow);return DATA_INT;}
-async function setMode(m){if(m==="int"){
-    if(!state.internOk){announce("Kein Zugriff auf den internen Bereich.");return;}
-    const rows=await loadIntern();DATA=rows;state.mode="int";
-    $("#btnDocs").hidden=false;$("#btnLog").hidden=!isAdmin();$("#btnIntern").textContent="Zum öffentlichen Archiv";internBanner(true);
-    logIntern("bereich_geoeffnet",null,null);
-  }else{DATA=DATA_PUB;state.mode="pub";$("#btnDocs").hidden=true;$("#btnLog").hidden=true;$("#btnIntern").textContent="Vorstandsbereich öffnen";internBanner(false);}
-  state.current=null;state.q="";$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
-  buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();
-  announce(state.mode==="int"?"Interner Vorstandsbereich aktiv. Inhalte nur für Vorstand und Admin.":"Öffentliches Archiv.");
-  document.querySelector(".wrap").scrollIntoView({block:"start"});}
-$("#btnIntern").onclick=()=>setMode(state.mode==="int"?"pub":"int");
+const EBENEN={pub:"Stammtische",int:"Interne Stammtische",mit:"Mitgliederabend",dat:"Vereinsdaten",dok:"Dokumente"};
+const EBENEN_BALD={
+  mit:{t:"Mitgliederabend",p:["Diese Ebene wird gerade gebaut.","Hier kommen die Aufnahmen der Mitgliederabende hin. Sie werden genauso verarbeitet wie die Stammtische und sind nur für Vorstand und Admin sichtbar."]},
+  dat:{t:"Vereinsdaten",p:["Diese Ebene wird gerade gebaut.","Hier siehst du künftig die Kennzahlen deines Vereins mit Verlauf über die Stichtage, dazu Durchschnitte über alle Vereine zum Vergleich. Jeder Vorstand sieht dabei nur die Zahlen seines eigenen Vereins."]},
+  dok:{t:"Dokumente",p:["Diese Ebene wird gerade gebaut.","Hier kommen die Unterlagen deines Vereins hin. Ansehen, bearbeiten und unterschreiben soll direkt hier möglich sein, ohne Umweg über den Rechner."]}
+};
+function vbRender(){const kopf=$("#vbKopf"),bald=$("#vbBald"),wrap=document.querySelector(".wrap");
+  kopf.hidden=!state.vb;
+  if(state.vb){
+    $("#vbEbenen").querySelectorAll("[data-ebene]").forEach(b=>{const on=b.dataset.ebene===state.mode;
+      b.setAttribute("aria-selected",on?"true":"false");b.tabIndex=on?0:-1;});
+    $("#vbWer").textContent=state.email?("Angemeldet als "+state.email):"Nur für Vorstand und Admin sichtbar";
+  }
+  const info=state.vb?EBENEN_BALD[state.mode]:null;
+  if(info){bald.hidden=false;wrap.hidden=true;bald.innerHTML=`<h3>${esc(info.t)}</h3>`+info.p.map(x=>`<p>${esc(x)}</p>`).join("");}
+  else{bald.hidden=true;wrap.hidden=false;}}
+async function setEbene(e,vb){
+  if(vb&&!state.internOk){announce("Kein Zugriff auf den Vorstandsbereich.");return;}
+  if(!EBENEN[e])e="pub";
+  state.vb=!!vb;state.mode=e;
+  if(e==="int"){DATA=await loadIntern();}else if(e==="pub"){DATA=DATA_PUB;}else{DATA=[];}
+  $("#btnDocs").hidden=!(state.vb&&e==="int");
+  $("#btnLog").hidden=!(state.vb&&isAdmin());
+  $("#btnIntern").textContent=state.vb?"Zum öffentlichen Archiv":"Vorstandsbereich öffnen";
+  if(state.vb&&e==="int")logIntern("bereich_geoeffnet",null,null);
+  state.current=null;state.q="";if($("#q"))$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
+  vbRender();
+  if(!(state.vb&&EBENEN_BALD[e])){buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();}
+  announce(state.vb?("Vorstandsbereich. Ebene "+EBENEN[e]+"."):"Öffentliches Archiv.");
+  const ziel=(state.vb&&EBENEN_BALD[e])?$("#vbBald"):document.querySelector(".wrap");
+  if(ziel&&ziel.scrollIntoView)ziel.scrollIntoView({block:"start"});}
+async function setMode(m){return setEbene(m==="int"?"int":"pub", m!=="pub");}
+$("#btnIntern").onclick=()=>state.vb?setEbene("pub",false):setEbene("int",true);
+if($("#vbRaus"))$("#vbRaus").onclick=()=>setEbene("pub",false);
+if($("#vbEbenen")){const tabs=[...$("#vbEbenen").querySelectorAll("[data-ebene]")];
+  tabs.forEach((b,idx)=>{b.onclick=()=>setEbene(b.dataset.ebene,true);
+    b.onkeydown=ev=>{let n=null;
+      if(ev.key==="ArrowRight")n=(idx+1)%tabs.length;
+      else if(ev.key==="ArrowLeft")n=(idx-1+tabs.length)%tabs.length;
+      else if(ev.key==="Home")n=0; else if(ev.key==="End")n=tabs.length-1;
+      if(n!==null){ev.preventDefault();tabs[n].focus();setEbene(tabs[n].dataset.ebene,true);}};});}
 function logIntern(aktion,sid,detail){if(!supa||!state.email)return;
   try{supa.from("intern_zugriff_log").insert({email:state.email,aktion,stammtisch_id:sid,detail}).then(()=>{},()=>{});}catch(e){}}
 
