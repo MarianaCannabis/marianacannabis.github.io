@@ -249,6 +249,7 @@
     background:var(--panel-solid);border:2px solid var(--gold);border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--text);box-shadow:0 10px 28px rgba(0,0,0,.5);max-width:min(94vw,620px)}
   @media (max-width:768px),(pointer:coarse){ .ver-banner{bottom:8px;padding:12px} .ver-banner .btn{min-height:44px} }
   /* Vorstandsbereich: deutlich abgegrenzter Rahmen mit Ebenen-Umschalter */
+  .vb-kopf,.vb-bald,.wrap{scroll-margin-top:96px}
   .vb-kopf{max-width:var(--maxw);margin:0 auto 14px;padding:12px 14px;border:2px solid var(--gold);border-radius:var(--radius);background:linear-gradient(180deg,#1a1607 0%,var(--panel-solid) 70%)}
   .vb-zeile{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .vb-titel{font-weight:700;color:var(--gold);font-size:15px}
@@ -262,7 +263,7 @@
   .vb-bald{max-width:var(--maxw);margin:0 auto;padding:26px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--panel-solid);text-align:center}
   .vb-bald h3{color:var(--gold);margin-bottom:6px}
   .vb-bald p{color:var(--muted);font-size:13.5px;margin:4px 0}
-  @media (max-width:768px),(pointer:coarse){ .vb-ebene{min-height:44px} }
+  @media (max-width:768px),(pointer:coarse){ .vb-ebene{min-height:44px} .vb-kopf,.vb-bald,.wrap{scroll-margin-top:78px} }
   /* Touch-Flaechen >= 44px auf kleinen Schirmen und Touch-Geraeten (WCAG 2.5.8) */
   @media (max-width:768px),(pointer:coarse){
     .btn,.chip,.topic-chip,.facet-h,.mgrp-head,.grp-head,.sel,select,
@@ -691,7 +692,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-16-4";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-16-5";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -891,7 +892,8 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)pruefeFass
 function renderNextMeet(){
   renderTermine();
   const el=$("#nextMeet");
-  if(el){const dt=naechsterStammtisch();
+  if(el&&state.mode!=="pub"){el.hidden=true;}
+  else if(el){const dt=naechsterStammtisch();
     el.innerHTML=`<span class="nm-ico" aria-hidden="true">📅</span><div class="nm-txt"><span class="nm-lbl">Nächster Stammtisch</span><b>${WTAGE[dt.getDay()]}, ${fmtDate(isoOf(dt))}, 19:00 Uhr</b></div><button class="btn small" id="nmIcs" aria-label="Nächsten Stammtisch als Kalendereintrag herunterladen">Kalender</button>`;
     el.hidden=false;
     $("#nmIcs").onclick=()=>ladeICS(buildICS({dt,uid:"stammtisch",summary:"Stammtisch Mariana Cannabis",desc:"Naechster Stammtisch der Mariana Cannabis. Beginn 19:00 Uhr.",rrule:"FREQ=WEEKLY;INTERVAL=2;BYDAY=SU"}),"stammtisch.ics");}
