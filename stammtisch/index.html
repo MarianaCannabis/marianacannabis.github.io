@@ -657,7 +657,14 @@ const supa=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_ANON):null
 const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var(--sp6)"];
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
-let DATA_PUB=[],DATA_INT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
+let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
+const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
+const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
+const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
+const EBENE_PFX={pub:"st",int:"sti",mit:"ma"};
+const EBENE_IMODE={pub:"fill",int:"fill_intern",mit:"fill_mitglieder"};
+const EBENE_WORT={pub:"Stammtisch",int:"Stammtisch",mit:"Mitgliederabend"};
+function ebenePrivat(){return state.mode==="int"||state.mode==="mit";}
 let state={authed:false,email:null,internOk:false,isAdmin:false,vb:false,rechte:[],mode:"pub",q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
 let wz={step:1,files:[],folien:null,ort:""};
 let editObj=null,pendingDelete=null,statusTimer=null,LIVE_STATUS=null;
@@ -860,7 +867,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   if(SPEAKING&&SPEAKING!==state.current)stopSpeak();
   if(!d){det.innerHTML=`<div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Wähle links einen Stammtisch.</p></div>`;return;}
   if(state.tab==="slides"&&!(d.folien&&d.folien.length))state.tab="summary";
-  const src=d.audio_pfad?((state.mode==="int"&&!d.ist_testdaten)?null:pubUrl("audio",d.audio_pfad)):null;
+  const src=d.audio_pfad?((ebenePrivat()&&!d.ist_testdaten)?null:pubUrl("audio",d.audio_pfad)):null;
   const noDL=state.authed?"":'controlslist="nodownload noplaybackrate" oncontextmenu="return false"';
   const order=filtered();const oIdx=order.findIndex(x=>x.id===d.id);const oN=order.length;
   const nav=`<div class="dnav"><button class="btn small" id="dPrev" ${oIdx<=0?'disabled':''} title="Vorheriger Stammtisch">◀ Vorheriger</button><span class="dnav-pos">${oIdx>=0?`${oIdx+1} / ${oN}`:""}</span><button class="btn small" id="dNext" ${(oIdx<0||oIdx>=oN-1)?'disabled':''} title="Nächster Stammtisch">Nächster ▶</button></div>`;
@@ -893,9 +900,9 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
       ${d.folien&&d.folien.length?`<button role="tab" data-tab="slides">📄 Folien<span class="badge">${d.folien.length}</span></button>`:`<span class="tab-missing">📄 Keine Folien</span>`}
     </div><div class="tabwrap" id="tabwrap"></div>`;
   setupPlayer(d);renderTabBar();renderTab(d);
-  if(state.mode==="int"){
+  if(ebenePrivat()){
     logIntern("sitzung_geoeffnet",d.id,d.titel||null);
-    if(d.audio_pfad&&supa&&!d.ist_testdaten){supa.storage.from("audio-intern").createSignedUrl(d.audio_pfad,3600).then(r=>{const a=$("#aud");if(a&&r&&r.data&&r.data.signedUrl){a.src=r.data.signedUrl;a.addEventListener("play",()=>logIntern("audio_gestartet",d.id,null),{once:true});}}).catch(()=>{});}
+    if(d.audio_pfad&&supa&&!d.ist_testdaten){supa.storage.from(audioBucket()).createSignedUrl(d.audio_pfad,3600).then(r=>{const a=$("#aud");if(a&&r&&r.data&&r.data.signedUrl){a.src=r.data.signedUrl;a.addEventListener("play",()=>logIntern("audio_gestartet",d.id,null),{once:true});}}).catch(()=>{});}
   }
   if($("#dPrev"))$("#dPrev").onclick=()=>stepEntry(-1);
   if($("#dNext"))$("#dNext").onclick=()=>stepEntry(1);
@@ -1065,7 +1072,7 @@ function renderLines(d){const box=$("#txlines"),q=state.txQ.trim().toLowerCase()
     box.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editLine(d,+b.dataset.edit));
   } else box.querySelectorAll("[data-report]").forEach(b=>b.onclick=()=>reportTypo(d,+b.dataset.report));
   highlightCurrentLine(d);}
-async function saveTranskript(d){try{await supa.from(aufbTable()).update({transkript:d.transkript,volltext:volltext(d),embedding:null}).eq("id",d.id);d.embedding=null;semEmbCache={pub:null,int:null};}catch(e){alert("Speichern fehlgeschlagen: "+(e.message||e));}}
+async function saveTranskript(d){try{await supa.from(aufbTable()).update({transkript:d.transkript,volltext:volltext(d),embedding:null}).eq("id",d.id);d.embedding=null;semEmbCache={pub:null,int:null,mit:null};}catch(e){alert("Speichern fehlgeschlagen: "+(e.message||e));}}
 function editLine(d,idx){const said=$(`[data-said="${idx}"]`);if(!said)return;const cur=d.transkript[idx].text;
   said.innerHTML=`<textarea class="lnedit">${esc(cur)}</textarea><div class="lnedit-act"><button class="btn small" data-ok>Speichern</button><button class="btn small ghost" data-cancel>Abbrechen</button></div>`;
   const ta=said.querySelector("textarea");ta.focus();
@@ -1090,7 +1097,7 @@ function editSummary(d){const w=$("#tabwrap");const z=d.zusammenfassung||{};cons
   $("#esCancel").onclick=()=>renderTab(d);
   $("#esSave").onclick=async()=>{
     d.zusammenfassung=Object.assign({},z,{lead:$("#esLead").value.trim(),sachstand:lines($("#esSach").value),fragen:lines($("#esFrag").value),offene_fragen:lines($("#esOffen").value)});
-    try{await supa.from(aufbTable()).update({zusammenfassung:d.zusammenfassung,volltext:volltext(d),embedding:null}).eq("id",d.id);d.embedding=null;semEmbCache={pub:null,int:null};announce("Zusammenfassung gespeichert.");renderTab(d);}
+    try{await supa.from(aufbTable()).update({zusammenfassung:d.zusammenfassung,volltext:volltext(d),embedding:null}).eq("id",d.id);d.embedding=null;semEmbCache={pub:null,int:null,mit:null};announce("Zusammenfassung gespeichert.");renderTab(d);}
     catch(e){$("#esMsg").className="msg err";$("#esMsg").textContent="Fehler: "+(e.message||e);}};}
 
 /* ---- inline Sprecher benennen (admin) ---- */
@@ -1249,11 +1256,11 @@ function rechJump(ds,raw){closeModal($("#ovResearch"));state.current=ds.id;state
   setTimeout(()=>{if(ds.idx!=null){const el=$("#txlines")&&$("#txlines").querySelector(`.line[data-idx="${ds.idx}"]`);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("playing");}}if(ds.t!=null)seekAudio(parseInt(ds.t));},320);}
 /* ---- Semantische Suche: Query-Vektor lokal per Ollama, Rangordnung lokal im Browser ---- */
 let semState={query:null,scope:null,status:null,phase:null,ranked:[],fehler:null,id:null,timer:null,tick:null,startedAt:0};
-let semEmbCache={pub:null,int:null};
+let semEmbCache={pub:null,int:null,mit:null};
 let semWorkerSeen=undefined,semWorkerDetail="",semWorkerCheckedAt=0;
 function semStop(){if(semState.timer){clearInterval(semState.timer);semState.timer=null;}if(semState.tick){clearInterval(semState.tick);semState.tick=null;}}
 function cosine(a,b){if(!a||!b||a.length!==b.length)return -1;let d=0,na=0,nb=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];na+=a[i]*a[i];nb+=b[i]*b[i];}const n=Math.sqrt(na)*Math.sqrt(nb);return n?d/n:-1;}
-async function loadEmbeddings(scope){if(semEmbCache[scope])return semEmbCache[scope];const tbl=scope==="int"?"stammtische_intern":"stammtische";const m={};try{const {data}=await supa.from(tbl).select("id,embedding");(data||[]).forEach(r=>{if(Array.isArray(r.embedding))m[r.id]=r.embedding;});}catch(e){}if(Object.keys(m).length)semEmbCache[scope]=m;return m;}
+async function loadEmbeddings(scope){if(semEmbCache[scope])return semEmbCache[scope];const tbl=EBENE_TABLE[scope]||"stammtische";const m={};try{const {data}=await supa.from(tbl).select("id,embedding");(data||[]).forEach(r=>{if(Array.isArray(r.embedding))m[r.id]=r.embedding;});}catch(e){}if(Object.keys(m).length)semEmbCache[scope]=m;return m;}
 async function semCheckWorker(force){if(!supa)return;if(!force&&Date.now()-semWorkerCheckedAt<15000)return;semWorkerCheckedAt=Date.now();
   try{const {data}=await supa.from("dienst_status").select("last_seen,detail").eq("dienst","embed").maybeSingle();
     semWorkerSeen=(data&&data.last_seen)?(Date.now()-Date.parse(data.last_seen))/1000:Infinity;semWorkerDetail=(data&&data.detail)||"";}catch(e){semWorkerSeen=undefined;}
@@ -1350,7 +1357,7 @@ async function startKiJob(raw,results){
   try{
     const {error}=await supa.from("recherche_jobs").insert({id,query:raw,scope:state.mode,payload:kiPayload(raw,results),status:"offen",angefordert_von:state.email});
     if(error)throw error;
-    if(state.mode==="int")logIntern("ki_recherche",null,raw);
+    if(ebenePrivat())logIntern("ki_recherche",null,raw);
     kiBeginPolling(id);
   }catch(e){kiStop();kiState.status="fehler";kiState.fehler=e.message||(""+e);research();}}
 function kiBeginPolling(id){
@@ -1601,12 +1608,15 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.querySelec
 function internBanner(show){return;/* ersetzt durch den Vorstandsbereichs-Rahmen (vbKopf) */ let b=$("#internBanner");
   if(show){if(!b){b=document.createElement("div");b.id="internBanner";b.className="intern-banner";document.querySelector(".wrap").before(b);}b.innerHTML='🔒 Interner Vorstandsbereich · Inhalte sind nur für Vorstand und Admin sichtbar. <button class="btn small" id="internBack">Zurück zum öffentlichen Archiv</button>';$("#internBack").onclick=()=>setMode("pub");}
   else if(b){b.remove();}}
+async function loadMitglieder(){if(DATA_MIT)return DATA_MIT;if(!supa)return[];
+  const {data,error}=await supa.from("mitgliederabende").select("*").order("datum",{ascending:false});
+  if(error){console.error(error);return[];}DATA_MIT=(data||[]).map(normalizeRow);return DATA_MIT;}
 async function loadIntern(){if(DATA_INT)return DATA_INT;if(!supa)return[];
   const {data,error}=await supa.from("stammtische_intern").select("*").order("datum",{ascending:false});
   if(error){console.error(error);return[];}DATA_INT=(data||[]).map(normalizeRow);return DATA_INT;}
 const EBENEN={pub:"Stammtische",int:"Interne Stammtische",mit:"Mitgliederabend",dat:"Vereinsdaten",dok:"Dokumente"};
 const EBENEN_BALD={
-  mit:{t:"Mitgliederabend",p:["Diese Ebene wird gerade gebaut.","Hier kommen die Aufnahmen der Mitgliederabende hin. Sie werden genauso verarbeitet wie die Stammtische und sind nur für Vorstand und Admin sichtbar."]},
+
   dat:{t:"Vereinsdaten",p:["Diese Ebene wird gerade gebaut.","Hier siehst du künftig die Kennzahlen deines Vereins mit Verlauf über die Stichtage, dazu Durchschnitte über alle Vereine zum Vergleich. Jeder Vorstand sieht dabei nur die Zahlen seines eigenen Vereins."]},
   dok:{t:"Dokumente",p:["Diese Ebene wird gerade gebaut.","Hier kommen die Unterlagen deines Vereins hin. Ansehen, bearbeiten und unterschreiben soll direkt hier möglich sein, ohne Umweg über den Rechner."]}
 };
@@ -1624,11 +1634,11 @@ async function setEbene(e,vb){
   if(vb&&!state.internOk){announce("Kein Zugriff auf den Vorstandsbereich.");return;}
   if(!EBENEN[e])e="pub";
   state.vb=!!vb;state.mode=e;
-  if(e==="int"){DATA=await loadIntern();}else if(e==="pub"){DATA=DATA_PUB;}else{DATA=[];}
-  $("#btnDocs").hidden=!(state.vb&&e==="int");
+  if(e==="int"){DATA=await loadIntern();}else if(e==="mit"){DATA=await loadMitglieder();}else if(e==="pub"){DATA=DATA_PUB;}else{DATA=[];}
+  $("#btnDocs").hidden=!(state.vb&&ebenePrivat());
   $("#btnLog").hidden=!(state.vb&&isAdmin());
   $("#btnIntern").textContent=state.vb?"Zum öffentlichen Archiv":"Vorstandsbereich öffnen";
-  if(state.vb&&e==="int")logIntern("bereich_geoeffnet",null,null);
+  if(state.vb&&ebenePrivat())logIntern("bereich_geoeffnet",null,null);
   state.current=null;state.q="";if($("#q"))$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
   vbRender();
   if(!(state.vb&&EBENEN_BALD[e])){buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();}
@@ -1801,10 +1811,10 @@ if($("#btnOffenePunkte"))$("#btnOffenePunkte").onclick=()=>openOffenePunkte();
 
 /* ---- Phase 5b: Aufbewahrungs-Werkzeug (Admin, nur markieren) ---- */
 let AUFB_MONATE=24;
-function aufbTable(){return state.mode==="int"?"stammtische_intern":"stammtische";}
-function audioBucket(){return state.mode==="int"?"audio-intern":"audio";}
-function folienBucket(){return state.mode==="int"?"folien-intern":"folien";}
-async function reloadActive(){if(state.mode==="int"){DATA_INT=null;DATA=await loadIntern();}else{DATA=await loadData();}}
+function aufbTable(){return EBENE_TABLE[state.mode]||"stammtische";}
+function audioBucket(){return EBENE_AUDIO[state.mode]||"audio";}
+function folienBucket(){return EBENE_FOLIEN[state.mode]||"folien";}
+async function reloadActive(){if(state.mode==="int"){DATA_INT=null;DATA=await loadIntern();}else if(state.mode==="mit"){DATA_MIT=null;DATA=await loadMitglieder();}else{DATA=await loadData();}}
 /* ---- Admin-Verwaltung ---- */
 async function openAdmins(){if(!isAdmin()){announce("Nur für Admins.");return;}
   $("#admMsg").textContent="";$("#admEmail").value="";$("#admName").value="";
@@ -1936,7 +1946,7 @@ $("#editSave").onclick=async()=>{syncEdit();const d=editObj,msg=$("#editMsg");ms
     if(af){const p=`${d.id}/audio.${(af.name.split(".").pop()||"m4a").toLowerCase()}`;const u=await supa.storage.from(audioBucket()).upload(p,af,{upsert:true});if(u.error)throw u.error;d.audio_pfad=p;}
     if(ff){const p=`${d.id}/folien.pdf`;const u=await supa.storage.from(folienBucket()).upload(p,ff,{upsert:true});if(u.error)throw u.error;d.folien=[{n:1,titel:"Foliensatz",note:d.titel,pfad:p}];}
     const row={datum:d.datum,titel:d.titel,ort:d.ort,sprecher:d.sprecher,themen:d.themen,zusammenfassung:{lead:d.zusammenfassung.lead,punkte:(d.zusammenfassung.punkte||[]).filter(x=>x.trim())},transkript:d.transkript,folien:d.folien,audio_pfad:d.audio_pfad,kapitel:(d.kapitel||[]).filter(k=>k.titel.trim()),volltext:volltext(d),embedding:null};
-    const {error}=await supa.from(aufbTable()).update(row).eq("id",d.id);if(error)throw error;semEmbCache={pub:null,int:null};
+    const {error}=await supa.from(aufbTable()).update(row).eq("id",d.id);if(error)throw error;semEmbCache={pub:null,int:null,mit:null};
     msg.textContent="Gespeichert.";msg.className="msg ok";announce("Gespeichert.");await reloadActive();buildFacets();renderFacets();renderList();state.current=d.id;renderDetail();setTimeout(()=>closeModal($("#ovEdit")),500);
   }catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}};
 $("#editDelete").onclick=()=>askDelete(editObj,true);
@@ -1952,7 +1962,7 @@ $("#delGo").onclick=async()=>{if(!pendingDelete)return;const msg=$("#delMsg");ms
   }catch(e){msg.textContent="Löschen fehlgeschlagen: "+(e.message||e);msg.className="msg err";}};
 
 /* ---- wizard (mehrfach) ---- */
-function openWizard(){wz={step:1,files:[],folien:null,ort:"",intern:state.mode==="int"};$("#wzMsg").textContent="";
+function openWizard(){wz={step:1,files:[],folien:null,ort:"",ebene:(state.vb?state.mode:"pub"),intern:state.mode==="int"};$("#wzMsg").textContent="";
   const t=$("#wzTarget");
   if(wz.intern){t.className="wz-target intern";t.innerHTML="🔒 <b>Interner Upload.</b> Diese Aufnahme(n) landen im Vorstandsbereich und sind nur für Vorstand und Admin sichtbar.";$("#wzTitle").textContent="Interne Aufnahme hochladen";}
   else{t.className="wz-target pub";t.innerHTML="🌐 <b>Öffentlicher Upload.</b> Diese Aufnahme(n) sind nach dem Hochladen für alle Besucher sichtbar.";$("#wzTitle").textContent="Stammtisch hochladen";}
@@ -1981,13 +1991,13 @@ $("#wzNext").onclick=async()=>{
   if(wz.step===1){if(!wz.files.length){$("#wzMsg").textContent="Bitte mindestens eine Aufnahme wählen.";$("#wzMsg").className="msg err";return;}wz.step=2;return renderWizard();}
   if(wz.step===2){if(wz.files.some(f=>!f.datum)){$("#wzMsg").textContent="Bitte für jede Datei ein Datum angeben.";$("#wzMsg").className="msg err";return;}wz.step=3;return renderWizard();}
   const msg=$("#wzMsg");let ok=0;const errs=[];
-  const intern=wz.intern;const BA=intern?"audio-intern":"audio",BF=intern?"folien-intern":"folien",TB=intern?"stammtische_intern":"stammtische",PFX=intern?"sti":"st",IMODE=intern?"fill_intern":"fill";
+  const eb=wz.ebene||"pub";const intern=eb!=="pub";const BA=EBENE_AUDIO[eb],BF=EBENE_FOLIEN[eb],TB=EBENE_TABLE[eb],PFX=EBENE_PFX[eb],IMODE=EBENE_IMODE[eb];
   for(let k=0;k<wz.files.length;k++){const f=wz.files[k];msg.className="msg info";msg.textContent=`Lade hoch (${k+1}/${wz.files.length}) …`;
     try{const sid=PFX+"_"+f.datum+"_"+Math.random().toString(36).slice(2,6);const aExt=(f.file.name.split(".").pop()||"m4a").toLowerCase();const aPath=`${sid}/audio.${aExt}`;
       let dur=0;try{dur=await audioDuration(f.file);}catch(e){}
       let u=await supa.storage.from(BA).upload(aPath,f.file,{upsert:!intern});if(u.error)throw u.error;
-      let folien=null;if(wz.files.length===1&&wz.folien){const fPath=`${sid}/folien.pdf`;let uf=await supa.storage.from(BF).upload(fPath,wz.folien,{upsert:!intern});if(uf.error)throw uf.error;folien=[{n:1,titel:"Foliensatz",note:f.titel||("Stammtisch "+f.datum),pfad:fPath}];}
-      const titel=f.titel||("Stammtisch "+fmtDate(f.datum));
+      let folien=null;if(wz.files.length===1&&wz.folien){const fPath=`${sid}/folien.pdf`;let uf=await supa.storage.from(BF).upload(fPath,wz.folien,{upsert:!intern});if(uf.error)throw uf.error;folien=[{n:1,titel:"Foliensatz",note:f.titel||((EBENE_WORT[eb]||"Stammtisch")+" "+f.datum),pfad:fPath}];}
+      const titel=f.titel||((EBENE_WORT[eb]||"Stammtisch")+" "+fmtDate(f.datum));
       const row={id:sid,datum:f.datum,titel,ort:wz.ort||"",audio_pfad:aPath,folien,dauer_sek:Math.round(dur),sprecher:[],themen:[],zusammenfassung:{lead:"",punkte:[]},transkript:[],kapitel:[],verarbeitung:"offen",volltext:titel+" "+(wz.ort||"")};
       let ins=await supa.from(TB).insert(row);if(ins.error)throw ins.error;
       await supa.from("ingest").insert({id:(intern?"filli_":"fill_")+sid,status:"queued",mode:IMODE,stammtisch_id:sid,datum:f.datum,titel});ok++;
