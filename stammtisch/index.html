@@ -637,18 +637,15 @@
     <p>Mit dem Stern setzt du ein Lesezeichen, mit „Notiz" hinterlegst du eine persönliche Notiz. Beides wird nur auf deinem eigenen Gerät gespeichert und ist für niemanden sonst sichtbar.</p>
     <div class="sec-h">Hinweis</div>
     <p>Transkripte und Zusammenfassungen werden automatisch erstellt und können Fehler enthalten. Einen Tippfehler im Transkript kannst du über „Fehler melden" an die Verwaltung schicken.</p>
+    <div id="helpRolle"></div>
   </div>
-  <div class="modal-foot"><span></span><button class="btn" data-close>Schließen</button></div></div></div>
+  <div class="modal-foot"><button class="btn" id="helpIntro">Einführung erneut ansehen</button><button class="btn" data-close>Schließen</button></div></div></div>
 
 <div class="overlay noquit" id="ovIntro" hidden role="dialog" aria-modal="true" aria-labelledby="introTitle"><div class="modal">
   <div class="modal-head"><h3 id="introTitle">Kurz vorab</h3></div>
-  <div class="modal-body">
-    <p>Schön, dass du reinschaust. Ein kurzer Hinweis, bevor es losgeht.</p>
-    <p>Die Zusammenfassungen und Transkripte in diesem Archiv werden automatisch erstellt und können Fehler enthalten, etwa bei Namen, Zahlen oder undeutlichen Stellen. Sie sind als Orientierung und zum schnellen Finden gedacht, nicht als wortgenaues Protokoll.</p>
-    <p>Wenn es auf den genauen Inhalt ankommt, hör dir bitte immer die eigentliche Aufnahme an und sieh dir die zugehörigen Folien an. Die Audioaufnahme ist die verlässliche Quelle, der Text hilft dir nur beim Einordnen.</p>
-    <p class="msg info">Diesen Hinweis findest du später jederzeit wieder unter „Hilfe".</p>
-  </div>
-  <div class="modal-foot"><span></span><button class="btn primary" id="introOk">Verstanden, los geht's</button></div></div></div>
+  <div class="modal-body" id="introBody" tabindex="-1"></div>
+  <div class="modal-foot"><span class="msg info" id="introZaehler" role="status"></span>
+    <span><button class="btn" id="introBack" hidden>Zurück</button> <button class="btn primary" id="introOk">Verstanden, los geht's</button></span></div></div></div>
 
 <div class="overlay" id="ovSprecher" hidden role="dialog" aria-modal="true" aria-labelledby="spkTitel"><div class="modal modal-wide">
   <div class="modal-head"><h3 id="spkTitel">Sprecher-Übersicht</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -739,7 +736,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-16-8";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-16-9";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1176,7 +1173,7 @@ function shareLink(id,t){let url=location.origin+location.pathname+"#e="+encodeU
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(()=>announce("Teilen-Link kopiert."),()=>window.prompt("Link kopieren:",url));
   else window.prompt("Link kopieren:",url);}
 function parseHash(){const h=location.hash.replace(/^#/,"");if(!h)return false;
-  if(h==="protokoll"){openProtokoll();return true;}if(h==="hilfe"){openModal($("#ovHelp"));return true;}
+  if(h==="protokoll"){openProtokoll();return true;}if(h==="hilfe"){helpRender();openModal($("#ovHelp"));return true;}
   const p=new URLSearchParams(h);const e=p.get("e");if(!e)return false;
   const t=parseInt(p.get("t")||"0");const d=DATA.find(x=>x.id===e);if(!d)return false;
   state.current=e;state.tab="summary";state.txQ="";state.autohit=null;renderList();renderDetail(true);
@@ -1369,7 +1366,7 @@ function openHits(){const q=state.q.trim().toLowerCase();if(!q)return;const out=
   openModal($("#ovHits"));}
 
 /* ---- Hilfe ---- */
-$("#btnHelp").onclick=()=>openModal($("#ovHelp"));
+$("#btnHelp").onclick=()=>{helpRender();openModal($("#ovHelp"));};
 
 /* ---- Recherche (Admin + Vorstand) ---- */
 function spName(d,i){return (d.sprecher&&d.sprecher[i])||("Sprecher "+(i!=null?i+1:"?"));}
@@ -1760,7 +1757,7 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnOffenePunkte"))$("#btnOffenePunkte").hidden=!isAdmin();
   if($("#btnAgenda"))$("#btnAgenda").hidden=!(berechtigt&&hatRecht("agenda"));
   if(!berechtigt){if(state.vb)setEbene("pub",false);$("#btnDocs").hidden=true;$("#btnLog").hidden=true;closeMenus();}
-  renderDetail();}
+  renderDetail();if(berechtigt&&typeof introPruefen==="function")introPruefen();}
 $("#btnAdmin").onclick=()=>{$("#loginMsgAdmin").textContent="";$("#loginPw").value="";openModal($("#ovAdminLogin"));};
 function openVorstandLogin(){$("#loginMsg").textContent="";$("#loginEmail").value=state.email||"";
   const hin=$("#loginHinweis");
@@ -2051,6 +2048,71 @@ $("#admAdd").onclick=async()=>{const email=($("#admEmail").value||"").trim().toL
     announce("Admin hinzugefügt.");$("#admEmail").value="";$("#admName").value="";await renderAdmins();
   }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}};
 if($("#btnAdmins"))$("#btnAdmins").onclick=()=>openAdmins();
+
+/* ---- Hilfe und Einfuehrung, rollenabhaengig in vier aufbauenden Stufen ----
+   Stufe 0 Mitglied, 1 Ansprechperson, 2 Vorstand, 3 Admin. Jede Stufe sieht alles
+   der darunterliegenden. Neue Rolle: HIER eintragen, nicht verstreuen. */
+const ROLLE_STUFE={ap:1,vorstand:2,admin:3};
+function meineStufe(){if(!state.authed||!state.rolle)return 0;return ROLLE_STUFE[state.rolle]||0;}
+const HILFE_STUFEN=[
+ {ab:1,t:"Der Vorstandsbereich",p:["Über „Vorstandsbereich öffnen\" kommst du in den geschützten Teil. Alles dort ist für Mitglieder unsichtbar. Oben siehst du jederzeit, als wer du angemeldet bist und welche Rolle du hast."]},
+ {ab:1,t:"Anmelden",p:["Die Anmeldung läuft über den Magic Link an dein Rollen-Postfach, also die Adresse deines Vereins. Du bekommst eine E-Mail mit einem Link, ein Klick darauf meldet dich an. Ein Passwort brauchst du nicht.","Wichtig: Der Zugang hängt an der <b>Adresse</b>, nicht an dir persönlich. Wer das Postfach lesen kann, kommt rein. Wenn sich bei euch etwas ändert, sag dem Admin Bescheid, damit die Adresse angepasst wird."]},
+ {ab:1,t:"Die Ebenen",p:["Oben im Vorstandsbereich stehen Reiter, das sind die Ebenen. Du siehst nur die Ebenen, für die du berechtigt bist. Mit den Pfeiltasten wechselst du zwischen ihnen.","Als Ansprechperson siehst du Stammtische, interne Stammtische und den Mitgliederabend. Vereinsdaten und Dokumente sind dem Vorstand vorbehalten."]},
+ {ab:2,t:"Vereinsdaten",p:["Hier stehen die Kennzahlen deines Vereins mit Verlauf über die Stichtage, dazu Durchschnitte über alle Vereine zum Vergleich. Zu jeder Kennzahl gibt es eine Erklärung.","Du siehst ausschließlich die Zahlen deines eigenen Vereins, und nur lesend. Die Zahlen der anderen Vereine bekommst du nur als Durchschnitt, nie einzeln. Diese Ebene wird gerade gebaut."]},
+ {ab:2,t:"Dokumente",p:["Die Unterlagen deines Vereins. Ansehen, bearbeiten und unterschreiben geht direkt hier, ohne Umweg über den Rechner. Unterlagen ohne Vereinszuordnung sind gemeinsame Papiere für alle Vorstände.","Unterschreiben geht mit dem Finger, mit der Maus oder über ein hochgeladenes Bild. Das Ergebnis wird eine neue Fassung, das Original bleibt erhalten. Diese Ebene wird gerade gebaut."]},
+ {ab:3,t:"Aufnahmen einspielen",p:["Über „Neue Aufnahme\" lädst du Audio und Folien hoch. Der Assistent legt den Auftrag in die Warteschlange, die Verarbeitung läuft danach auf Andres Rechner: Transkript, Sprechertrennung, Zusammenfassung.","Achte auf die Ebene, in der du gerade bist. Der Assistent legt die Aufnahme genau dort ab."]},
+ {ab:3,t:"Verwaltung",p:["Unter „Status & Warteschlange\" siehst du, was gerade verarbeitet wird. „Pflege\" korrigiert Namen und Themen, „Sicherung & Export\" zieht eine Kopie, „Aufbewahrung\" markiert alte Sitzungen zur Prüfung, löscht aber nichts.","„Termine verwalten\" pflegt die Termine je Ebene, etwa den Mitgliederabend am Donnerstag."]},
+ {ab:3,t:"Adressen und Admins",p:["„Adressen verwalten\" bestimmt, wer überhaupt in den Vorstandsbereich kommt. Vorstand sieht alle fünf Ebenen, Ansprechperson sieht die drei Ebenen ohne Vereinsdaten und Dokumente. Wer dort nicht steht, kommt nicht rein.","Sperren ist zurücknehmbar und meistens die bessere Wahl als Löschen. Unter „Admins verwalten\" kommen weitere Admins dazu. Der letzte aktive Admin lässt sich nicht entfernen, damit sich niemand aussperrt."]},
+ {ab:3,t:"Verantwortung",p:["Jeder Zugriff im Vorstandsbereich wird protokolliert. Das Archiv enthält personenbezogene Daten, gib Zugänge deshalb sparsam und nur an Rollen-Postfächer, nicht an private Adressen."]}
+];
+function helpRender(){const box=$("#helpRolle");if(!box)return;const st=meineStufe();
+  const bl=HILFE_STUFEN.filter(b=>st>=b.ab);
+  box.innerHTML=bl.length?('<div class="sec-h" style="margin-top:18px;color:var(--gold)">Zusätzlich für dich freigeschaltet</div>'
+    +bl.map(b=>`<div class="sec-h">${b.t}</div>`+b.p.map(x=>`<p>${x}</p>`).join("")).join("")):"";
+  const ib=$("#helpIntro");if(ib)ib.hidden=false;}
+
+const INTRO_MERKER={mitglied:"st_intro_ok",ap:"st_intro_ap_ok",vorstand:"st_intro_vorstand_ok",admin:"st_intro_admin_ok"};
+const INTRO={
+ mitglied:[{t:"Kurz vorab",p:["Schön, dass du reinschaust. Ein kurzer Hinweis, bevor es losgeht.","Die Zusammenfassungen und Transkripte in diesem Archiv werden automatisch erstellt und können Fehler enthalten, etwa bei Namen, Zahlen oder undeutlichen Stellen. Sie sind als Orientierung und zum schnellen Finden gedacht, nicht als wortgenaues Protokoll.","Wenn es auf den genauen Inhalt ankommt, hör dir bitte immer die eigentliche Aufnahme an und sieh dir die zugehörigen Folien an. Die Audioaufnahme ist die verlässliche Quelle, der Text hilft dir nur beim Einordnen.",'<span class="msg info">Diesen Hinweis findest du später jederzeit wieder unter „Hilfe".</span>']}],
+ ap:[
+  {t:"Willkommen im Vorstandsbereich",p:["Du bist als Ansprechperson deines Vereins angemeldet. Alles, was du hier siehst, ist für Mitglieder unsichtbar.","Der Zugang hängt an der Adresse deines Vereins, nicht an dir persönlich. Wer das Postfach lesen kann, bekommt den Magic Link und kommt rein. Geh deshalb sorgsam mit dem Postfach um."]},
+  {t:"Deine drei Ebenen",p:["Oben stehen Reiter, das sind die Ebenen. Für dich sind es drei: <b>Stammtische</b> (die öffentlichen), <b>Interne Stammtische</b> und <b>Mitgliederabend</b>.","Mit den Pfeiltasten wechselst du zwischen den Reitern. Suche, Filter und Transkripte funktionieren in jeder Ebene gleich."]},
+  {t:"Was du nicht siehst",p:["Zwei weitere Ebenen gibt es, <b>Vereinsdaten</b> und <b>Dokumente</b>. Die sind dem Vorstand vorbehalten und tauchen bei dir gar nicht erst auf. Das ist kein Fehler.","Interne Stammtische und Mitgliederabende sind vertraulich. Jeder Zugriff wird protokolliert. Inhalte bleiben bitte hier drin.",'<span class="msg info">Die ausführliche Anleitung findest du jederzeit unter „Hilfe".</span>']}],
+ vorstand:[
+  {t:"Willkommen im Vorstandsbereich",p:["Du bist als Vorstand deines Vereins angemeldet und siehst alle fünf Ebenen.","Wichtig: Der Zugang hängt an der Adresse deines Vereins, nicht an dir persönlich. Wer das Postfach lesen kann, bekommt den Magic Link und kommt rein. Wenn sich bei euch im Vorstand etwas ändert, ist das eine Sache des Postfachs, nicht der Software."]},
+  {t:"Die fünf Ebenen",p:["Oben stehen Reiter: <b>Stammtische</b>, <b>Interne Stammtische</b>, <b>Mitgliederabend</b>, <b>Vereinsdaten</b> und <b>Dokumente</b>. Mit den Pfeiltasten wechselst du zwischen ihnen.","Manche Funktionen kommen in mehreren Ebenen doppelt vor. Das ist Absicht und soll dir Wege sparen."]},
+  {t:"Vereinsdaten",p:["Hier stehen die Kennzahlen deines Vereins mit Verlauf über die Stichtage. Zum Vergleich siehst du Durchschnitte über alle Vereine, aber nie die Einzelzahlen eines anderen Vereins.","Du siehst nur deinen eigenen Verein, und nur lesend. Es gibt bewusst keinen Export-Knopf. Ehrlich dazu: Ein Bildschirmfoto lässt sich technisch nicht verhindern. Belastbar ist das Zugriffsprotokoll, nicht die Sperre. Diese Ebene wird gerade gebaut."]},
+  {t:"Dokumente",p:["Die Unterlagen deines Vereins. Ansehen, bearbeiten und unterschreiben geht direkt hier, mit dem Finger, mit der Maus oder über ein hochgeladenes Bild. Das Ergebnis wird eine neue Fassung, das Original bleibt erhalten.","Unterlagen ohne Vereinszuordnung sind gemeinsame Papiere für alle Vorstände. Diese Ebene wird gerade gebaut.",'<span class="msg info">Die ausführliche Anleitung findest du jederzeit unter „Hilfe".</span>']}],
+ admin:[
+  {t:"Du bist Admin",p:["Als Admin siehst du alle Ebenen aller Vereine und darfst alles verwalten. Das ist die weitreichendste Rolle im Archiv, geh entsprechend sorgsam damit um."]},
+  {t:"Aufnahmen und Warteschlange",p:["„Neue Aufnahme\" lädt Audio und Folien hoch und legt einen Auftrag an. Die eigentliche Verarbeitung läuft danach lokal auf Andres Rechner, nicht in der Cloud: Transkript, Sprechertrennung, Zusammenfassung.","Unter „Status & Warteschlange\" siehst du, was gerade läuft. Achte beim Hochladen auf die Ebene, in der du stehst, dort landet die Aufnahme."]},
+  {t:"Wer darf rein",p:["„Adressen verwalten\" entscheidet über den Zugang. Vorstand sieht alle fünf Ebenen, Ansprechperson sieht die drei Ebenen ohne Vereinsdaten und Dokumente. Wer dort nicht steht, kommt nicht rein, auch nicht mit einer Adresse auf der richtigen Domain.","Sperren statt Löschen, das lässt sich zurücknehmen. Unter „Admins verwalten\" kommen weitere Admins dazu, der letzte aktive Admin lässt sich nicht entfernen.",'<span class="msg info">Die ausführliche Anleitung findest du jederzeit unter „Hilfe".</span>']}]
+};
+let INTRO_ROLLE=null,INTRO_I=0;
+function introFaellig(){if(!gp(INTRO_MERKER.mitglied))return "mitglied";
+  const r=state.authed?state.rolle:null;
+  if(r&&INTRO[r]&&!gp(INTRO_MERKER[r]))return r;return null;}
+function introRender(){const schr=INTRO[INTRO_ROLLE]||[],a=schr[INTRO_I];if(!a)return;
+  $("#introTitle").textContent=a.t;
+  $("#introBody").innerHTML=a.p.map(x=>`<p>${x}</p>`).join("");
+  $("#introZaehler").textContent=schr.length>1?`Schritt ${INTRO_I+1} von ${schr.length}`:"";
+  $("#introBack").hidden=INTRO_I===0;
+  $("#introOk").textContent=INTRO_I<schr.length-1?"Weiter":"Verstanden, los geht's";
+  /* Fokus in den Text, damit Screenreader den neuen Schritt vorlesen. Kein zusaetzlicher
+     Live-Bereich, sonst liest VoiceOver alles doppelt. */
+  setTimeout(()=>{try{$("#introBody").focus();}catch(e){}},40);}
+function introStart(rolle){if(!INTRO[rolle])return;INTRO_ROLLE=rolle;INTRO_I=0;introRender();openModal($("#ovIntro"));}
+function introFertig(){try{localStorage.setItem(INTRO_MERKER[INTRO_ROLLE],"1");}catch(e){}
+  closeModal($("#ovIntro"));const n=introFaellig();
+  if(n)setTimeout(()=>introStart(n),250);}
+function introPruefen(){if(!$("#ovIntro").hidden)return;
+  if([...document.querySelectorAll(".overlay")].some(o=>!o.hidden))return;
+  const r=introFaellig();if(r)setTimeout(()=>{if($("#ovIntro").hidden)introStart(r);},300);}
+if($("#introOk"))$("#introOk").onclick=()=>{const schr=INTRO[INTRO_ROLLE]||[];
+  if(INTRO_I<schr.length-1){INTRO_I++;introRender();}else introFertig();};
+if($("#introBack"))$("#introBack").onclick=()=>{if(INTRO_I>0){INTRO_I--;introRender();}};
+if($("#helpIntro"))$("#helpIntro").onclick=()=>{closeModal($("#ovHelp"));
+  const r=state.authed&&state.rolle&&INTRO[state.rolle]?state.rolle:"mitglied";setTimeout(()=>introStart(r),150);};
 
 /* ---- Adressen-Verwaltung (Admin): wer darf in den Vorstandsbereich ---- */
 let ADR_DATA=[],ADR_VEREINE=[],ADR_EDIT=null,ADR_Q="";
@@ -2540,8 +2602,7 @@ function computeSince(){const last=lsGet("st_lastvisit",null);
   if(state.sinceCount>0)setTimeout(()=>announce(state.sinceCount+(state.sinceCount===1?" neuer Stammtisch":" neue Stammtische")+" seit deinem letzten Besuch."),500);
   if(!parseHash())renderDetail();
   window.addEventListener("hashchange",parseHash);
-  $("#introOk").onclick=()=>{try{localStorage.setItem("st_intro_ok","1");}catch(e){}closeModal($("#ovIntro"));};
-  if(!gp("st_intro_ok"))setTimeout(()=>openModal($("#ovIntro")),300);
+  introPruefen();
   refreshBanner();statusTimer=setInterval(()=>{refreshBanner();if(!$("#ovQueue").hidden)renderStatusPanel();},20000);})();
 </script>
 </body>
