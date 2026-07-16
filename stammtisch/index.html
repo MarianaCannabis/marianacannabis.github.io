@@ -245,6 +245,9 @@
   .kp-jump:hover{border-color:var(--green)}
   .kp-jump:focus{outline:2px solid var(--gold);outline-offset:2px}
   body.sr-mode #dRead{display:none}
+  .ver-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:9999;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+    background:var(--panel-solid);border:2px solid var(--gold);border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--text);box-shadow:0 10px 28px rgba(0,0,0,.5);max-width:min(94vw,620px)}
+  @media (max-width:768px),(pointer:coarse){ .ver-banner{bottom:8px;padding:12px} .ver-banner .btn{min-height:44px} }
   /* Vorstandsbereich: deutlich abgegrenzter Rahmen mit Ebenen-Umschalter */
   .vb-kopf{max-width:var(--maxw);margin:0 auto 14px;padding:12px 14px;border:2px solid var(--gold);border-radius:var(--radius);background:linear-gradient(180deg,#1a1607 0%,var(--panel-solid) 70%)}
   .vb-zeile{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -688,6 +691,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
+const APP_VERSION="2026-07-16-4";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -863,6 +867,27 @@ if($("#tmAdd"))$("#tmAdd").onclick=async()=>{const m=$("#tmMsg");
     await renderTermineListe();await renderTermine();
   }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}};
 if($("#btnTermine"))$("#btnTermine").onclick=()=>openTermine();
+let verHinweisOffen=false;
+async function pruefeFassung(){if(verHinweisOffen)return;
+  try{const r=await fetch(location.pathname+"?_pruef="+Date.now(),{cache:"no-store"});
+    if(!r.ok)return;
+    const t=await r.text();const m=t.match(/const APP_VERSION="([^"]+)"/);
+    if(!m||m[1]===APP_VERSION)return;
+    verHinweisOffen=true;zeigeFassungHinweis(m[1]);
+  }catch(e){}}
+function zeigeFassungHinweis(neu){
+  if($("#verBanner"))return;
+  const b=document.createElement("div");b.id="verBanner";b.className="ver-banner";b.setAttribute("role","status");
+  b.innerHTML='<span>Es gibt eine neuere Fassung des Vereinsarchivs. Deine Ansicht ist veraltet.</span>'+
+    '<button class="btn small" id="verNeu">Jetzt neu laden</button>'+
+    '<button class="btn small ghost" id="verSpaeter" aria-label="Hinweis ausblenden">Später</button>';
+  document.body.appendChild(b);
+  $("#verNeu").onclick=()=>location.replace(location.pathname+"?v="+encodeURIComponent(neu));
+  $("#verSpaeter").onclick=()=>{b.remove();};
+  announce("Es gibt eine neuere Fassung. Bitte neu laden.");}
+setTimeout(pruefeFassung,4000);
+setInterval(()=>{if(!document.hidden)pruefeFassung();},15*60*1000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)pruefeFassung();});
 function renderNextMeet(){
   renderTermine();
   const el=$("#nextMeet");
@@ -1748,7 +1773,7 @@ async function setEbene(e,vb){
   if(!(state.vb&&EBENEN_BALD[e])){buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();}
   else{renderTermine();}
   announce(state.vb?("Vorstandsbereich. Ebene "+EBENEN[e]+"."):"Öffentliches Archiv.");
-  const ziel=(state.vb&&EBENEN_BALD[e])?$("#vbBald"):document.querySelector(".wrap");
+  const ziel=state.vb?$("#vbKopf"):document.querySelector(".wrap");
   if(ziel&&ziel.scrollIntoView)ziel.scrollIntoView({block:"start"});}
 async function setMode(m){return setEbene(m==="int"?"int":"pub", m!=="pub");}
 $("#btnIntern").onclick=()=>state.vb?setEbene("pub",false):setEbene("int",true);
