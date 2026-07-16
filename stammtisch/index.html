@@ -345,6 +345,7 @@
         <button class="btn menu-item" id="btnRechte" hidden>Rechte &amp; Vorstand</button>
         <button class="btn menu-item" id="btnAufbewahrung" hidden>Aufbewahrung</button>
         <button class="btn menu-item" id="btnAdmins" hidden>Admins verwalten</button>
+        <button class="btn menu-item" id="btnAdressen" hidden>Adressen verwalten</button>
         <button class="btn menu-item" id="btnTermine" hidden>Termine verwalten</button>
       </div>
     </div>
@@ -566,6 +567,33 @@
   </div>
   <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
 
+<div class="overlay" id="ovAdressen" hidden role="dialog" aria-modal="true" aria-labelledby="adrTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="adrTitel">Adressen verwalten</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Hier steht, wer in den Vorstandsbereich darf. Der Zugang hängt an der <b>Adresse</b>, nicht an einer Person: wer das Postfach lesen kann, bekommt den Magic Link und kommt rein.<br>
+      <b>Vorstand</b> sieht alle fünf Ebenen. <b>Ansprechperson</b> sieht Stammtische, interne Stammtische und Mitgliederabend, aber weder Vereinsdaten noch Dokumente. Wer hier nicht steht, kommt gar nicht rein.</p>
+    <div class="sec-h" id="adrFormTitel">Adresse hinzufügen</div>
+    <div class="field"><label for="adrEmail">E-Mail-Adresse</label><input id="adrEmail" type="email" inputmode="email" placeholder="marburg@mariana-cannabis.de"></div>
+    <div class="field"><label for="adrVerein">Verein</label><select id="adrVerein"><option value="">Bitte wählen</option></select></div>
+    <div class="field" id="adrNeuBox" hidden>
+      <label for="adrNeuStadt">Stadt des neuen Vereins</label><input id="adrNeuStadt" type="text" placeholder="Marburg">
+      <label for="adrNeuSchluessel" style="margin-top:8px">Kennung (der Teil vor dem @)</label><input id="adrNeuSchluessel" type="text" placeholder="marburg">
+    </div>
+    <div class="field"><label for="adrRolle">Rolle</label><select id="adrRolle">
+      <option value="vorstand">Vorstand (alle fünf Ebenen)</option>
+      <option value="ap">Ansprechperson (ohne Vereinsdaten und Dokumente)</option>
+    </select></div>
+    <div class="field"><label for="adrName">Name (freiwillig)</label><input id="adrName" type="text"></div>
+    <button class="btn primary" id="adrSave" style="margin-top:6px">Speichern</button>
+    <button class="btn" id="adrReset" style="margin-top:6px" hidden>Abbrechen</button>
+    <div class="msg" id="adrMsg" role="status" style="margin-top:8px"></div>
+    <div class="sec-h" style="margin-top:16px">Vorhandene Adressen</div>
+    <div class="field"><label for="adrSuche">Suchen (Adresse, Verein oder Stadt)</label><input id="adrSuche" type="search" placeholder="marburg"></div>
+    <div class="msg info" id="adrZahl" role="status"></div>
+    <div id="adrListe"><div class="msg info">Lade…</div></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
+
 <div class="overlay" id="ovAufbewahrung" hidden role="dialog" aria-modal="true" aria-label="Aufbewahrung"><div class="modal modal-wide">
   <div class="modal-head"><h3>Aufbewahrung</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
@@ -711,15 +739,20 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-16-7";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-16-8";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
 const EBENE_PFX={pub:"st",int:"sti",mit:"ma"};
 const EBENE_IMODE={pub:"fill",int:"fill_intern",mit:"fill_mitglieder"};
 const EBENE_WORT={pub:"Stammtisch",int:"Stammtisch",mit:"Mitgliederabend"};
+/* Wer darf welche Ebene sehen. Neue Ebene HIER eintragen, nicht verstreuen.
+   Massgeblich ist die Backend-Funktion darf_ebene(), das hier ist nur die Anzeige. */
+const EBENE_ROLLEN={pub:["admin","vorstand","ap"],int:["admin","vorstand","ap"],mit:["admin","vorstand","ap"],dat:["admin","vorstand"],dok:["admin","vorstand"]};
+function darfEbene(e){const r=state.rolle;if(!r)return false;return (EBENE_ROLLEN[e]||[]).includes(r);}
+const ROLLE_WORT={admin:"Admin",vorstand:"Vorstand",ap:"Ansprechperson"};
 function ebenePrivat(){return state.mode==="int"||state.mode==="mit";}
-let state={authed:false,email:null,internOk:false,isAdmin:false,vb:false,rechte:[],mode:"pub",q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
+let state={authed:false,email:null,internOk:false,isAdmin:false,rolle:null,vereinId:null,verein:null,vb:false,rechte:[],mode:"pub",q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
 let wz={step:1,files:[],folien:null,ort:""};
 let editObj=null,pendingDelete=null,statusTimer=null,LIVE_STATUS=null;
 
@@ -1698,12 +1731,15 @@ async function reprocess(d,mode){const txt=mode==="retranscribe"?"komplett neu t
 /* ---- auth ---- */
 async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.auth.getSession();
   state.email=session&&session.user?(session.user.email||"").toLowerCase():null;
-  // Muster als schneller Startwert; maszgeblich ist die Backend-Funktion (deckt auch die Allowlist ab).
+  // Nur ein schneller Startwert. Maszgeblich ist die Backend-Funktion: seit 16.07. zaehlt die
+  // gepflegte Adressliste, die Domain allein reicht nicht mehr.
   state.internOk=!!state.email&&(state.email===ADMIN_EMAIL.toLowerCase()||state.email.endsWith("@mariana-cannabis.de"));
-  state.rechte=[];state.isAdmin=false;
+  state.rechte=[];state.isAdmin=false;state.rolle=null;state.vereinId=null;state.verein=null;
   if(state.email){
     try{const {data}=await supa.rpc("ist_intern_berechtigt");if(data!=null)state.internOk=!!data;}catch(e){}
     try{const {data}=await supa.rpc("ist_admin");state.isAdmin=!!data;}catch(e){state.isAdmin=false;}
+    try{const {data}=await supa.rpc("meine_rolle");if(data){state.rolle=data.rolle||null;state.vereinId=data.verein_id||null;state.verein=data.verein||null;}}catch(e){}
+    if(!state.rolle&&state.isAdmin)state.rolle="admin";
     try{const {data}=await supa.from("vorstand_rechte").select("recht").eq("email",state.email).eq("aktiv",true);state.rechte=(data||[]).map(x=>x.recht);}catch(e){state.rechte=[];}
   }
   setAuthed(!!session);}
@@ -1716,6 +1752,7 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnRechte"))$("#btnRechte").hidden=!isAdmin();
   if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
   if($("#btnAdmins"))$("#btnAdmins").hidden=!isAdmin();
+  if($("#btnAdressen"))$("#btnAdressen").hidden=!isAdmin();
   if($("#btnTermine"))$("#btnTermine").hidden=!isAdmin();
   if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").hidden=!isAdmin();
   if($("#btnVorschlagVorstand"))$("#btnVorschlagVorstand").hidden=!berechtigt;
@@ -1779,9 +1816,12 @@ const EBENEN_BALD={
 function vbRender(){const kopf=$("#vbKopf"),bald=$("#vbBald"),wrap=document.querySelector(".wrap");
   kopf.hidden=!state.vb;
   if(state.vb){
-    $("#vbEbenen").querySelectorAll("[data-ebene]").forEach(b=>{const on=b.dataset.ebene===state.mode;
+    $("#vbEbenen").querySelectorAll("[data-ebene]").forEach(b=>{const erlaubt=darfEbene(b.dataset.ebene);
+      b.hidden=!erlaubt;b.setAttribute("aria-hidden",erlaubt?"false":"true");
+      const on=erlaubt&&b.dataset.ebene===state.mode;
       b.setAttribute("aria-selected",on?"true":"false");b.tabIndex=on?0:-1;});
-    $("#vbWer").textContent=state.email?("Angemeldet als "+state.email):"Nur für Vorstand und Admin sichtbar";
+    const rw=ROLLE_WORT[state.rolle]||"";
+    $("#vbWer").textContent=state.email?("Angemeldet als "+state.email+(rw?(" · "+rw+(state.verein?(", "+state.verein):"")):"")):"Nur für Vorstand und Admin sichtbar";
   }
   const info=state.vb?EBENEN_BALD[state.mode]:null;
   if(info){bald.hidden=false;wrap.hidden=true;bald.innerHTML=`<h3>${esc(info.t)}</h3>`+info.p.map(x=>`<p>${esc(x)}</p>`).join("")+`<div id="vbBaldTermine" style="margin-top:16px;text-align:left"></div>`;}
@@ -1789,6 +1829,7 @@ function vbRender(){const kopf=$("#vbKopf"),bald=$("#vbBald"),wrap=document.quer
 async function setEbene(e,vb){
   if(vb&&!state.internOk){announce("Kein Zugriff auf den Vorstandsbereich.");return;}
   if(!EBENEN[e])e="pub";
+  if(vb&&!darfEbene(e)){announce(EBENEN[e]+": dafür fehlt dir die Berechtigung.");e="pub";}
   state.vb=!!vb;state.mode=e;
   if(e==="int"){DATA=await loadIntern();}else if(e==="mit"){DATA=await loadMitglieder();}else if(e==="pub"){DATA=DATA_PUB;}else{DATA=[];}
   $("#btnDocs").hidden=!(state.vb&&ebenePrivat());
@@ -1810,9 +1851,12 @@ async function setEbene(e,vb){
 async function setMode(m){return setEbene(m==="int"?"int":"pub", m!=="pub");}
 $("#btnIntern").onclick=()=>state.vb?setEbene("pub",false):setEbene("int",true);
 if($("#vbRaus"))$("#vbRaus").onclick=()=>setEbene("pub",false);
-if($("#vbEbenen")){const tabs=[...$("#vbEbenen").querySelectorAll("[data-ebene]")];
-  tabs.forEach((b,idx)=>{b.onclick=()=>setEbene(b.dataset.ebene,true);
-    b.onkeydown=ev=>{let n=null;
+if($("#vbEbenen")){const alle=[...$("#vbEbenen").querySelectorAll("[data-ebene]")];
+  /* Sichtbare Reiter erst beim Tastendruck ermitteln, sie haengen an der Rolle. */
+  const sichtbar=()=>alle.filter(b=>!b.hidden);
+  alle.forEach(b=>{b.onclick=()=>setEbene(b.dataset.ebene,true);
+    b.onkeydown=ev=>{const tabs=sichtbar();if(!tabs.length)return;
+      const idx=Math.max(0,tabs.indexOf(b));let n=null;
       if(ev.key==="ArrowRight")n=(idx+1)%tabs.length;
       else if(ev.key==="ArrowLeft")n=(idx-1+tabs.length)%tabs.length;
       else if(ev.key==="Home")n=0; else if(ev.key==="End")n=tabs.length-1;
@@ -2007,6 +2051,101 @@ $("#admAdd").onclick=async()=>{const email=($("#admEmail").value||"").trim().toL
     announce("Admin hinzugefügt.");$("#admEmail").value="";$("#admName").value="";await renderAdmins();
   }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}};
 if($("#btnAdmins"))$("#btnAdmins").onclick=()=>openAdmins();
+
+/* ---- Adressen-Verwaltung (Admin): wer darf in den Vorstandsbereich ---- */
+let ADR_DATA=[],ADR_VEREINE=[],ADR_EDIT=null,ADR_Q="";
+async function openAdressen(){if(!isAdmin()){announce("Nur für Admins.");return;}
+  adrReset();$("#adrSuche").value="";ADR_Q="";
+  openModal($("#ovAdressen"));await loadAdressen();}
+function adrReset(){ADR_EDIT=null;$("#adrFormTitel").textContent="Adresse hinzufügen";
+  $("#adrEmail").value="";$("#adrName").value="";$("#adrRolle").value="vorstand";$("#adrVerein").value="";
+  $("#adrNeuStadt").value="";$("#adrNeuSchluessel").value="";$("#adrNeuBox").hidden=true;
+  $("#adrReset").hidden=true;$("#adrMsg").textContent="";$("#adrMsg").className="msg";}
+function adrVereinOptionen(){const sel=$("#adrVerein");const alt=sel.value;
+  sel.innerHTML='<option value="">Bitte wählen</option>'+ADR_VEREINE.map(v=>`<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.stadt)})</option>`).join("")+'<option value="__neu">Neuen Verein anlegen…</option>';
+  sel.value=alt;}
+async function loadAdressen(){const box=$("#adrListe");box.innerHTML='<div class="msg info">Lade…</div>';
+  try{const v=await supa.from("vereine").select("id,schluessel,name,stadt").order("stadt");if(v.error)throw v.error;
+    ADR_VEREINE=v.data||[];
+    const a=await supa.from("vereins_adressen").select("email,rolle,name,aktiv,verein_id").order("email");if(a.error)throw a.error;
+    ADR_DATA=a.data||[];adrVereinOptionen();renderAdressen();
+  }catch(e){box.innerHTML=`<div class="msg err">Konnte nicht laden: ${esc(e.message||String(e))}</div>`;}}
+function adrVerein(id){return ADR_VEREINE.find(v=>v.id===id)||null;}
+function renderAdressen(){const box=$("#adrListe");if(!box)return;
+  const q=(ADR_Q||"").trim().toLowerCase();
+  const treffer=ADR_DATA.filter(a=>{if(!q)return true;const v=adrVerein(a.verein_id);
+    return a.email.includes(q)||(a.name||"").toLowerCase().includes(q)||(v&&(v.name.toLowerCase().includes(q)||v.stadt.toLowerCase().includes(q)));});
+  $("#adrZahl").textContent=q?`${treffer.length} von ${ADR_DATA.length} Adressen`:`${ADR_DATA.length} Adressen, ${ADR_VEREINE.length} Vereine`;
+  if(!treffer.length){box.innerHTML='<div class="nodata">Keine Adresse gefunden.</div>';return;}
+  const zeig=treffer.slice(0,60);
+  box.innerHTML=zeig.map(a=>{const v=adrVerein(a.verein_id);
+    return `<div class="qrow"><div><b>${esc(a.email)}</b><div class="msg info">${esc(v?(v.name+" · "+v.stadt):"Verein unbekannt")}${a.name?(" · "+esc(a.name)):""}</div></div>
+      <span class="qstatus ${a.rolle==="vorstand"?"done":""}">${a.rolle==="vorstand"?"Vorstand":"Ansprechperson"}</span>
+      <span class="qstatus ${a.aktiv?"done":"error"}">${a.aktiv?"aktiv":"gesperrt"}</span>
+      <button class="btn small" data-adr-edit="${esc(a.email)}">Bearbeiten</button>
+      <button class="btn small${a.aktiv?" danger":""}" data-adr-toggle="${esc(a.email)}" data-adr-aktiv="${a.aktiv?"1":"0"}">${a.aktiv?"Sperren":"Freigeben"}</button>
+      <button class="btn small danger" data-adr-del="${esc(a.email)}">Löschen</button></div>`;}).join("")
+    +(treffer.length>zeig.length?`<div class="msg info">${treffer.length-zeig.length} weitere. Bitte die Suche eingrenzen.</div>`:"");
+  box.querySelectorAll("[data-adr-edit]").forEach(b=>b.onclick=()=>adrEdit(b.dataset.adrEdit));
+  box.querySelectorAll("[data-adr-toggle]").forEach(b=>b.onclick=()=>adrToggle(b.dataset.adrToggle,b.dataset.adrAktiv==="1"));
+  box.querySelectorAll("[data-adr-del]").forEach(b=>b.onclick=()=>adrDelete(b.dataset.adrDel));}
+function adrEdit(email){const a=ADR_DATA.find(x=>x.email===email);if(!a)return;
+  ADR_EDIT=email;$("#adrFormTitel").textContent="Adresse bearbeiten";
+  $("#adrEmail").value=a.email;$("#adrRolle").value=a.rolle;$("#adrName").value=a.name||"";
+  $("#adrVerein").value=a.verein_id||"";$("#adrNeuBox").hidden=true;$("#adrReset").hidden=false;
+  $("#adrMsg").textContent="";$("#adrMsg").className="msg";$("#adrEmail").focus();}
+async function adrVereinHolen(){const wahl=$("#adrVerein").value;
+  if(wahl!=="__neu")return wahl||null;
+  const stadt=($("#adrNeuStadt").value||"").trim();
+  let schl=($("#adrNeuSchluessel").value||"").trim().toLowerCase();
+  if(!stadt)throw new Error("Bitte die Stadt des neuen Vereins eintragen.");
+  if(!schl)throw new Error("Bitte die Kennung des neuen Vereins eintragen, also den Teil vor dem @.");
+  if(!/^[a-z0-9.]+$/.test(schl))throw new Error("Die Kennung darf nur kleine Buchstaben, Ziffern und Punkte enthalten.");
+  const da=ADR_VEREINE.find(v=>v.schluessel===schl);if(da)return da.id;
+  const {data,error}=await supa.from("vereine").insert({schluessel:schl,name:"CSC "+stadt,stadt}).select("id,schluessel,name,stadt").single();
+  if(error)throw error;ADR_VEREINE.push(data);ADR_VEREINE.sort((a,b)=>a.stadt.localeCompare(b.stadt));adrVereinOptionen();
+  return data.id;}
+async function adrSave(){const m=$("#adrMsg");
+  const email=($("#adrEmail").value||"").trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){m.className="msg err";m.textContent="Bitte eine gültige E-Mail-Adresse eingeben.";return;}
+  m.className="msg info";m.textContent="Speichern…";
+  try{const verein_id=await adrVereinHolen();
+    if(!verein_id)throw new Error("Bitte einen Verein wählen.");
+    const zeile={email,verein_id,rolle:$("#adrRolle").value,name:($("#adrName").value||"").trim()||null};
+    if(ADR_EDIT){
+      if(ADR_EDIT!==email){
+        const {error:e1}=await supa.from("vereins_adressen").insert({...zeile,aktiv:true,angelegt_von:state.email});if(e1)throw e1;
+        const {error:e2}=await supa.from("vereins_adressen").delete().eq("email",ADR_EDIT);if(e2)throw e2;
+        m.textContent="Geändert. Achtung: die alte Adresse "+ADR_EDIT+" kommt jetzt nicht mehr rein.";
+      }else{
+        const {error}=await supa.from("vereins_adressen").update({...zeile,geaendert_von:state.email}).eq("email",ADR_EDIT);if(error)throw error;
+        m.textContent="Geändert.";
+      }
+    }else{
+      const {error}=await supa.from("vereins_adressen").insert({...zeile,aktiv:true,angelegt_von:state.email});if(error)throw error;
+      m.textContent="Hinzugefügt. Der Zugang greift, sobald sich diese Adresse einmal per Magic Link anmeldet.";
+    }
+    m.className="msg ok";announce("Adresse gespeichert.");adrReset();await loadAdressen();
+  }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}}
+async function adrToggle(email,aktivJetzt){const m=$("#adrMsg");
+  if(aktivJetzt&&!confirm(`Zugang für ${email} sperren? Diese Adresse kommt danach nicht mehr in den Vorstandsbereich.`))return;
+  m.className="msg info";m.textContent="Speichern…";
+  try{const {error}=await supa.from("vereins_adressen").update({aktiv:!aktivJetzt,geaendert_von:state.email}).eq("email",email);if(error)throw error;
+    m.className="msg ok";m.textContent=aktivJetzt?"Zugang gesperrt.":"Zugang wieder freigegeben.";announce("Gespeichert.");
+    await loadAdressen();if(email===state.email)await refreshAuth();
+  }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}}
+async function adrDelete(email){const m=$("#adrMsg");
+  if(!confirm(`Adresse ${email} ganz löschen? Sperren reicht meistens und lässt sich leichter zurücknehmen.`))return;
+  m.className="msg info";m.textContent="Löschen…";
+  try{const {error}=await supa.from("vereins_adressen").delete().eq("email",email);if(error)throw error;
+    m.className="msg ok";m.textContent="Gelöscht.";announce("Adresse gelöscht.");
+    if(ADR_EDIT===email)adrReset();await loadAdressen();if(email===state.email)await refreshAuth();
+  }catch(e){m.className="msg err";m.textContent="Nicht gelöscht: "+(e.message||e);}}
+if($("#btnAdressen"))$("#btnAdressen").onclick=()=>openAdressen();
+if($("#adrSave"))$("#adrSave").onclick=()=>adrSave();
+if($("#adrReset"))$("#adrReset").onclick=()=>adrReset();
+if($("#adrVerein"))$("#adrVerein").onchange=e=>{$("#adrNeuBox").hidden=e.target.value!=="__neu";};
+if($("#adrSuche"))$("#adrSuche").oninput=e=>{ADR_Q=e.target.value;renderAdressen();};
 
 function openAufbewahrung(){if(!isAdmin()){announce("Nur für den Admin.");return;}$("#aufbMsg").textContent="";const el=$("#aufbMonate");if(el)el.value=AUFB_MONATE;renderAufbewahrung();openModal($("#ovAufbewahrung"));}
 function renderAufbewahrung(){const box=$("#aufbListe");if(!box)return;
