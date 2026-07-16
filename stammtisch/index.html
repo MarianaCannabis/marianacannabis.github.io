@@ -298,6 +298,7 @@
 </head>
 <body>
 <a href="#detail" class="skip">Zum Inhalt springen</a>
+<h1 class="sr-only">Vereinsarchiv – Mariana Cannabis</h1>
 <div id="srlive" class="sr-only" aria-live="polite" role="status"></div>
 
 <header class="topbar">
@@ -692,7 +693,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-16-5";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-16-6";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1776,7 +1777,12 @@ async function setEbene(e,vb){
   else{renderTermine();}
   announce(state.vb?("Vorstandsbereich. Ebene "+EBENEN[e]+"."):"Öffentliches Archiv.");
   const ziel=state.vb?$("#vbKopf"):document.querySelector(".wrap");
-  if(ziel&&ziel.scrollIntoView)ziel.scrollIntoView({block:"start"});}
+  if(ziel){
+    // Im Vorstandsbereich die Sprungmarke dynamisch auf die tatsaechliche Kopfleistenhoehe setzen;
+    // sie ist variabel (bricht am Handy nach dem Login in mehrere Zeilen um), fester scroll-margin-top
+    // reicht dort nicht. Oeffentlicher Weg bleibt unveraendert (CSS scroll-margin-top).
+    if(state.vb){const bar=document.querySelector(".topbar");ziel.style.scrollMarginTop=((bar?bar.getBoundingClientRect().height:0)+8)+"px";}
+    if(ziel.scrollIntoView)ziel.scrollIntoView({block:"start"});}}
 async function setMode(m){return setEbene(m==="int"?"int":"pub", m!=="pub");}
 $("#btnIntern").onclick=()=>state.vb?setEbene("pub",false):setEbene("int",true);
 if($("#vbRaus"))$("#vbRaus").onclick=()=>setEbene("pub",false);
