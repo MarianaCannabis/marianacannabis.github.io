@@ -952,7 +952,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-17-4";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-17-5";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -2713,7 +2713,7 @@ function datFmt(z,art,nk,einheit){
 function datDatum(d){if(!d)return "";const p=String(d).slice(0,10).split("-");return p.length===3?(p[2]+"."+p[1]+"."+p[0]):String(d);}
 
 /* Bewertung der Veraenderung: richtung sagt, ob mehr oder weniger gut ist. */
-function datDelta(jetzt,vorher,richtung,art,nk){
+function datDelta(jetzt,vorher,richtung,art,nk,einheit){
   if(jetzt==null||vorher==null)return null;
   const a=Number(jetzt),b=Number(vorher);if(!isFinite(a)||!isFinite(b))return null;
   const d=a-b;
@@ -2723,9 +2723,10 @@ function datDelta(jetzt,vorher,richtung,art,nk){
   else if(roh!==0&&richtung==="runter_gut")klasse=d<0?"gut":"schlecht";
   const vz=d>0?"+":(d<0?"\u2212":"\u00b1");
   let txt=vz+datNum(Math.abs(d),nk);
-  if(art==="geld")txt+="\u00a0€";else if(art==="prozent")txt+="\u00a0%";
+  if(art==="geld")txt+="\u00a0€";else if(art==="prozent")txt+="\u00a0%";else if(einheit)txt+="\u00a0"+einheit;
   if(roh===0)txt="\u00b10";
-  const wort=roh===0?"unverändert":(d>0?("plus "+datNum(Math.abs(d),nk)):("minus "+datNum(Math.abs(d),nk)));
+  const e=einheit?(" "+einheit):(art==="geld"?" Euro":(art==="prozent"?" Prozentpunkte":""));
+  const wort=roh===0?"unverändert":(d>0?("plus "+datNum(Math.abs(d),nk)+e):("minus "+datNum(Math.abs(d),nk)+e));
   return {txt:txt, klasse:klasse, wort:wort, betrag:Math.abs(d), rel:Math.abs(b)>1e-9?Math.abs(d/b):(roh===0?0:1)};}
 
 /* ---- Verlaufsgrafik ----
@@ -2920,7 +2921,7 @@ function renderDat(){
     const r=jetzt[d.schluessel];
     const wert=r?datFmt(r.zahl!=null?r.zahl:null,d.art,d.nachkomma,d.einheit):null;
     const roh=r&&r.zahl==null?r.wert:null;
-    const dl=r?datDelta(r.zahl,(vor[d.schluessel]||{}).zahl,d.richtung,d.art,d.nachkomma):null;
+    const dl=r?datDelta(r.zahl,(vor[d.schluessel]||{}).zahl,d.richtung,d.art,d.nachkomma,d.einheit):null;
     const zeigt=wert||roh;
     return `<article class="dat-karte${zeigt?"":" dat-fehlt"}">
       <div class="dat-name">${esc(d.name)}</div>
@@ -2942,8 +2943,8 @@ function renderDat(){
     const s=liste.slice();
     if(DAT_ST.sort==="az")s.sort((a,b)=>a.name.localeCompare(b.name,"de"));
     else s.sort((a,b)=>{
-      const da=jetzt[a.schluessel]?datDelta(jetzt[a.schluessel].zahl,(vor[a.schluessel]||{}).zahl,a.richtung,a.art,a.nachkomma):null;
-      const db=jetzt[b.schluessel]?datDelta(jetzt[b.schluessel].zahl,(vor[b.schluessel]||{}).zahl,b.richtung,b.art,b.nachkomma):null;
+      const da=jetzt[a.schluessel]?datDelta(jetzt[a.schluessel].zahl,(vor[a.schluessel]||{}).zahl,a.richtung,a.art,a.nachkomma,a.einheit):null;
+      const db=jetzt[b.schluessel]?datDelta(jetzt[b.schluessel].zahl,(vor[b.schluessel]||{}).zahl,b.richtung,b.art,b.nachkomma,b.einheit):null;
       return (db?db.rel:-1)-(da?da.rel:-1);});
     html=`<div class="dat-gitter">${s.map(karte).join("")}</div>`;}
   box.innerHTML=liste.length?html:'<div class="msg info">Keine Kennzahl passt zu deiner Suche.</div>';
@@ -2967,7 +2968,7 @@ async function datVerlauf(k){
   if(error){body.innerHTML='<div class="msg warn">'+esc(error.message)+'</div>';return;}
   body.innerHTML='<p class="dat-erkl" style="margin-bottom:10px">'+esc(d.erklaerung||"")+'</p>'+datGrafik(data||[],d)+
     (data&&data.length?`<table class="dat-tab"><thead><tr><th scope="col">Stichtag</th><th scope="col">Wert</th><th scope="col">Veränderung</th></tr></thead><tbody>`+
-      data.map((r,i)=>{const v=i>0?datDelta(r.zahl,data[i-1].zahl,d.richtung,d.art,d.nachkomma):null;
+      data.map((r,i)=>{const v=i>0?datDelta(r.zahl,data[i-1].zahl,d.richtung,d.art,d.nachkomma,d.einheit):null;
         return `<tr><td>${esc(datDatum(r.stichtag))}</td><td>${esc(datFmt(r.zahl,d.art,d.nachkomma,d.einheit)||r.wert||"keine Angabe")}</td><td>${v?`<span class="dat-delta ${v.klasse}">${esc(v.txt)}</span>`:"<span class=\"dat-delta gleich\">erster Wert</span>"}</td></tr>`;}).join("")
       +`</tbody></table>`
     :'<div class="msg info">Für diese Kennzahl liegt noch kein Wert vor.</div>');}
