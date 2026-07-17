@@ -952,7 +952,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-17-5";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-17-6";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -2725,7 +2725,7 @@ function datDelta(jetzt,vorher,richtung,art,nk,einheit){
   let txt=vz+datNum(Math.abs(d),nk);
   if(art==="geld")txt+="\u00a0€";else if(art==="prozent")txt+="\u00a0%";else if(einheit)txt+="\u00a0"+einheit;
   if(roh===0)txt="\u00b10";
-  const e=einheit?(" "+einheit):(art==="geld"?" Euro":(art==="prozent"?" Prozentpunkte":""));
+  const e=art==="geld"?" Euro":(art==="prozent"?" Prozentpunkte":(einheit?(" "+einheit):""));
   const wort=roh===0?"unverändert":(d>0?("plus "+datNum(Math.abs(d),nk)+e):("minus "+datNum(Math.abs(d),nk)+e));
   return {txt:txt, klasse:klasse, wort:wort, betrag:Math.abs(d), rel:Math.abs(b)>1e-9?Math.abs(d/b):(roh===0?0:1)};}
 
