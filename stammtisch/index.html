@@ -47,7 +47,7 @@
      Ohne diese Zeile wirkt element.hidden=true nicht. Genau daran blieb die Stammtischliste in
      jeder anderen Ebene stehen, und die oeffentliche Terminkarte im Vorstandsbereich.
      Neuer umschaltbarer Bereich mit eigenem display: HIER eintragen. */
-  .wrap[hidden],.vb-bald[hidden],.vb-dok[hidden],.nextmeet[hidden]{display:none!important}
+  .wrap[hidden],.vb-bald[hidden],.vb-dok[hidden],.vb-dat[hidden],.nextmeet[hidden]{display:none!important}
   @media(max-width:880px){.wrap{grid-template-columns:1fr;padding:14px;gap:14px}.rail{position:static!important;max-height:none;overflow:visible}.rail .search{position:static}}
   body.mobile .wrap{grid-template-columns:1fr;gap:14px}body.mobile .rail{position:static;max-height:none;overflow:visible}body.mobile .rail .search{position:static}body.mobile .btn{padding:11px 15px;font-size:14px}body.mobile .card{padding:17px}body.mobile .card h3{font-size:16px}body.mobile .tabs button{padding:15px 15px;font-size:14px}body.mobile .line{padding:12px 0}body.mobile .line .said{font-size:15px}
   .rail{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow-y:auto;overflow-x:hidden;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
@@ -269,7 +269,7 @@
     background:var(--panel-solid);border:2px solid var(--gold);border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--text);box-shadow:0 10px 28px rgba(0,0,0,.5);max-width:min(94vw,620px)}
   @media (max-width:768px),(pointer:coarse){ .ver-banner{bottom:8px;padding:12px} .ver-banner .btn{min-height:44px} }
   /* Vorstandsbereich: deutlich abgegrenzter Rahmen mit Ebenen-Umschalter */
-  .vb-kopf,.vb-bald,.vb-dok,.wrap{scroll-margin-top:96px}
+  .vb-kopf,.vb-bald,.vb-dok,.vb-dat,.wrap{scroll-margin-top:96px}
   .vb-kopf{max-width:var(--maxw);margin:0 auto 14px;padding:12px 14px;border:2px solid var(--gold);border-radius:var(--radius);background:linear-gradient(180deg,#1a1607 0%,var(--panel-solid) 70%)}
   .vb-zeile{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .vb-titel{font-weight:700;color:var(--gold);font-size:15px}
@@ -283,7 +283,7 @@
   .vb-bald{max-width:var(--maxw);margin:0 auto;padding:26px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--panel-solid);text-align:center}
   .vb-bald h3{color:var(--gold);margin-bottom:6px}
   .vb-bald p{color:var(--muted);font-size:13.5px;margin:4px 0}
-  @media (max-width:768px),(pointer:coarse){ .vb-ebene{min-height:44px} .vb-kopf,.vb-bald,.vb-dok,.wrap{scroll-margin-top:78px} }
+  @media (max-width:768px),(pointer:coarse){ .vb-ebene{min-height:44px} .vb-kopf,.vb-bald,.vb-dok,.vb-dat,.wrap{scroll-margin-top:78px} }
   /* Touch-Flaechen >= 44px auf kleinen Schirmen und Touch-Geraeten (WCAG 2.5.8) */
   @media (max-width:768px),(pointer:coarse){
     .btn,.chip,.topic-chip,.facet-h,.mgrp-head,.grp-head,.sel,select,
@@ -332,6 +332,39 @@
   .dok-buehne canvas{max-width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px;background:#fff}
   .dok-marke{position:absolute;border:2px dashed var(--gold);border-radius:4px;pointer-events:none}
   #sigPad{width:100%;max-width:460px;height:150px;border:1px dashed var(--line);border-radius:8px;background:#fff;touch-action:none;display:block}
+  /* Ebene Vereinsdaten */
+  .vb-dat{max-width:var(--maxw);margin:0 auto;padding:22px}
+  .dat-kopf{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:6px}
+  .dat-kopf .field{margin-bottom:0}
+  .dat-knoepfe{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+  .dat-stand{font-size:12px;color:var(--muted);margin:2px 0 10px}
+  .dat-gruppe{margin:20px 0 8px;color:var(--gold);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .dat-gruppe:first-child{margin-top:6px}
+  .dat-gitter{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:10px}
+  .dat-karte{background:var(--panel-solid);border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s}
+  .dat-karte:hover{border-color:var(--green-dim)}
+  .dat-karte.dat-fehlt{opacity:.72}
+  .dat-name{font-weight:650;letter-spacing:-.01em;font-size:13.5px}
+  .dat-zeile2{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .dat-wert{font-size:25px;font-weight:700;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums}
+  .dat-wert.leer{font-size:15px;font-weight:500;color:var(--muted);font-style:italic}
+  .dat-delta{font-size:11.5px;font-weight:650;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .dat-delta.gut{color:var(--green);border-color:var(--green-dim);background:rgba(76,175,106,.13)}
+  .dat-delta.schlecht{color:var(--red);border-color:rgba(217,105,78,.45);background:rgba(217,105,78,.13)}
+  .dat-delta.gleich{color:var(--muted)}
+  .dat-erkl{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0}
+  .dat-fuss{display:flex;gap:6px;margin-top:auto;padding-top:6px}
+  .dat-tab{width:100%;border-collapse:collapse;font-size:13px}
+  .dat-tab th,.dat-tab td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+  .dat-tab th:first-child,.dat-tab td:first-child{text-align:left;font-variant-numeric:normal}
+  .dat-tab thead th{color:var(--muted);font-weight:600;font-size:11.5px;letter-spacing:.03em;text-transform:uppercase}
+  .dat-tab tbody tr:hover{background:rgba(255,255,255,.03)}
+  .dat-sort{background:none;border:0;color:var(--muted);font:inherit;font-size:11.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;cursor:pointer;padding:0}
+  .dat-sort:hover,.dat-sort[aria-sort]:not([aria-sort="none"]){color:var(--gold)}
+  .dat-spark{display:block;width:100%;height:56px;margin:6px 0 2px}
+  .dat-imp-zeile{display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line)}
+  .dat-imp-zeile b{flex:1 1 auto;font-weight:600}
+  @media(max-width:880px){.vb-dat{padding:14px}.dat-gitter{grid-template-columns:1fr}.dat-knoepfe{width:100%;margin-left:0}.dat-knoepfe .btn{flex:1 1 auto;justify-content:center}}
 </style>
 </head>
 <body>
@@ -422,6 +455,22 @@
   <div class="msg info" id="dokHinweis" role="status" style="margin-bottom:12px"></div>
   <div id="dokListe"><div class="msg info">Lade…</div></div>
 </div>
+<div class="vb-dat" id="vbDat" hidden role="region" aria-label="Vereinsdaten">
+  <div class="dat-kopf">
+    <div class="field" id="datVereinBox" style="flex:0 1 240px" hidden><label for="datVerein">Verein</label><select id="datVerein"></select></div>
+    <div class="field" style="flex:0 1 190px"><label for="datStichtag">Stichtag</label><select id="datStichtag"></select></div>
+    <div class="field" style="flex:1 1 200px"><label for="datQ">Suchen</label><input id="datQ" type="search" placeholder="Kennzahl oder Erklärung…" autocomplete="off"></div>
+    <div class="field" style="flex:0 1 190px"><label for="datSort">Sortierung</label><select id="datSort"><option value="reihe">Nach Gruppen</option><option value="az">Name A–Z</option><option value="delta">Stärkste Veränderung</option></select></div>
+    <div class="dat-knoepfe">
+      <button class="btn" id="datGesamt" hidden>Gesamtübersicht</button>
+      <button class="btn primary" id="datImport" hidden>Kennzahlen einspielen</button>
+    </div>
+  </div>
+  <div class="msg ok" id="datMeldung" hidden role="status" style="margin-bottom:10px"></div>
+  <div class="msg info" id="datHinweis" role="status" style="margin-bottom:8px"></div>
+  <p class="dat-stand" id="datStand"></p>
+  <div id="datListe"><div class="msg info">Lade…</div></div>
+</div>
 <main class="wrap">
   <aside class="rail" aria-label="Suche und Filter">
     <div class="nextmeet" id="nextMeet" hidden></div>
@@ -446,6 +495,36 @@
   </aside>
   <section class="detail" id="detail" tabindex="-1" aria-label="Stammtisch-Details"><div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Lade Daten…</p></div></section>
 </main>
+
+<div class="overlay" id="ovDatVerlauf" hidden role="dialog" aria-modal="true" aria-labelledby="datVlTitel"><div class="modal">
+  <div class="modal-head"><h3 id="datVlTitel">Verlauf</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body" id="datVlBody"></div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovDatGesamt" hidden role="dialog" aria-modal="true" aria-labelledby="datGsTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="datGsTitel">Gesamtübersicht über alle Vereine</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body" id="datGsBody"></div>
+  <div class="modal-foot"><span class="msg info">Nur für Admins. Vorstände sehen ausschließlich ihren eigenen Verein.</span><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovDatVergleich" hidden role="dialog" aria-modal="true" aria-labelledby="datVgTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="datVgTitel">Alle Vereine</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body" id="datVgBody"></div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovDatImport" hidden role="dialog" aria-modal="true" aria-labelledby="datImTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="datImTitel">Kennzahlen einspielen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Die CSV aus dem Vereinssystem, eine Zeile je Verein. Die Datei enthält keinen Stichtag, den setzt du hier selbst. Ein bereits vorhandener Stichtag wird überschrieben. Ein Wert, der als <code>null</code> in der Datei steht, gilt als „keine Angabe" und wird nicht als Null gespeichert.</p>
+    <div class="field"><label for="datImStichtag">Stichtag der Erhebung</label><input id="datImStichtag" type="date">
+      <span class="msg info" style="display:block;margin-top:4px">Das Datum, auf das sich die Zahlen beziehen, nicht das Datum des Hochladens. Danach werden die Verläufe sortiert.</span></div>
+    <div class="msg warn" id="datImTagWarn" hidden role="status" style="margin-bottom:10px"></div>
+    <div class="field"><label for="datImDatei">CSV-Datei</label><input id="datImDatei" type="file" accept=".csv,text/csv"></div>
+    <div id="datImPruef"></div>
+    <button class="btn primary" id="datImGo" style="width:100%;margin-top:10px" disabled>Einspielen</button>
+    <div class="msg" id="datImMsg" role="status" style="margin-top:8px"></div>
+    <div id="datImBericht"></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
 
 <div class="overlay" id="ovLogin" hidden role="dialog" aria-modal="true" aria-labelledby="loginTitel" aria-describedby="loginErkl"><div class="modal small">
   <div class="modal-head"><h3 id="loginTitel">Vorstand anmelden</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -827,7 +906,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-16-12";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-17-1";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1896,10 +1975,9 @@ async function loadIntern(){if(DATA_INT)return DATA_INT;if(!supa)return[];
   const {data,error}=await supa.from("stammtische_intern").select("*").order("datum",{ascending:false});
   if(error){console.error(error);return[];}DATA_INT=(data||[]).map(normalizeRow);return DATA_INT;}
 const EBENEN={pub:"Stammtische",int:"Interne Stammtische",mit:"Mitgliederabend",dat:"Vereinsdaten",dok:"Dokumente"};
-const EBENEN_BALD={
-
-  dat:{t:"Vereinsdaten",p:["Diese Ebene wird gerade gebaut.","Hier siehst du künftig die Kennzahlen deines Vereins mit Verlauf über die Stichtage, dazu Durchschnitte über alle Vereine zum Vergleich. Jeder Vorstand sieht dabei nur die Zahlen seines eigenen Vereins."]},
-};
+/* Alle fuenf Ebenen sind gebaut. Eine neue Ebene im Bau kommt hier rein,
+   dann greift der Platzhalter in vbRender automatisch. */
+const EBENEN_BALD={};
 function vbRender(){const kopf=$("#vbKopf"),bald=$("#vbBald"),wrap=document.querySelector(".wrap");
   kopf.hidden=!state.vb;
   if(state.vb){
@@ -1911,9 +1989,11 @@ function vbRender(){const kopf=$("#vbKopf"),bald=$("#vbBald"),wrap=document.quer
     $("#vbWer").textContent=state.email?("Angemeldet als "+state.email+(rw?(" · "+rw+(state.verein?(", "+state.verein):"")):"")):"Nur für Vorstand und Admin sichtbar";
   }
   const dokAn=!!(state.vb&&state.mode==="dok");
+  const datAn=!!(state.vb&&state.mode==="dat");
   const dokBox=$("#vbDok");if(dokBox)dokBox.hidden=!dokAn;
-  const info=(state.vb&&!dokAn)?EBENEN_BALD[state.mode]:null;
-  if(dokAn){bald.hidden=true;wrap.hidden=true;}
+  const datBox=$("#vbDat");if(datBox)datBox.hidden=!datAn;
+  const info=(state.vb&&!dokAn&&!datAn)?EBENEN_BALD[state.mode]:null;
+  if(dokAn||datAn){bald.hidden=true;wrap.hidden=true;}
   else if(info){bald.hidden=false;wrap.hidden=true;bald.innerHTML=`<h3>${esc(info.t)}</h3>`+info.p.map(x=>`<p>${esc(x)}</p>`).join("")+`<div id="vbBaldTermine" style="margin-top:16px;text-align:left"></div>`;}
   else{bald.hidden=true;wrap.hidden=false;}}
 async function setEbene(e,vb){
@@ -1923,6 +2003,7 @@ async function setEbene(e,vb){
   state.vb=!!vb;state.mode=e;
   if(e==="int"){DATA=await loadIntern();}else if(e==="mit"){DATA=await loadMitglieder();}else if(e==="pub"){DATA=DATA_PUB;}else{DATA=[];}
   if(state.vb&&e==="dok"){await loadDok();}
+  if(state.vb&&e==="dat"){await loadDat();}
   $("#btnDocs").hidden=!(state.vb&&ebenePrivat());
   $("#btnLog").hidden=!(state.vb&&isAdmin());
   $("#btnIntern").textContent=state.vb?"Zum öffentlichen Archiv":"Vorstandsbereich öffnen";
@@ -1930,6 +2011,7 @@ async function setEbene(e,vb){
   state.current=null;state.q="";if($("#q"))$("#q").value="";state.years=new Set();state.speakers=new Set();state.themes=new Set();
   vbRender();
   if(state.vb&&e==="dok"){dokMelde("");renderDok();logIntern("dok_bereich_geoeffnet",null,null);}
+  else if(state.vb&&e==="dat"){logIntern("dat_bereich_geoeffnet",null,null);}
   else if(!(state.vb&&EBENEN_BALD[e])){buildFacets();computeSince();renderFacets();renderList();renderDetail();renderNextMeet();}
   else{renderTermine();}
   announce(state.vb?("Vorstandsbereich. Ebene "+EBENEN[e]+"."):"Öffentliches Archiv.");
@@ -2559,6 +2641,316 @@ if($("#dokQ"))$("#dokQ").oninput=e=>{DOK_Q=e.target.value;renderDok();};
 if($("#dokKat"))$("#dokKat").onchange=e=>{DOK_KAT=e.target.value;renderDok();};
 if($("#dokVFilter"))$("#dokVFilter").onchange=e=>{DOK_VF=e.target.value;renderDok();};
 
+/* ==================== Ebene Vereinsdaten ====================
+   Zugang: Vorstand sieht ausschliesslich den eigenen Verein, lesend.
+   Aggregate ueber alle Vereine sind ausdruecklich Admin-Sache (Entscheidung 17.07.).
+   Alle Werte liegen in der Datenbank verschluesselt und sind fuer die Anwendung nur
+   ueber die vd_-Funktionen erreichbar, die Tabelle selbst ist unerreichbar. */
+let DAT_DEF=null, DAT_TAGE=null, DAT_VEREINE=null;
+let DAT_WERTE=null, DAT_VOR=null;
+const DAT_ST={tag:null, vorTag:null, verein:"", q:"", sort:"reihe"};
+let DAT_IMP=null;
+
+function datMelde(t){const m=$("#datMeldung");if(!m)return;m.textContent=t||"";m.hidden=!t;}
+function datHinweis(t,art){const m=$("#datHinweis");if(!m)return;m.className="msg "+(art||"info");m.innerHTML=t||"";m.hidden=!t;}
+
+const DAT_NF=new Intl.NumberFormat("de-DE");
+function datNum(z,nk){return new Intl.NumberFormat("de-DE",{minimumFractionDigits:nk|0,maximumFractionDigits:nk|0}).format(z);}
+function datFmt(z,art,nk,einheit){
+  if(z==null||z==="")return null;
+  const n=Number(z);if(!isFinite(n))return String(z);
+  let s=datNum(n,nk);
+  if(art==="geld")s+="\u00a0€";
+  else if(art==="prozent")s+="\u00a0%";
+  else if(einheit)s+="\u00a0"+einheit;
+  return s;}
+function datDatum(d){if(!d)return "";const p=String(d).slice(0,10).split("-");return p.length===3?(p[2]+"."+p[1]+"."+p[0]):String(d);}
+
+/* Bewertung der Veraenderung: richtung sagt, ob mehr oder weniger gut ist. */
+function datDelta(jetzt,vorher,richtung,art,nk){
+  if(jetzt==null||vorher==null)return null;
+  const a=Number(jetzt),b=Number(vorher);if(!isFinite(a)||!isFinite(b))return null;
+  const d=a-b;
+  const roh=Math.abs(d)<1e-9?0:d;
+  let klasse="gleich";
+  if(roh!==0&&richtung==="hoch_gut")klasse=d>0?"gut":"schlecht";
+  else if(roh!==0&&richtung==="runter_gut")klasse=d<0?"gut":"schlecht";
+  const vz=d>0?"+":(d<0?"\u2212":"\u00b1");
+  let txt=vz+datNum(Math.abs(d),nk);
+  if(art==="geld")txt+="\u00a0€";else if(art==="prozent")txt+="\u00a0%";
+  if(roh===0)txt="\u00b10";
+  const wort=roh===0?"unverändert":(d>0?("plus "+datNum(Math.abs(d),nk)):("minus "+datNum(Math.abs(d),nk)));
+  return {txt:txt, klasse:klasse, wort:wort, betrag:Math.abs(d), rel:Math.abs(b)>1e-9?Math.abs(d/b):(roh===0?0:1)};}
+
+async function datStammLaden(){
+  if(!supa)return false;
+  if(!DAT_DEF){
+    const {data,error}=await supa.from("kennzahlen_def").select("*").eq("aktiv",true).order("reihenfolge");
+    if(error){console.error(error);return false;}
+    DAT_DEF=data||[];}
+  if(!DAT_TAGE){
+    const {data,error}=await supa.rpc("vd_stichtage");
+    if(error){console.error(error);DAT_TAGE=[];}else DAT_TAGE=(data||[]).map(x=>typeof x==="string"?x:(x&&x.vd_stichtage)||x);}
+  if(isAdmin()&&!DAT_VEREINE){
+    const {data}=await supa.from("vereine").select("id,name,stadt").eq("aktiv",true).order("name");
+    DAT_VEREINE=data||[];}
+  return true;}
+
+async function loadDat(){
+  datMelde("");datHinweis("");
+  const box=$("#datListe");if(box)box.innerHTML='<div class="msg info">Lade…</div>';
+  $("#datGesamt").hidden=!isAdmin();
+  $("#datImport").hidden=!isAdmin();
+  $("#datVereinBox").hidden=!isAdmin();
+  if(!await datStammLaden()){if(box)box.innerHTML='<div class="msg warn">Die Kennzahlen sind gerade nicht erreichbar.</div>';return;}
+  if(isAdmin()){
+    const sel=$("#datVerein");
+    sel.innerHTML='<option value="">Verein wählen…</option>'+DAT_VEREINE.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}</option>`).join("");
+    if(DAT_ST.verein)sel.value=DAT_ST.verein;}
+  const st=$("#datStichtag");
+  if(!DAT_TAGE.length){
+    st.innerHTML='<option value="">keine Daten</option>';
+    $("#datStand").textContent="";
+    if(box)box.innerHTML='<div class="msg info">Für die Vereinsdaten sind noch keine Kennzahlen eingespielt. '+(isAdmin()?'Über „Kennzahlen einspielen\" lädst du die CSV hoch.':'Sobald der Admin die erste Erhebung einspielt, stehen sie hier.')+'</div>';
+    return;}
+  st.innerHTML=DAT_TAGE.map(t=>`<option value="${esc(t)}">${esc(datDatum(t))}</option>`).join("");
+  if(!DAT_ST.tag||!DAT_TAGE.includes(DAT_ST.tag))DAT_ST.tag=DAT_TAGE[0];
+  st.value=DAT_ST.tag;
+  await datWerteLaden();}
+
+async function datWerteLaden(){
+  const box=$("#datListe");
+  const i=DAT_TAGE.indexOf(DAT_ST.tag);
+  DAT_ST.vorTag=(i>=0&&i+1<DAT_TAGE.length)?DAT_TAGE[i+1]:null;
+  const ziel=isAdmin()?(DAT_ST.verein||null):null;
+  if(isAdmin()&&!ziel){
+    DAT_WERTE=null;DAT_VOR=null;
+    $("#datStand").textContent="";
+    if(box)box.innerHTML='<div class="msg info">Wähle oben einen Verein, dann siehst du seine Kennzahlen. Die Zahlen über alle Vereine hinweg stehen unter „Gesamtübersicht".</div>';
+    return;}
+  if(box)box.innerHTML='<div class="msg info">Lade…</div>';
+  try{
+    const r1=await supa.rpc("vd_meine",{p_stichtag:DAT_ST.tag,p_verein:ziel});
+    if(r1.error)throw r1.error;
+    DAT_WERTE=r1.data||[];
+    DAT_VOR=null;
+    if(DAT_ST.vorTag){
+      const r2=await supa.rpc("vd_meine",{p_stichtag:DAT_ST.vorTag,p_verein:ziel});
+      if(!r2.error)DAT_VOR=r2.data||[];}
+  }catch(e){
+    console.error(e);
+    if(box)box.innerHTML='<div class="msg warn">'+esc(e.message||"Die Kennzahlen sind gerade nicht erreichbar.")+'</div>';
+    $("#datStand").textContent="";return;}
+  renderDat();}
+
+function renderDat(){
+  const box=$("#datListe");if(!box)return;
+  if(!DAT_WERTE)return;
+  const jetzt={},vor={};
+  DAT_WERTE.forEach(r=>jetzt[r.schluessel]=r);
+  (DAT_VOR||[]).forEach(r=>vor[r.schluessel]=r);
+  const q=(DAT_ST.q||"").trim().toLowerCase();
+  let liste=DAT_DEF.filter(d=>{
+    if(!q)return true;
+    return (d.name||"").toLowerCase().includes(q)||(d.erklaerung||"").toLowerCase().includes(q)||(d.gruppe||"").toLowerCase().includes(q);});
+
+  const karte=d=>{
+    const r=jetzt[d.schluessel];
+    const wert=r?datFmt(r.zahl!=null?r.zahl:null,d.art,d.nachkomma,d.einheit):null;
+    const roh=r&&r.zahl==null?r.wert:null;
+    const dl=r?datDelta(r.zahl,(vor[d.schluessel]||{}).zahl,d.richtung,d.art,d.nachkomma):null;
+    const zeigt=wert||roh;
+    return `<article class="dat-karte${zeigt?"":" dat-fehlt"}">
+      <div class="dat-name">${esc(d.name)}</div>
+      <div class="dat-zeile2">
+        <span class="dat-wert${zeigt?"":" leer"}">${zeigt?esc(zeigt):"keine Angabe"}</span>
+        ${dl?`<span class="dat-delta ${dl.klasse}" aria-hidden="true" title="gegenüber ${esc(datDatum(DAT_ST.vorTag))}">${esc(dl.txt)}</span><span class="sr-only">, ${esc(dl.wort)} gegenüber ${esc(datDatum(DAT_ST.vorTag))}</span>`:""}
+      </div>
+      <p class="dat-erkl">${esc(d.erklaerung||"")}</p>
+      <div class="dat-fuss"><button class="btn small" data-dat-verlauf="${esc(d.schluessel)}">Verlauf</button>${isAdmin()?`<button class="btn small" data-dat-alle="${esc(d.schluessel)}">Alle Vereine</button>`:""}</div>
+    </article>`;};
+
+  let html="";
+  if(DAT_ST.sort==="reihe"){
+    const gr=[];
+    liste.forEach(d=>{if(!gr.length||gr[gr.length-1].g!==d.gruppe)gr.push({g:d.gruppe,k:[]});gr[gr.length-1].k.push(d);});
+    html=gr.map(g=>`<h3 class="dat-gruppe">${esc(g.g)}</h3><div class="dat-gitter">${g.k.map(karte).join("")}</div>`).join("");
+  }else{
+    const s=liste.slice();
+    if(DAT_ST.sort==="az")s.sort((a,b)=>a.name.localeCompare(b.name,"de"));
+    else s.sort((a,b)=>{
+      const da=jetzt[a.schluessel]?datDelta(jetzt[a.schluessel].zahl,(vor[a.schluessel]||{}).zahl,a.richtung,a.art,a.nachkomma):null;
+      const db=jetzt[b.schluessel]?datDelta(jetzt[b.schluessel].zahl,(vor[b.schluessel]||{}).zahl,b.richtung,b.art,b.nachkomma):null;
+      return (db?db.rel:-1)-(da?da.rel:-1);});
+    html=`<div class="dat-gitter">${s.map(karte).join("")}</div>`;}
+  box.innerHTML=liste.length?html:'<div class="msg info">Keine Kennzahl passt zu deiner Suche.</div>';
+  box.querySelectorAll("[data-dat-verlauf]").forEach(b=>b.onclick=()=>datVerlauf(b.dataset.datVerlauf));
+  box.querySelectorAll("[data-dat-alle]").forEach(b=>b.onclick=()=>datAlleVereine(b.dataset.datAlle));
+
+  const wer=isAdmin()?((DAT_VEREINE.find(v=>v.id===DAT_ST.verein)||{}).name||""):(state.verein||"dein Verein");
+  const fehlt=DAT_DEF.length-DAT_WERTE.length;
+  $("#datStand").textContent="Stichtag "+datDatum(DAT_ST.tag)+" · "+wer+" · "+DAT_WERTE.length+" von "+DAT_DEF.length+" Kennzahlen"
+    +(fehlt>0?(", "+fehlt+" ohne Angabe"):"")
+    +(DAT_ST.vorTag?(" · Veränderung gegenüber "+datDatum(DAT_ST.vorTag)):" · noch kein Vergleichsstichtag");
+  datHinweis(isAdmin()?"":"Du siehst ausschließlich die Zahlen deines Vereins, und nur lesend. Es gibt bewusst keinen Export. Jeder Aufruf wird protokolliert.");}
+
+async function datVerlauf(k){
+  const d=DAT_DEF.find(x=>x.schluessel===k);if(!d)return;
+  const ov=$("#ovDatVerlauf"),body=$("#datVlBody");
+  $("#datVlTitel").textContent="Verlauf: "+d.name;
+  body.innerHTML='<div class="msg info">Lade…</div>';openModal(ov);
+  const ziel=isAdmin()?(DAT_ST.verein||null):null;
+  const {data,error}=await supa.rpc("vd_verlauf",{p_schluessel:k,p_verein:ziel});
+  if(error){body.innerHTML='<div class="msg warn">'+esc(error.message)+'</div>';return;}
+  const rows=(data||[]).filter(r=>r.zahl!=null);
+  let sp="";
+  if(rows.length>1){
+    const zs=rows.map(r=>Number(r.zahl)),mi=Math.min(...zs),ma=Math.max(...zs),sp_=ma-mi||1;
+    const pts=zs.map((z,i)=>`${(i/(zs.length-1))*100},${48-((z-mi)/sp_)*44}`).join(" ");
+    sp=`<svg class="dat-spark" viewBox="0 0 100 52" preserveAspectRatio="none" role="img" aria-label="Verlaufslinie, ${rows.length} Stichtage von ${esc(datNum(mi,d.nachkomma))} bis ${esc(datNum(ma,d.nachkomma))}"><polyline points="${pts}" fill="none" stroke="var(--green)" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;}
+  body.innerHTML='<p class="dat-erkl" style="margin-bottom:10px">'+esc(d.erklaerung||"")+'</p>'+sp+
+    (data&&data.length?`<table class="dat-tab"><thead><tr><th scope="col">Stichtag</th><th scope="col">Wert</th><th scope="col">Veränderung</th></tr></thead><tbody>`+
+      data.map((r,i)=>{const v=i>0?datDelta(r.zahl,data[i-1].zahl,d.richtung,d.art,d.nachkomma):null;
+        return `<tr><td>${esc(datDatum(r.stichtag))}</td><td>${esc(datFmt(r.zahl,d.art,d.nachkomma,d.einheit)||r.wert||"keine Angabe")}</td><td>${v?`<span class="dat-delta ${v.klasse}">${esc(v.txt)}</span>`:"<span class=\"dat-delta gleich\">erster Wert</span>"}</td></tr>`;}).join("")
+      +`</tbody></table>`
+    :'<div class="msg info">Für diese Kennzahl liegt noch kein Wert vor.</div>');}
+
+async function datAlleVereine(k){
+  const d=DAT_DEF.find(x=>x.schluessel===k);if(!d)return;
+  const ov=$("#ovDatVergleich"),body=$("#datVgBody");
+  $("#datVgTitel").textContent=d.name+" · alle Vereine";
+  body.innerHTML='<div class="msg info">Lade…</div>';openModal(ov);
+  const {data,error}=await supa.rpc("vd_alle_vereine",{p_schluessel:k,p_stichtag:DAT_ST.tag});
+  if(error){body.innerHTML='<div class="msg warn">'+esc(error.message)+'</div>';return;}
+  const rows=(data||[]).slice().sort((a,b)=>(b.zahl==null?-Infinity:Number(b.zahl))-(a.zahl==null?-Infinity:Number(a.zahl)));
+  body.innerHTML='<p class="dat-erkl" style="margin-bottom:10px">'+esc(d.erklaerung||"")+' Stichtag '+esc(datDatum(DAT_ST.tag))+'.</p>'+
+    `<table class="dat-tab"><thead><tr><th scope="col">Verein</th><th scope="col">${esc(d.name)}</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${esc(r.verein)}</td><td>${r.zahl!=null?esc(datFmt(r.zahl,d.art,d.nachkomma,d.einheit)):'<span style="color:var(--muted)">keine Angabe</span>'}</td></tr>`).join("")+
+    `</tbody></table>`;}
+
+async function datGesamtAuf(){
+  const ov=$("#ovDatGesamt"),body=$("#datGsBody");
+  body.innerHTML='<div class="msg info">Lade…</div>';openModal(ov);
+  const {data,error}=await supa.rpc("vd_aggregat",{p_stichtag:DAT_ST.tag});
+  if(error){body.innerHTML='<div class="msg warn">'+esc(error.message)+'</div>';return;}
+  const rows=data||[];
+  if(!rows.length){body.innerHTML='<div class="msg info">Für diesen Stichtag liegen keine Kennzahlen vor.</div>';return;}
+  const z=(v,r)=>v==null?'<span style="color:var(--muted)">–</span>':esc(datFmt(v,r.art,r.nachkomma,r.einheit));
+  let html='<p class="dat-erkl" style="margin-bottom:10px">Stichtag '+esc(datDatum(rows[0].stichtag))+'. „Anzahl\" ist die Zahl der Vereine, die zu dieser Kennzahl einen Wert gemeldet haben. Bei Prozentwerten und Durchschnitten gibt es bewusst keine Summe, die wäre sinnlos.</p>';
+  let g=null;
+  rows.forEach(r=>{
+    if(r.gruppe!==g){if(g!==null)html+='</tbody></table>';g=r.gruppe;
+      html+=`<h3 class="dat-gruppe">${esc(g)}</h3><table class="dat-tab"><thead><tr><th scope="col">Kennzahl</th><th scope="col">Anzahl</th><th scope="col">Summe</th><th scope="col">Mittel</th><th scope="col">Median</th><th scope="col">Kleinstes</th><th scope="col">Größtes</th></tr></thead><tbody>`;}
+    html+=`<tr><td>${esc(r.name)}</td><td>${r.anzahl}</td><td>${z(r.summe,r)}</td><td>${z(r.mittel,r)}</td><td>${z(r.median,r)}</td><td>${z(r.kleinstes,r)}</td><td>${z(r.groesstes,r)}</td></tr>`;});
+  html+='</tbody></table>';
+  body.innerHTML=html;}
+
+/* ---- CSV einspielen, nur Admin ----
+   Der Export kommt mit \r\r\n und englischem Zahlenformat, fehlende Werte stehen als 'null'.
+   Der Stichtag steht nicht in der Datei, deshalb setzt ihn der Admin von Hand. */
+function datCsvLesen(text){
+  const zeilen=[];let feld="",zeile=[],inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){ if(c==='"'){ if(text[i+1]==='"'){feld+='"';i++;} else inQ=false; } else feld+=c; }
+    else if(c==='"')inQ=true;
+    else if(c===","){zeile.push(feld);feld="";}
+    else if(c==="\n"){zeile.push(feld);feld="";zeilen.push(zeile);zeile=[];}
+    else if(c!=="\r")feld+=c;}
+  if(feld!==""||zeile.length){zeile.push(feld);zeilen.push(zeile);}
+  return zeilen.filter(z=>z.some(x=>String(x).trim()!==""));}
+
+function datImportPruef(text){
+  const z=datCsvLesen(text);
+  if(z.length<2)return {fehler:"Die Datei enthält keine Datenzeilen."};
+  const kopf=z[0].map(x=>x.trim());
+  if(kopf[0].toLowerCase()!=="verein")return {fehler:"Die erste Spalte muss „verein\" heißen, gefunden: „"+kopf[0]+"\"."};
+  const bekannt=new Set(DAT_DEF.map(d=>d.schluessel));
+  const spalten=kopf.slice(1);
+  const unbekannt=spalten.filter(s=>!bekannt.has(s));
+  const fehlend=[...bekannt].filter(s=>!spalten.includes(s));
+  const zeilen=z.slice(1).map(r=>{
+    const w={};spalten.forEach((s,i)=>{if(bekannt.has(s))w[s]=(r[i+1]==null?"":String(r[i+1]).trim());});
+    return {verein:String(r[0]||"").trim(), werte:w};});
+  return {zeilen:zeilen, unbekannt:unbekannt, fehlend:fehlend, spalten:spalten.length};}
+
+function datImportAuf(){
+  DAT_IMP=null;
+  $("#datImPruef").innerHTML="";$("#datImBericht").innerHTML="";
+  const m=$("#datImMsg");m.textContent="";m.className="msg";
+  $("#datImGo").disabled=true;
+  $("#datImDatei").value="";
+  const h=new Date();$("#datImStichtag").value=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
+  datImTagPruefen();
+  openModal($("#ovDatImport"));}
+
+function datImportPruefen(){
+  const f=$("#datImDatei").files&&$("#datImDatei").files[0];
+  const box=$("#datImPruef");
+  if(!f){box.innerHTML="";DAT_IMP=null;$("#datImGo").disabled=true;return;}
+  const r=new FileReader();
+  r.onload=()=>{
+    const p=datImportPruef(String(r.result||""));
+    if(p.fehler){box.innerHTML='<div class="msg warn">'+esc(p.fehler)+'</div>';DAT_IMP=null;$("#datImGo").disabled=true;return;}
+    DAT_IMP=p;
+    let h='<div class="msg ok">'+p.zeilen.length+' Zeilen gelesen, '+p.spalten+' Kennzahlen-Spalten.</div>';
+    if(p.unbekannt.length)h+='<div class="msg warn">'+p.unbekannt.length+' Spalte(n) kennt die Anwendung nicht und überspringt sie: '+esc(p.unbekannt.join(", "))+'</div>';
+    if(p.fehlend.length)h+='<div class="msg warn">'+p.fehlend.length+' bekannte Kennzahl(en) fehlen in der Datei und werden für diesen Stichtag gelöscht: '+esc(p.fehlend.join(", "))+'</div>';
+    box.innerHTML=h;
+    $("#datImGo").disabled=false;};
+  r.readAsText(f,"utf-8");}
+
+async function datImportGo(){
+  if(!DAT_IMP)return;
+  const tag=$("#datImStichtag").value;
+  const m=$("#datImMsg");
+  if(!tag){m.className="msg warn";m.textContent="Bitte einen Stichtag setzen.";return;}
+  const b=$("#datImGo");b.disabled=true;
+  $("#datImBericht").innerHTML="";
+  /* In Haeppchen schicken. Ein Verein kostet rund 44 Verschluesselungen, alles auf einmal
+     kaeme dem Zeitlimit der Datenbank zu nahe. Nebenbei sieht der Admin, dass es vorangeht. */
+  const PAKET=20, alle=DAT_IMP.zeilen, rows=[];
+  try{
+    for(let i=0;i<alle.length;i+=PAKET){
+      const teil=alle.slice(i,i+PAKET);
+      m.className="msg info";
+      m.textContent="Spiele ein: "+Math.min(i+PAKET,alle.length)+" von "+alle.length+" Vereinen…";
+      const {data,error}=await supa.rpc("vd_import",{p_stichtag:tag,p_zeilen:teil});
+      if(error)throw error;
+      (data||[]).forEach(r=>rows.push(r));}
+    const ok=rows.filter(r=>r.status==="ok"),un=rows.filter(r=>r.status!=="ok");
+    const gesetzt=ok.reduce((s,r)=>s+(r.gesetzt||0),0);
+    m.className=un.length?"msg warn":"msg ok";
+    m.textContent=ok.length+" von "+rows.length+" Vereinen eingespielt, "+gesetzt+" Werte gespeichert, Stichtag "+datDatum(tag)+"."+(un.length?(" "+un.length+" Zeile(n) konnten keinem Verein zugeordnet werden."):"");
+    let h="";
+    if(un.length)h+='<div class="msg warn" style="margin-top:8px">Nicht zugeordnet, diese Zeilen wurden nicht gespeichert:<br>'+un.map(r=>esc(r.csv_name)).join(", ")+'<br>Lege den Verein unter „Adressen verwalten" an und spiele die Datei erneut ein.</div>';
+    h+='<div style="margin-top:10px;max-height:220px;overflow:auto">'+ok.map(r=>`<div class="dat-imp-zeile"><b>${esc(r.csv_name)}</b><span>${r.gesetzt} Werte</span>${r.geloescht?`<span style="color:var(--muted)">${r.geloescht} entfernt</span>`:""}</div>`).join("")+'</div>';
+    $("#datImBericht").innerHTML=h;
+    DAT_TAGE=null;DAT_ST.tag=tag;
+    announce("Kennzahlen eingespielt.");
+    await loadDat();
+  }catch(e){
+    console.error(e);
+    m.className="msg warn";
+    m.textContent=(e.message||"Das Einspielen ist fehlgeschlagen.")+(rows.length?(" Die ersten "+rows.length+" Vereine sind bereits gespeichert, ein erneuter Lauf mit derselben Datei schadet nicht."):"");}
+  b.disabled=false;}
+
+if($("#datStichtag"))$("#datStichtag").onchange=async e=>{DAT_ST.tag=e.target.value;await datWerteLaden();};
+if($("#datVerein"))$("#datVerein").onchange=async e=>{DAT_ST.verein=e.target.value;await datWerteLaden();};
+if($("#datQ"))$("#datQ").oninput=e=>{DAT_ST.q=e.target.value;renderDat();};
+if($("#datSort"))$("#datSort").onchange=e=>{DAT_ST.sort=e.target.value;renderDat();};
+if($("#datGesamt"))$("#datGesamt").onclick=datGesamtAuf;
+if($("#datImport"))$("#datImport").onclick=datImportAuf;
+function datImTagPruefen(){
+  const w=$("#datImTagWarn");if(!w)return;
+  const t=$("#datImStichtag").value;
+  const da=t&&DAT_TAGE&&DAT_TAGE.includes(t);
+  w.hidden=!da;
+  if(da)w.textContent="Zum "+datDatum(t)+" liegen bereits Kennzahlen vor. Ein Einspielen überschreibt sie. Ist das gewollt?";}
+if($("#datImDatei"))$("#datImDatei").onchange=datImportPruefen;
+if($("#datImStichtag"))$("#datImStichtag").onchange=datImTagPruefen;
+if($("#datImGo"))$("#datImGo").onclick=datImportGo;
+
 /* ---- Hilfe und Einfuehrung, rollenabhaengig in vier aufbauenden Stufen ----
    Stufe 0 Mitglied, 1 Ansprechperson, 2 Vorstand, 3 Admin. Jede Stufe sieht alles
    der darunterliegenden. Neue Rolle: HIER eintragen, nicht verstreuen. */
@@ -2568,9 +2960,10 @@ const HILFE_STUFEN=[
  {ab:1,t:"Der Vorstandsbereich",p:["Über „Vorstandsbereich öffnen\" kommst du in den geschützten Teil. Alles dort ist für Mitglieder unsichtbar. Oben siehst du jederzeit, als wer du angemeldet bist und welche Rolle du hast."]},
  {ab:1,t:"Anmelden",p:["Die Anmeldung läuft über den Magic Link an dein Rollen-Postfach, also die Adresse deines Vereins. Du bekommst eine E-Mail mit einem Link, ein Klick darauf meldet dich an. Ein Passwort brauchst du nicht.","Wichtig: Der Zugang hängt an der <b>Adresse</b>, nicht an dir persönlich. Wer das Postfach lesen kann, kommt rein. Wenn sich bei euch etwas ändert, sag dem Admin Bescheid, damit die Adresse angepasst wird."]},
  {ab:1,t:"Die Ebenen",p:["Oben im Vorstandsbereich stehen Reiter, das sind die Ebenen. Du siehst nur die Ebenen, für die du berechtigt bist. Mit den Pfeiltasten wechselst du zwischen ihnen.","Als Ansprechperson siehst du Stammtische, interne Stammtische und den Mitgliederabend. Vereinsdaten und Dokumente sind dem Vorstand vorbehalten."]},
- {ab:2,t:"Vereinsdaten",p:["Hier stehen die Kennzahlen deines Vereins mit Verlauf über die Stichtage, dazu Durchschnitte über alle Vereine zum Vergleich. Zu jeder Kennzahl gibt es eine Erklärung.","Du siehst ausschließlich die Zahlen deines eigenen Vereins, und nur lesend. Die Zahlen der anderen Vereine bekommst du nur als Durchschnitt, nie einzeln. Diese Ebene wird gerade gebaut."]},
+ {ab:2,t:"Vereinsdaten",p:["Hier stehen die Kennzahlen deines Vereins, geordnet nach Gruppen wie Mitglieder, Zahlungsverhalten oder Außenstände. Zu jeder Kennzahl gibt es eine Erklärung in verständlichen Worten, du musst nichts nachschlagen.","Oben wählst du den <b>Stichtag</b>. Liegt ein früherer Stichtag vor, steht neben jedem Wert die Veränderung, grün oder rot je nachdem, ob das für diese Kennzahl gut oder schlecht ist. Über „Verlauf\" siehst du alle Stichtage einer Kennzahl untereinander.","Du siehst ausschließlich die Zahlen deines eigenen Vereins, und nur lesend. Zahlen anderer Vereine bekommst du nicht, auch nicht als Durchschnitt. Es gibt bewusst keinen Export-Knopf. Ehrlich dazu: Ein Bildschirmfoto lässt sich technisch nicht verhindern. Belastbar ist das Zugriffsprotokoll, nicht die Sperre."]},
  {ab:2,t:"Dokumente",p:["Die Unterlagen deines Vereins, dazu die gemeinsamen Vorlagen für alle Vorstände. Über „Unterlage hochladen\" legst du eine PDF ab, ein Klick auf „Ansehen\" zeigt sie Seite für Seite.","Unterschreiben geht direkt hier: „Jetzt unterschreiben\", dann mit dem Finger oder der Maus zeichnen oder ein Bild deiner Unterschrift hochladen, auf die Stelle tippen, Breite einstellen, fertig. Die Unterschrift steht danach fest in der PDF. Es entsteht eine <b>neue Fassung</b>, die alte bleibt über „Fassungen\" erreichbar.","Unterschreibst du eine gemeinsame Vorlage, bekommst du eine eigene Unterlage für deinen Verein. Die Vorlage selbst bleibt für alle anderen unverändert.","Ein Herunterladen ist nicht vorgesehen, die Unterlagen sollen hier bleiben. Jedes Ansehen und jede Unterschrift wird protokolliert."]},
  {ab:3,t:"Unterlagen als Admin",p:["Du siehst die Unterlagen aller Vereine und darfst in jeden Verein hochladen. Nur du kannst <b>gemeinsame</b> Unterlagen anlegen, also Vorlagen, die bei allen 180 Vorständen auftauchen. Ein einzelner Verein kann das nicht.","Herunterladen kannst nur du. Ein Vorstand sieht seine Unterlagen, bekommt aber keinen Speichern-Knopf."]},
+ {ab:3,t:"Vereinsdaten als Admin",p:["Über „Kennzahlen einspielen\" lädst du die CSV aus dem Vereinssystem hoch, eine Zeile je Verein. Die Datei hat keinen Stichtag, den setzt du beim Hochladen. Vereine, die die Anwendung nicht kennt, werden gemeldet und nicht stillschweigend verschluckt.","Ein Wert, der in der Datei als <code>null</code> steht, gilt als „keine Angabe\" und wird nicht als Null gespeichert. Das ist ein Unterschied: Null heißt null Euro, keine Angabe heißt unbekannt.","Du wählst oben einen beliebigen Verein und siehst dessen Zahlen. Unter „Gesamtübersicht\" stehen Summe, Mittel, Median, Kleinstes und Größtes über alle Vereine, „Alle Vereine\" zeigt eine einzelne Kennzahl für alle Vereine nebeneinander. Das sieht nur der Admin, kein Vorstand."]},
  {ab:3,t:"Aufnahmen einspielen",p:["Über „Neue Aufnahme\" lädst du Audio und Folien hoch. Der Assistent legt den Auftrag in die Warteschlange, die Verarbeitung läuft danach auf Andres Rechner: Transkript, Sprechertrennung, Zusammenfassung.","Achte auf die Ebene, in der du gerade bist. Der Assistent legt die Aufnahme genau dort ab."]},
  {ab:3,t:"Verwaltung",p:["Unter „Status & Warteschlange\" siehst du, was gerade verarbeitet wird. „Pflege\" korrigiert Namen und Themen, „Sicherung & Export\" zieht eine Kopie, „Aufbewahrung\" markiert alte Sitzungen zur Prüfung, löscht aber nichts.","„Termine verwalten\" pflegt die Termine je Ebene, etwa den Mitgliederabend am Donnerstag."]},
  {ab:3,t:"Adressen und Admins",p:["„Adressen verwalten\" bestimmt, wer überhaupt in den Vorstandsbereich kommt. Vorstand sieht alle fünf Ebenen, Ansprechperson sieht die drei Ebenen ohne Vereinsdaten und Dokumente. Wer dort nicht steht, kommt nicht rein.","Sperren ist zurücknehmbar und meistens die bessere Wahl als Löschen. Unter „Admins verwalten\" kommen weitere Admins dazu. Der letzte aktive Admin lässt sich nicht entfernen, damit sich niemand aussperrt."]},
@@ -2592,7 +2985,7 @@ const INTRO={
  vorstand:[
   {t:"Willkommen im Vorstandsbereich",p:["Du bist als Vorstand deines Vereins angemeldet und siehst alle fünf Ebenen.","Wichtig: Der Zugang hängt an der Adresse deines Vereins, nicht an dir persönlich. Wer das Postfach lesen kann, bekommt den Magic Link und kommt rein. Wenn sich bei euch im Vorstand etwas ändert, ist das eine Sache des Postfachs, nicht der Software."]},
   {t:"Die fünf Ebenen",p:["Oben stehen Reiter: <b>Stammtische</b>, <b>Interne Stammtische</b>, <b>Mitgliederabend</b>, <b>Vereinsdaten</b> und <b>Dokumente</b>. Mit den Pfeiltasten wechselst du zwischen ihnen.","Manche Funktionen kommen in mehreren Ebenen doppelt vor. Das ist Absicht und soll dir Wege sparen."]},
-  {t:"Vereinsdaten",p:["Hier stehen die Kennzahlen deines Vereins mit Verlauf über die Stichtage. Zum Vergleich siehst du Durchschnitte über alle Vereine, aber nie die Einzelzahlen eines anderen Vereins.","Du siehst nur deinen eigenen Verein, und nur lesend. Es gibt bewusst keinen Export-Knopf. Ehrlich dazu: Ein Bildschirmfoto lässt sich technisch nicht verhindern. Belastbar ist das Zugriffsprotokoll, nicht die Sperre. Diese Ebene wird gerade gebaut."]},
+  {t:"Vereinsdaten",p:["Hier stehen die Kennzahlen deines Vereins mit Verlauf über die Stichtage. Zu jeder Zahl gehört eine Erklärung, und neben dem Wert steht, wie er sich seit dem letzten Stichtag verändert hat.","Du siehst nur deinen eigenen Verein, und nur lesend. Zahlen anderer Vereine bekommst du nicht. Es gibt bewusst keinen Export-Knopf. Ehrlich dazu: Ein Bildschirmfoto lässt sich technisch nicht verhindern. Belastbar ist das Zugriffsprotokoll, nicht die Sperre."]},
   {t:"Dokumente",p:["Die Unterlagen deines Vereins, dazu gemeinsame Vorlagen für alle Vorstände. Hochladen, ansehen und unterschreiben geht direkt hier, ohne Umweg über den Rechner.","Unterschreiben: zeichnen mit dem Finger oder der Maus, oder ein Bild deiner Unterschrift hochladen, dann auf die Stelle tippen. Die Unterschrift steht danach fest in der PDF. Es entsteht eine <b>neue Fassung</b>, die alte bleibt erhalten.","Ein Herunterladen ist nicht vorgesehen. Jedes Ansehen und jede Unterschrift wird protokolliert.",'<span class="msg info">Die ausführliche Anleitung findest du jederzeit unter „Hilfe".</span>']}],
  admin:[
   {t:"Du bist Admin",p:["Als Admin siehst du alle Ebenen aller Vereine und darfst alles verwalten. Das ist die weitreichendste Rolle im Archiv, geh entsprechend sorgsam damit um."]},
