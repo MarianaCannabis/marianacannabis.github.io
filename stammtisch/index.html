@@ -463,6 +463,7 @@
     <div class="field" style="flex:0 1 190px"><label for="datSort">Sortierung</label><select id="datSort"><option value="reihe">Nach Gruppen</option><option value="az">Name A–Z</option><option value="delta">Stärkste Veränderung</option></select></div>
     <div class="dat-knoepfe">
       <button class="btn" id="datGesamt" hidden>Gesamtübersicht</button>
+      <button class="btn" id="datVerw" hidden>Kennzahlen verwalten</button>
       <button class="btn primary" id="datImport" hidden>Kennzahlen einspielen</button>
     </div>
   </div>
@@ -495,6 +496,50 @@
   </aside>
   <section class="detail" id="detail" tabindex="-1" aria-label="Stammtisch-Details"><div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Lade Daten…</p></div></section>
 </main>
+
+<div class="overlay" id="ovDatVerw" hidden role="dialog" aria-modal="true" aria-labelledby="datVwTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="datVwTitel">Kennzahlen verwalten</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <div class="gp-tools">
+      <button class="btn primary" id="datVwNeu">Neue Kennzahl</button>
+      <span class="msg info" id="datVwZahl"></span>
+    </div>
+    <div class="msg" id="datVwMsg" role="status" hidden style="margin-bottom:10px"></div>
+    <h4 class="dat-gruppe" style="margin-top:4px">Kennzahlen</h4>
+    <div id="datVwListe"><div class="msg info">Lade…</div></div>
+    <h4 class="dat-gruppe">Stichtage</h4>
+    <p class="dat-erkl" style="margin-bottom:8px">Ein Stichtag ist eine ganze Erhebung. Löschen entfernt die Zahlen aller Vereine zu diesem Datum und lässt sich nicht rückgängig machen.</p>
+    <div id="datVwTage"><div class="msg info">Lade…</div></div>
+  </div>
+  <div class="modal-foot"><span class="msg info">Nur für Admins. Änderungen wirken sofort für alle Vorstände.</span><button class="btn" data-close>Schließen</button></div></div></div>
+
+<div class="overlay" id="ovDatKz" hidden role="dialog" aria-modal="true" aria-labelledby="datKzTitel"><div class="modal">
+  <div class="modal-head"><h3 id="datKzTitel">Kennzahl ändern</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <div class="field"><label for="datKzSchluessel">Spaltenname in der CSV</label><input id="datKzSchluessel" autocomplete="off" placeholder="z. B. aktive_mitglieder">
+      <span class="msg info" id="datKzSchlHint" style="display:block;margin-top:4px">Muss genau so heißen wie die Spalte in der Datei. Nur Kleinbuchstaben, Ziffern und Unterstrich.</span></div>
+    <div class="field"><label for="datKzName">Anzeigename</label><input id="datKzName" autocomplete="off" placeholder="z. B. Aktive Mitglieder"></div>
+    <div class="field"><label for="datKzErkl">Erklärung für die Vorstände</label><textarea id="datKzErkl" rows="4" placeholder="In verständlichen Worten: was steht hier, und was heißt die Zahl?"></textarea>
+      <span class="msg info" style="display:block;margin-top:4px">Diesen Text lesen alle Vorstände. Ohne Erklärung lässt sich die Kennzahl nicht speichern.</span></div>
+    <div class="dat-kopf" style="margin-bottom:0">
+      <div class="field" style="flex:1 1 150px"><label for="datKzGruppe">Gruppe</label><input id="datKzGruppe" list="datKzGruppen" autocomplete="off"><datalist id="datKzGruppen"></datalist></div>
+      <div class="field" style="flex:0 1 110px"><label for="datKzReihe">Reihenfolge</label><input id="datKzReihe" type="number" step="10"></div>
+    </div>
+    <div class="dat-kopf" style="margin-bottom:0">
+      <div class="field" style="flex:0 1 130px"><label for="datKzArt">Art</label><select id="datKzArt">
+        <option value="zahl">Zahl</option><option value="geld">Geld, mit €</option><option value="prozent">Prozent, mit %</option><option value="text">Text</option></select></div>
+      <div class="field" style="flex:0 1 110px"><label for="datKzEinheit">Einheit</label><input id="datKzEinheit" autocomplete="off" placeholder="z. B. T"></div>
+      <div class="field" style="flex:0 1 110px"><label for="datKzNk">Nachkommastellen</label><input id="datKzNk" type="number" min="0" max="4"></div>
+    </div>
+    <div class="field"><label for="datKzRichtung">Was ist gut?</label><select id="datKzRichtung">
+      <option value="hoch_gut">mehr ist gut, steigend wird grün</option>
+      <option value="runter_gut">weniger ist gut, fallend wird grün</option>
+      <option value="neutral">weder noch, Veränderung bleibt grau</option></select></div>
+    <label class="toggle"><input type="checkbox" id="datKzSumme"> Eine Summe über alle Vereine ist sinnvoll</label>
+    <label class="toggle"><input type="checkbox" id="datKzAktiv"> Wird angezeigt und beim Einspielen übernommen</label>
+    <div class="msg" id="datKzMsg" role="status" style="margin-top:8px"></div>
+  </div>
+  <div class="modal-foot"><button class="btn" id="datKzWeg" style="margin-right:auto">Löschen</button><button class="btn" data-close>Abbrechen</button><button class="btn primary" id="datKzSpeichern">Speichern</button></div></div></div>
 
 <div class="overlay" id="ovDatVerlauf" hidden role="dialog" aria-modal="true" aria-labelledby="datVlTitel"><div class="modal">
   <div class="modal-head"><h3 id="datVlTitel">Verlauf</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -906,7 +951,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-17-1";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-17-2";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -2700,6 +2745,7 @@ async function loadDat(){
   datMelde("");datHinweis("");
   const box=$("#datListe");if(box)box.innerHTML='<div class="msg info">Lade…</div>';
   $("#datGesamt").hidden=!isAdmin();
+  $("#datVerw").hidden=!isAdmin();
   $("#datImport").hidden=!isAdmin();
   $("#datVereinBox").hidden=!isAdmin();
   if(!await datStammLaden()){if(box)box.innerHTML='<div class="msg warn">Die Kennzahlen sind gerade nicht erreichbar.</div>';return;}
@@ -2894,9 +2940,11 @@ function datImportPruefen(){
     if(p.fehler){box.innerHTML='<div class="msg warn">'+esc(p.fehler)+'</div>';DAT_IMP=null;$("#datImGo").disabled=true;return;}
     DAT_IMP=p;
     let h='<div class="msg ok">'+p.zeilen.length+' Zeilen gelesen, '+p.spalten+' Kennzahlen-Spalten.</div>';
-    if(p.unbekannt.length)h+='<div class="msg warn">'+p.unbekannt.length+' Spalte(n) kennt die Anwendung nicht und überspringt sie: '+esc(p.unbekannt.join(", "))+'</div>';
+    if(p.unbekannt.length)h+='<div class="msg warn">'+p.unbekannt.length+' Spalte(n) kennt die Anwendung noch nicht. Sie werden übersprungen, bis du sie anlegst:</div>'
+      +p.unbekannt.map(s=>`<div class="dat-imp-zeile"><b>${esc(s)}</b><button class="btn small" data-neu-kz="${esc(s)}">Anlegen</button></div>`).join("");
     if(p.fehlend.length)h+='<div class="msg warn">'+p.fehlend.length+' bekannte Kennzahl(en) fehlen in der Datei und werden für diesen Stichtag gelöscht: '+esc(p.fehlend.join(", "))+'</div>';
     box.innerHTML=h;
+    box.querySelectorAll("[data-neu-kz]").forEach(b=>b.onclick=()=>datKzAuf(null,b.dataset.neuKz));
     $("#datImGo").disabled=false;};
   r.readAsText(f,"utf-8");}
 
@@ -2935,6 +2983,129 @@ async function datImportGo(){
     m.textContent=(e.message||"Das Einspielen ist fehlgeschlagen.")+(rows.length?(" Die ersten "+rows.length+" Vereine sind bereits gespeichert, ein erneuter Lauf mit derselben Datei schadet nicht."):"");}
   b.disabled=false;}
 
+/* ---- Kennzahlen und Stichtage verwalten, nur Admin ----
+   kennzahlen_def darf der Admin per RLS direkt schreiben (kzd_admin), dafuer braucht es
+   keine eigene Funktion. Die Werte selbst sind unerreichbar, Stichtag loeschen laeuft
+   deshalb ueber vd_stichtag_loeschen. */
+let DAT_KZ_ALT=null;
+
+function datVwMelde(t,art){const m=$("#datVwMsg");if(!m)return;m.className="msg "+(art||"ok");m.textContent=t||"";m.hidden=!t;}
+
+async function datVwAuf(){
+  datVwMelde("");
+  openModal($("#ovDatVerw"));
+  await datVwListe();
+  await datVwTage();}
+
+async function datVwListe(){
+  const box=$("#datVwListe");
+  const {data,error}=await supa.from("kennzahlen_def").select("*").order("reihenfolge");
+  if(error){box.innerHTML='<div class="msg warn">'+esc(error.message)+'</div>';return;}
+  const alle=data||[];
+  DAT_DEF=alle.filter(d=>d.aktiv);
+  $("#datVwZahl").textContent=alle.length+" Kennzahlen, davon "+DAT_DEF.length+" sichtbar";
+  const gr=[...new Set(alle.map(d=>d.gruppe))];
+  $("#datKzGruppen").innerHTML=gr.map(g=>`<option value="${esc(g)}"></option>`).join("");
+  box.innerHTML=alle.length?(`<table class="dat-tab"><thead><tr><th scope="col">Kennzahl</th><th scope="col">Gruppe</th><th scope="col">Art</th><th scope="col">Sichtbar</th><th scope="col"></th></tr></thead><tbody>`+
+    alle.map(d=>`<tr><td><b>${esc(d.name)}</b><br><span style="color:var(--muted);font-size:11.5px">${esc(d.schluessel)}</span></td>
+      <td>${esc(d.gruppe)}</td><td>${esc(d.art)}${d.einheit?(" "+esc(d.einheit)):""}</td>
+      <td>${d.aktiv?"ja":'<span style="color:var(--muted)">ausgeblendet</span>'}</td>
+      <td><button class="btn small" data-kz="${esc(d.schluessel)}">Ändern</button></td></tr>`).join("")+`</tbody></table>`)
+    :'<div class="msg info">Noch keine Kennzahlen angelegt.</div>';
+  box.querySelectorAll("[data-kz]").forEach(b=>b.onclick=()=>datKzAuf(alle.find(x=>x.schluessel===b.dataset.kz)));}
+
+async function datVwTage(){
+  const box=$("#datVwTage");
+  const {data,error}=await supa.rpc("vd_stichtag_uebersicht");
+  if(error){box.innerHTML='<div class="msg warn">'+esc(error.message)+'</div>';return;}
+  const t=data||[];
+  box.innerHTML=t.length?(`<table class="dat-tab"><thead><tr><th scope="col">Stichtag</th><th scope="col">Vereine</th><th scope="col">Werte</th><th scope="col">Eingespielt von</th><th scope="col"></th></tr></thead><tbody>`+
+    t.map(r=>`<tr><td><b>${esc(datDatum(r.stichtag))}</b></td><td>${r.vereine}</td><td>${r.werte}</td>
+      <td style="text-align:left;font-size:11.5px;color:var(--muted)">${esc(r.erfasst_von||"")}<br>${esc(datDatum(r.erfasst_am))}</td>
+      <td><button class="btn small" data-tag="${esc(r.stichtag)}" data-n="${r.werte}" data-v="${r.vereine}">Löschen</button></td></tr>`).join("")+`</tbody></table>`)
+    :'<div class="msg info">Noch kein Stichtag eingespielt.</div>';
+  box.querySelectorAll("[data-tag]").forEach(b=>b.onclick=()=>datTagWeg(b.dataset.tag,b.dataset.n,b.dataset.v));}
+
+async function datTagWeg(tag,n,v){
+  if(!confirm("Stichtag "+datDatum(tag)+" wirklich löschen?\n\n"+n+" Werte von "+v+" Vereinen werden entfernt. Das lässt sich nicht rückgängig machen."))return;
+  const {data,error}=await supa.rpc("vd_stichtag_loeschen",{p_stichtag:tag});
+  if(error){datVwMelde(error.message,"warn");return;}
+  datVwMelde("Stichtag "+datDatum(tag)+" gelöscht, "+data+" Werte entfernt.","ok");
+  announce("Stichtag gelöscht.");
+  DAT_TAGE=null;if(DAT_ST.tag===tag)DAT_ST.tag=null;
+  await datVwTage();
+  await loadDat();}
+
+function datKzWort(s){const t=String(s||"").replace(/_/g," ").trim();return t?t[0].toUpperCase()+t.slice(1):"";}
+function datKzAuf(d,vorschlag){
+  DAT_KZ_ALT=d||null;
+  const neu=!d;
+  $("#datKzTitel").textContent=neu?"Neue Kennzahl":"Kennzahl ändern";
+  $("#datKzSchluessel").value=d?d.schluessel:(vorschlag||"");
+  $("#datKzSchluessel").disabled=!neu;
+  $("#datKzSchlHint").textContent=neu?"Muss genau so heißen wie die Spalte in der Datei. Nur Kleinbuchstaben, Ziffern und Unterstrich."
+    :"Der Spaltenname liegt fest, sonst würden die bisherigen Werte verwaisen.";
+  $("#datKzName").value=d?d.name:(vorschlag?datKzWort(vorschlag):"");
+  $("#datKzErkl").value=d?(d.erklaerung||""):"";
+  $("#datKzGruppe").value=d?d.gruppe:"";
+  $("#datKzReihe").value=d?d.reihenfolge:((DAT_DEF.length?Math.max(...DAT_DEF.map(x=>x.reihenfolge)):0)+10);
+  $("#datKzArt").value=d?d.art:"zahl";
+  $("#datKzEinheit").value=d?(d.einheit||""):"";
+  $("#datKzNk").value=d?d.nachkomma:0;
+  $("#datKzRichtung").value=d?d.richtung:"neutral";
+  $("#datKzSumme").checked=d?!!d.summierbar:true;
+  $("#datKzAktiv").checked=d?!!d.aktiv:true;
+  $("#datKzWeg").hidden=neu;
+  const m=$("#datKzMsg");m.textContent="";m.className="msg";
+  openModal($("#ovDatKz"));}
+
+async function datKzSpeichern(){
+  const m=$("#datKzMsg");
+  const s=$("#datKzSchluessel").value.trim().toLowerCase();
+  const name=$("#datKzName").value.trim();
+  const erkl=$("#datKzErkl").value.trim();
+  const gruppe=$("#datKzGruppe").value.trim();
+  if(!/^[a-z0-9_]+$/.test(s)){m.className="msg warn";m.textContent="Der Spaltenname darf nur Kleinbuchstaben, Ziffern und Unterstrich enthalten.";return;}
+  if(!name){m.className="msg warn";m.textContent="Der Anzeigename fehlt.";return;}
+  if(!erkl){m.className="msg warn";m.textContent="Die Erklärung fehlt. Sie ist das Kernstück, ohne sie weiß kein Vorstand, was er sieht.";return;}
+  if(!gruppe){m.className="msg warn";m.textContent="Die Gruppe fehlt.";return;}
+  const zeile={schluessel:s, name:name, erklaerung:erkl, gruppe:gruppe,
+    einheit:$("#datKzEinheit").value.trim(), art:$("#datKzArt").value,
+    nachkomma:parseInt($("#datKzNk").value,10)||0, richtung:$("#datKzRichtung").value,
+    reihenfolge:parseInt($("#datKzReihe").value,10)||0,
+    summierbar:$("#datKzSumme").checked, aktiv:$("#datKzAktiv").checked};
+  m.className="msg info";m.textContent="Speichere…";
+  const {error}=await supa.from("kennzahlen_def").upsert(zeile,{onConflict:"schluessel"});
+  if(error){m.className="msg warn";m.textContent=error.message;return;}
+  closeModal($("#ovDatKz"));
+  datVwMelde((DAT_KZ_ALT?"Kennzahl geändert: ":"Kennzahl angelegt: ")+name,"ok");
+  announce(DAT_KZ_ALT?"Kennzahl geändert.":"Kennzahl angelegt.");
+  DAT_DEF=null;await datStammLaden();
+  if(!$("#ovDatVerw").hidden)await datVwListe();
+  if(!$("#ovDatImport").hidden)datImportPruefen();
+  if(DAT_WERTE)await datWerteLaden();}
+
+async function datKzWeg(){
+  if(!DAT_KZ_ALT)return;
+  const m=$("#datKzMsg");
+  const {data,error}=await supa.rpc("vd_kennzahl_belegt",{p_schluessel:DAT_KZ_ALT.schluessel});
+  if(error){m.className="msg warn";m.textContent=error.message;return;}
+  if(data>0){
+    m.className="msg warn";
+    m.textContent="Diese Kennzahl hat "+data+" gespeicherte Werte und lässt sich deshalb nicht löschen. Nimm den Haken bei „Wird angezeigt\" weg, dann verschwindet sie aus der Anzeige und die Werte bleiben erhalten.";
+    return;}
+  if(!confirm("Kennzahl „"+DAT_KZ_ALT.name+"\" wirklich löschen?\n\nSie hat keine gespeicherten Werte, es geht also nichts verloren."))return;
+  const r=await supa.from("kennzahlen_def").delete().eq("schluessel",DAT_KZ_ALT.schluessel);
+  if(r.error){m.className="msg warn";m.textContent=r.error.message;return;}
+  closeModal($("#ovDatKz"));
+  datVwMelde("Kennzahl gelöscht: "+DAT_KZ_ALT.name,"ok");
+  await datVwListe();}
+
+if($("#datVerw"))$("#datVerw").onclick=datVwAuf;
+if($("#datVwNeu"))$("#datVwNeu").onclick=()=>datKzAuf(null);
+if($("#datKzSpeichern"))$("#datKzSpeichern").onclick=datKzSpeichern;
+if($("#datKzWeg"))$("#datKzWeg").onclick=datKzWeg;
+
 if($("#datStichtag"))$("#datStichtag").onchange=async e=>{DAT_ST.tag=e.target.value;await datWerteLaden();};
 if($("#datVerein"))$("#datVerein").onchange=async e=>{DAT_ST.verein=e.target.value;await datWerteLaden();};
 if($("#datQ"))$("#datQ").oninput=e=>{DAT_ST.q=e.target.value;renderDat();};
@@ -2963,7 +3134,7 @@ const HILFE_STUFEN=[
  {ab:2,t:"Vereinsdaten",p:["Hier stehen die Kennzahlen deines Vereins, geordnet nach Gruppen wie Mitglieder, Zahlungsverhalten oder Außenstände. Zu jeder Kennzahl gibt es eine Erklärung in verständlichen Worten, du musst nichts nachschlagen.","Oben wählst du den <b>Stichtag</b>. Liegt ein früherer Stichtag vor, steht neben jedem Wert die Veränderung, grün oder rot je nachdem, ob das für diese Kennzahl gut oder schlecht ist. Über „Verlauf\" siehst du alle Stichtage einer Kennzahl untereinander.","Du siehst ausschließlich die Zahlen deines eigenen Vereins, und nur lesend. Zahlen anderer Vereine bekommst du nicht, auch nicht als Durchschnitt. Es gibt bewusst keinen Export-Knopf. Ehrlich dazu: Ein Bildschirmfoto lässt sich technisch nicht verhindern. Belastbar ist das Zugriffsprotokoll, nicht die Sperre."]},
  {ab:2,t:"Dokumente",p:["Die Unterlagen deines Vereins, dazu die gemeinsamen Vorlagen für alle Vorstände. Über „Unterlage hochladen\" legst du eine PDF ab, ein Klick auf „Ansehen\" zeigt sie Seite für Seite.","Unterschreiben geht direkt hier: „Jetzt unterschreiben\", dann mit dem Finger oder der Maus zeichnen oder ein Bild deiner Unterschrift hochladen, auf die Stelle tippen, Breite einstellen, fertig. Die Unterschrift steht danach fest in der PDF. Es entsteht eine <b>neue Fassung</b>, die alte bleibt über „Fassungen\" erreichbar.","Unterschreibst du eine gemeinsame Vorlage, bekommst du eine eigene Unterlage für deinen Verein. Die Vorlage selbst bleibt für alle anderen unverändert.","Ein Herunterladen ist nicht vorgesehen, die Unterlagen sollen hier bleiben. Jedes Ansehen und jede Unterschrift wird protokolliert."]},
  {ab:3,t:"Unterlagen als Admin",p:["Du siehst die Unterlagen aller Vereine und darfst in jeden Verein hochladen. Nur du kannst <b>gemeinsame</b> Unterlagen anlegen, also Vorlagen, die bei allen 180 Vorständen auftauchen. Ein einzelner Verein kann das nicht.","Herunterladen kannst nur du. Ein Vorstand sieht seine Unterlagen, bekommt aber keinen Speichern-Knopf."]},
- {ab:3,t:"Vereinsdaten als Admin",p:["Über „Kennzahlen einspielen\" lädst du die CSV aus dem Vereinssystem hoch, eine Zeile je Verein. Die Datei hat keinen Stichtag, den setzt du beim Hochladen. Vereine, die die Anwendung nicht kennt, werden gemeldet und nicht stillschweigend verschluckt.","Ein Wert, der in der Datei als <code>null</code> steht, gilt als „keine Angabe\" und wird nicht als Null gespeichert. Das ist ein Unterschied: Null heißt null Euro, keine Angabe heißt unbekannt.","Du wählst oben einen beliebigen Verein und siehst dessen Zahlen. Unter „Gesamtübersicht\" stehen Summe, Mittel, Median, Kleinstes und Größtes über alle Vereine, „Alle Vereine\" zeigt eine einzelne Kennzahl für alle Vereine nebeneinander. Das sieht nur der Admin, kein Vorstand."]},
+ {ab:3,t:"Vereinsdaten als Admin",p:["Über „Kennzahlen einspielen\" lädst du die CSV aus dem Vereinssystem hoch, eine Zeile je Verein. Die Datei hat keinen Stichtag, den setzt du beim Hochladen. Vereine, die die Anwendung nicht kennt, werden gemeldet und nicht stillschweigend verschluckt.","Ein Wert, der in der Datei als <code>null</code> steht, gilt als „keine Angabe\" und wird nicht als Null gespeichert. Das ist ein Unterschied: Null heißt null Euro, keine Angabe heißt unbekannt.","Du wählst oben einen beliebigen Verein und siehst dessen Zahlen. Unter „Gesamtübersicht\" stehen Summe, Mittel, Median, Kleinstes und Größtes über alle Vereine, „Alle Vereine\" zeigt eine einzelne Kennzahl für alle Vereine nebeneinander. Das sieht nur der Admin, kein Vorstand.","Unter „Kennzahlen verwalten\" gehören dir die Kennzahlen selbst: Anzeigename und Erklärung ändern, Gruppe und Reihenfolge setzen, festlegen ob steigend grün oder rot ist. Kommt in einer künftigen Datei eine neue Spalte dazu, meldet der Einspiel-Dialog sie und du legst sie mit einem Klick an. Eine Kennzahl mit gespeicherten Werten lässt sich nicht löschen, nur ausblenden, damit die Verläufe heil bleiben.","Im selben Dialog stehen unten die <b>Stichtage</b>. Falsches Datum erwischt oder die falsche Datei genommen? Dort wirfst du die ganze Erhebung wieder weg."]},
  {ab:3,t:"Aufnahmen einspielen",p:["Über „Neue Aufnahme\" lädst du Audio und Folien hoch. Der Assistent legt den Auftrag in die Warteschlange, die Verarbeitung läuft danach auf Andres Rechner: Transkript, Sprechertrennung, Zusammenfassung.","Achte auf die Ebene, in der du gerade bist. Der Assistent legt die Aufnahme genau dort ab."]},
  {ab:3,t:"Verwaltung",p:["Unter „Status & Warteschlange\" siehst du, was gerade verarbeitet wird. „Pflege\" korrigiert Namen und Themen, „Sicherung & Export\" zieht eine Kopie, „Aufbewahrung\" markiert alte Sitzungen zur Prüfung, löscht aber nichts.","„Termine verwalten\" pflegt die Termine je Ebene, etwa den Mitgliederabend am Donnerstag."]},
  {ab:3,t:"Adressen und Admins",p:["„Adressen verwalten\" bestimmt, wer überhaupt in den Vorstandsbereich kommt. Vorstand sieht alle fünf Ebenen, Ansprechperson sieht die drei Ebenen ohne Vereinsdaten und Dokumente. Wer dort nicht steht, kommt nicht rein.","Sperren ist zurücknehmbar und meistens die bessere Wahl als Löschen. Unter „Admins verwalten\" kommen weitere Admins dazu. Der letzte aktive Admin lässt sich nicht entfernen, damit sich niemand aussperrt."]},
