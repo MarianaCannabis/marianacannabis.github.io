@@ -951,7 +951,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-17-2";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-17-3";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -2920,24 +2920,46 @@ function datImportPruef(text){
     return {verein:String(r[0]||"").trim(), werte:w};});
   return {zeilen:zeilen, unbekannt:unbekannt, fehlend:fehlend, spalten:spalten.length};}
 
+function datDatumAusName(name){
+  const s=String(name||"");
+  const bau=(j,m,t)=>{
+    j=+j;m=+m;t=+t;
+    if(m<1||m>12||t<1||t>31||j<2020||j>2100)return null;
+    const d=new Date(Date.UTC(j,m-1,t));
+    if(d.getUTCFullYear()!==j||d.getUTCMonth()!==m-1||d.getUTCDate()!==t)return null;
+    return j+"-"+String(m).padStart(2,"0")+"-"+String(t).padStart(2,"0");};
+  let m;
+  if((m=s.match(/(20\d{2})[-_.](\d{1,2})[-_.](\d{1,2})/)))return bau(m[1],m[2],m[3]);
+  if((m=s.match(/(\d{1,2})[-_.](\d{1,2})[-_.](20\d{2})/)))return bau(m[3],m[2],m[1]);
+  if((m=s.match(/(20\d{2})(\d{2})(\d{2})/)))return bau(m[1],m[2],m[3]);
+  return null;}
+
+function datImBereit(){
+  const b=$("#datImGo");if(!b)return;
+  b.disabled=!(DAT_IMP&&$("#datImStichtag").value);}
+
 function datImportAuf(){
   DAT_IMP=null;
   $("#datImPruef").innerHTML="";$("#datImBericht").innerHTML="";
   const m=$("#datImMsg");m.textContent="";m.className="msg";
   $("#datImGo").disabled=true;
   $("#datImDatei").value="";
-  const h=new Date();$("#datImStichtag").value=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
+  $("#datImStichtag").value="";
   datImTagPruefen();
   openModal($("#ovDatImport"));}
 
 function datImportPruefen(){
   const f=$("#datImDatei").files&&$("#datImDatei").files[0];
   const box=$("#datImPruef");
-  if(!f){box.innerHTML="";DAT_IMP=null;$("#datImGo").disabled=true;return;}
+  if(!f){box.innerHTML="";DAT_IMP=null;datImBereit();return;}
+  if(!$("#datImStichtag").value){
+    const d=datDatumAusName(f.name);
+    if(d){$("#datImStichtag").value=d;announce("Stichtag "+datDatum(d)+" aus dem Dateinamen übernommen.");}}
+  datImTagPruefen();
   const r=new FileReader();
   r.onload=()=>{
     const p=datImportPruef(String(r.result||""));
-    if(p.fehler){box.innerHTML='<div class="msg warn">'+esc(p.fehler)+'</div>';DAT_IMP=null;$("#datImGo").disabled=true;return;}
+    if(p.fehler){box.innerHTML='<div class="msg warn">'+esc(p.fehler)+'</div>';DAT_IMP=null;datImBereit();return;}
     DAT_IMP=p;
     let h='<div class="msg ok">'+p.zeilen.length+' Zeilen gelesen, '+p.spalten+' Kennzahlen-Spalten.</div>';
     if(p.unbekannt.length)h+='<div class="msg warn">'+p.unbekannt.length+' Spalte(n) kennt die Anwendung noch nicht. Sie werden übersprungen, bis du sie anlegst:</div>'
@@ -2945,7 +2967,7 @@ function datImportPruefen(){
     if(p.fehlend.length)h+='<div class="msg warn">'+p.fehlend.length+' bekannte Kennzahl(en) fehlen in der Datei und werden für diesen Stichtag gelöscht: '+esc(p.fehlend.join(", "))+'</div>';
     box.innerHTML=h;
     box.querySelectorAll("[data-neu-kz]").forEach(b=>b.onclick=()=>datKzAuf(null,b.dataset.neuKz));
-    $("#datImGo").disabled=false;};
+    datImBereit();};
   r.readAsText(f,"utf-8");}
 
 async function datImportGo(){
@@ -3115,9 +3137,16 @@ if($("#datImport"))$("#datImport").onclick=datImportAuf;
 function datImTagPruefen(){
   const w=$("#datImTagWarn");if(!w)return;
   const t=$("#datImStichtag").value;
-  const da=t&&DAT_TAGE&&DAT_TAGE.includes(t);
-  w.hidden=!da;
-  if(da)w.textContent="Zum "+datDatum(t)+" liegen bereits Kennzahlen vor. Ein Einspielen überschreibt sie. Ist das gewollt?";}
+  let txt="", art="warn";
+  if(!t){txt="Ohne Stichtag geht es nicht weiter. Steht ein Datum im Dateinamen, hole ich es von dort, sonst trag es von Hand ein.";art="info";}
+  else{
+    const heute=new Date().toISOString().slice(0,10);
+    if(t>heute)txt="Der "+datDatum(t)+" liegt in der Zukunft. Zahlen aus der Zukunft gibt es nicht, sieh das Datum noch einmal an.";
+    else if(DAT_TAGE&&DAT_TAGE.includes(t))txt="Zum "+datDatum(t)+" liegen bereits Kennzahlen vor. Ein Einspielen überschreibt sie. Ist das gewollt?";
+    else if(t===heute)txt="Der "+datDatum(t)+" ist heute. Der Stichtag ist das Datum der Zahlen, und das ist selten der Tag des Hochladens. Passt das wirklich?";}
+  w.className="msg "+art;
+  w.textContent=txt;w.hidden=!txt;
+  datImBereit();}
 if($("#datImDatei"))$("#datImDatei").onchange=datImportPruefen;
 if($("#datImStichtag"))$("#datImStichtag").onchange=datImTagPruefen;
 if($("#datImGo"))$("#datImGo").onclick=datImportGo;
