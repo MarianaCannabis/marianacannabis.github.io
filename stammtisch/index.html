@@ -361,7 +361,8 @@
   .dat-tab tbody tr:hover{background:rgba(255,255,255,.03)}
   .dat-sort{background:none;border:0;color:var(--muted);font:inherit;font-size:11.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;cursor:pointer;padding:0}
   .dat-sort:hover,.dat-sort[aria-sort]:not([aria-sort="none"]){color:var(--gold)}
-  .dat-spark{display:block;width:100%;height:56px;margin:6px 0 2px}
+  .dat-spark-mini{display:block;width:100%;height:26px;margin:2px 0 0;overflow:visible}
+  .dat-grafik{display:block;width:100%;height:auto;margin:4px 0 14px}
   .dat-imp-zeile{display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line)}
   .dat-imp-zeile b{flex:1 1 auto;font-weight:600}
   @media(max-width:880px){.vb-dat{padding:14px}.dat-gitter{grid-template-columns:1fr}.dat-knoepfe{width:100%;margin-left:0}.dat-knoepfe .btn{flex:1 1 auto;justify-content:center}}
@@ -951,7 +952,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-17-3";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-17-4";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -2692,7 +2693,7 @@ if($("#dokVFilter"))$("#dokVFilter").onchange=e=>{DOK_VF=e.target.value;renderDo
    Alle Werte liegen in der Datenbank verschluesselt und sind fuer die Anwendung nur
    ueber die vd_-Funktionen erreichbar, die Tabelle selbst ist unerreichbar. */
 let DAT_DEF=null, DAT_TAGE=null, DAT_VEREINE=null;
-let DAT_WERTE=null, DAT_VOR=null;
+let DAT_WERTE=null, DAT_VOR=null, DAT_REIHEN=null, DAT_FENSTER=null;
 const DAT_ST={tag:null, vorTag:null, verein:"", q:"", sort:"reihe"};
 let DAT_IMP=null;
 
@@ -2726,6 +2727,119 @@ function datDelta(jetzt,vorher,richtung,art,nk){
   if(roh===0)txt="\u00b10";
   const wort=roh===0?"unverändert":(d>0?("plus "+datNum(Math.abs(d),nk)):("minus "+datNum(Math.abs(d),nk)));
   return {txt:txt, klasse:klasse, wort:wort, betrag:Math.abs(d), rel:Math.abs(b)>1e-9?Math.abs(d/b):(roh===0?0:1)};}
+
+/* ---- Verlaufsgrafik ----
+   Zwei Groessen: eine winzige Linie auf jeder Karte, damit man die Richtung im Vorbeigehen
+   sieht, und eine richtige Grafik mit Achsen im Verlauf-Fenster. Beide sind SVG, also
+   scharf auf jedem Bildschirm und ohne Fremdbibliothek.
+   Wichtig: Die Grafik ist die Zugabe, nicht die Quelle. Fuer Screenreader steht die
+   Tabelle darunter, die Grafik traegt nur eine zusammenfassende Beschriftung. */
+
+// Runde Achsenwerte statt 138.472,19. Sucht die naechste glatte Schrittweite (1, 2, 2.5, 5, 10 ...).
+function datSchritt(spanne, ziel){
+  const roh=spanne/Math.max(1,ziel);
+  if(!(roh>0))return 1;
+  const p=Math.pow(10,Math.floor(Math.log10(roh)));
+  const r=roh/p;
+  return (r<=1?1:r<=2?2:r<=2.5?2.5:r<=5?5:10)*p;}
+
+function datAchse(min,max,nk){
+  if(!(isFinite(min)&&isFinite(max)))return {von:0,bis:1,marken:[0,1]};
+  if(min===max){const d=Math.abs(min)||1;min-=d*0.5;max+=d*0.5;}
+  if(min>0&&min<max*0.45)min=0;          // Balkenluege vermeiden, Null zeigen wo sie hingehoert
+  if(max<0&&max>min*0.45)max=0;
+  let s=datSchritt(max-min,4);
+  // Zaehlbares hat keine Zwischenschritte. Ohne das stehen an der Achse 279,25 Mitglieder.
+  if(!nk)s=Math.max(1,Math.round(s));
+  const von=Math.floor(min/s)*s, bis=Math.ceil(max/s)*s;
+  const marken=[];
+  // toPrecision raeumt das Fliesskomma-Rauschen weg, sonst steht an der Achse 2.4000000000000004
+  for(let x=von;x<=bis+s*1e-9;x+=s)marken.push(Number((Math.round(x/s)*s).toPrecision(12)));
+  return {von:von,bis:bis,marken:marken};}
+
+function datKurz(z,d){
+  const a=Math.abs(z);
+  if(d.art==="prozent")return datNum(z,z%1?1:0)+"%";
+  if(a>=1e6)return datNum(z/1e6,1)+" Mio";
+  if(a>=1e4)return datNum(Math.round(z/1e3),0)+"k";
+  return datNum(z, a<10&&z%1?1:0);}
+
+/* Winzige Linie fuer die Karte. Keine Achsen, keine Zahlen, nur die Richtung. */
+function datSpark(reihe,d){
+  const da=reihe.filter(r=>r.zahl!=null);
+  if(da.length<2)return "";
+  const zs=da.map(r=>Number(r.zahl));
+  const mi=Math.min(...zs), ma=Math.max(...zs), sp=(ma-mi)||1;
+  const n=reihe.length-1;
+  const px=r=>(reihe.indexOf(r)/(n||1))*96+2;
+  const py=r=>24-((Number(r.zahl)-mi)/sp)*20;
+  // Luecken sind Luecken, die Linie wird dort unterbrochen statt geschummelt
+  const stuecke=[]; let s=[];
+  reihe.forEach(r=>{ if(r.zahl==null){if(s.length>1)stuecke.push(s);s=[];} else s.push(r); });
+  if(s.length>1)stuecke.push(s);
+  const letzte=da[da.length-1];
+  const farbe=(function(){
+    if(da.length<2)return "var(--muted)";
+    const v=Number(da[da.length-2].zahl), j=Number(letzte.zahl);
+    if(Math.abs(j-v)<1e-9||d.richtung==="neutral")return "var(--muted)";
+    const hoch=j>v;
+    return (d.richtung==="hoch_gut")===hoch?"var(--green)":"var(--red)";})();
+  return `<svg class="dat-spark-mini" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true" focusable="false">`
+    +stuecke.map(st=>`<polyline points="${st.map(r=>px(r).toFixed(1)+","+py(r).toFixed(1)).join(" ")}" fill="none" stroke="${farbe}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`).join("")
+    +`<circle cx="${px(letzte).toFixed(1)}" cy="${py(letzte).toFixed(1)}" r="2.4" fill="${farbe}" vector-effect="non-scaling-stroke"/></svg>`;}
+
+/* Richtige Grafik mit Achsen fuer das Verlauf-Fenster. */
+function datGrafik(reihe,d){
+  const da=reihe.filter(r=>r.zahl!=null);
+  if(!da.length)return "";
+  if(da.length<2)return '<div class="msg info">Für eine Linie braucht es mindestens zwei Stichtage. Bisher gibt es nur einen, deshalb steht hier noch keine Grafik.</div>';
+  const B=680,H=280,L=64,R=14,O=18,U=38;
+  const zs=da.map(r=>Number(r.zahl));
+  const a=datAchse(Math.min(...zs),Math.max(...zs),d.nachkomma);
+  const n=reihe.length-1;
+  const px=i=>L+(i/(n||1))*(B-L-R);
+  const py=z=>O+(1-(z-a.von)/((a.bis-a.von)||1))*(H-O-U);
+
+  let g="";
+  a.marken.forEach(m=>{
+    const y=py(m);
+    g+=`<line x1="${L}" y1="${y.toFixed(1)}" x2="${B-R}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`
+      +`<text x="${L-8}" y="${(y+4).toFixed(1)}" text-anchor="end" fill="var(--muted)" font-size="11">${esc(datKurz(m,d))}</text>`;});
+  if(a.von<0&&a.bis>0){const y=py(0);g+=`<line x1="${L}" y1="${y.toFixed(1)}" x2="${B-R}" y2="${y.toFixed(1)}" stroke="var(--muted)" stroke-width="1.5"/>`;}
+
+  const stuecke=[]; let s=[];
+  reihe.forEach((r,i)=>{ if(r.zahl==null){if(s.length)stuecke.push(s);s=[];} else s.push({i:i,z:Number(r.zahl)}); });
+  if(s.length)stuecke.push(s);
+
+  let flaeche="";
+  stuecke.filter(st=>st.length>1).forEach(st=>{
+    const basis=py(Math.max(a.von,Math.min(0>a.von?0:a.von,a.bis)));
+    flaeche+=`<path d="M${px(st[0].i).toFixed(1)},${basis.toFixed(1)} `
+      +st.map(p=>`L${px(p.i).toFixed(1)},${py(p.z).toFixed(1)}`).join(" ")
+      +` L${px(st[st.length-1].i).toFixed(1)},${basis.toFixed(1)} Z" fill="var(--green)" opacity=".10"/>`;});
+  const linien=stuecke.filter(st=>st.length>1).map(st=>
+    `<polyline points="${st.map(p=>px(p.i).toFixed(1)+","+py(p.z).toFixed(1)).join(" ")}" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`).join("");
+
+  const zeigLabels=da.length<=8;
+  let punkte="";
+  stuecke.forEach(st=>st.forEach(p=>{
+    const letzt=(p===st[st.length-1]&&st===stuecke[stuecke.length-1]);
+    punkte+=`<circle cx="${px(p.i).toFixed(1)}" cy="${py(p.z).toFixed(1)}" r="${letzt?5:3.5}" fill="var(--green)" stroke="var(--panel-solid)" stroke-width="2"/>`;
+    if(zeigLabels)punkte+=`<text x="${px(p.i).toFixed(1)}" y="${(py(p.z)-11).toFixed(1)}" text-anchor="middle" fill="var(--text)" font-size="11.5" font-weight="650">${esc(datKurz(p.z,d))}</text>`;}));
+
+  let xl="";
+  const jeder=Math.ceil(reihe.length/8);
+  reihe.forEach((r,i)=>{ if(i%jeder&&i!==n)return;
+    xl+=`<text x="${px(i).toFixed(1)}" y="${H-14}" text-anchor="middle" fill="var(--muted)" font-size="11">${esc(datDatum(r.stichtag).slice(0,6))}</text>`;});
+
+  const erst=da[0], letzt=da[da.length-1];
+  const wort=Number(letzt.zahl)>Number(erst.zahl)?"gestiegen":(Number(letzt.zahl)<Number(erst.zahl)?"gefallen":"unverändert");
+  const lab=d.name+", Verlauf über "+da.length+" Stichtage: von "+datFmt(erst.zahl,d.art,d.nachkomma,d.einheit)
+    +" am "+datDatum(erst.stichtag)+" auf "+datFmt(letzt.zahl,d.art,d.nachkomma,d.einheit)+" am "+datDatum(letzt.stichtag)+", insgesamt "+wort
+    +". Die genauen Werte stehen in der Tabelle darunter.";
+  return `<svg class="dat-grafik" viewBox="0 0 ${B} ${H}" role="img" aria-label="${esc(lab)}">`
+    +`<line x1="${L}" y1="${O}" x2="${L}" y2="${H-U}" stroke="var(--line)" stroke-width="1"/>`
+    +g+flaeche+linien+punkte+xl+`</svg>`;}
 
 async function datStammLaden(){
   if(!supa)return false;
@@ -2776,13 +2890,15 @@ async function datWerteLaden(){
     return;}
   if(box)box.innerHTML='<div class="msg info">Lade…</div>';
   try{
-    const r1=await supa.rpc("vd_meine",{p_stichtag:DAT_ST.tag,p_verein:ziel});
+    const r1=await supa.rpc("vd_reihen",{p_stichtag:DAT_ST.tag,p_verein:ziel,p_anzahl:6});
     if(r1.error)throw r1.error;
-    DAT_WERTE=r1.data||[];
-    DAT_VOR=null;
-    if(DAT_ST.vorTag){
-      const r2=await supa.rpc("vd_meine",{p_stichtag:DAT_ST.vorTag,p_verein:ziel});
-      if(!r2.error)DAT_VOR=r2.data||[];}
+    const roh=r1.data||[];
+    DAT_FENSTER=[...new Set(roh.map(r=>r.stichtag))].sort();
+    DAT_REIHEN={};
+    roh.forEach(r=>{(DAT_REIHEN[r.schluessel]=DAT_REIHEN[r.schluessel]||{})[r.stichtag]=r;});
+    const zuTag=t=>DAT_DEF.map(d=>(DAT_REIHEN[d.schluessel]||{})[t]).filter(Boolean);
+    DAT_WERTE=zuTag(DAT_ST.tag);
+    DAT_VOR=DAT_ST.vorTag?zuTag(DAT_ST.vorTag):null;
   }catch(e){
     console.error(e);
     if(box)box.innerHTML='<div class="msg warn">'+esc(e.message||"Die Kennzahlen sind gerade nicht erreichbar.")+'</div>';
@@ -2812,6 +2928,7 @@ function renderDat(){
         <span class="dat-wert${zeigt?"":" leer"}">${zeigt?esc(zeigt):"keine Angabe"}</span>
         ${dl?`<span class="dat-delta ${dl.klasse}" aria-hidden="true" title="gegenüber ${esc(datDatum(DAT_ST.vorTag))}">${esc(dl.txt)}</span><span class="sr-only">, ${esc(dl.wort)} gegenüber ${esc(datDatum(DAT_ST.vorTag))}</span>`:""}
       </div>
+      ${DAT_FENSTER&&DAT_FENSTER.length>1?datSpark(DAT_FENSTER.map(t=>({stichtag:t,zahl:((DAT_REIHEN[d.schluessel]||{})[t]||{}).zahl??null})),d):""}
       <p class="dat-erkl">${esc(d.erklaerung||"")}</p>
       <div class="dat-fuss"><button class="btn small" data-dat-verlauf="${esc(d.schluessel)}">Verlauf</button>${isAdmin()?`<button class="btn small" data-dat-alle="${esc(d.schluessel)}">Alle Vereine</button>`:""}</div>
     </article>`;};
@@ -2848,13 +2965,7 @@ async function datVerlauf(k){
   const ziel=isAdmin()?(DAT_ST.verein||null):null;
   const {data,error}=await supa.rpc("vd_verlauf",{p_schluessel:k,p_verein:ziel});
   if(error){body.innerHTML='<div class="msg warn">'+esc(error.message)+'</div>';return;}
-  const rows=(data||[]).filter(r=>r.zahl!=null);
-  let sp="";
-  if(rows.length>1){
-    const zs=rows.map(r=>Number(r.zahl)),mi=Math.min(...zs),ma=Math.max(...zs),sp_=ma-mi||1;
-    const pts=zs.map((z,i)=>`${(i/(zs.length-1))*100},${48-((z-mi)/sp_)*44}`).join(" ");
-    sp=`<svg class="dat-spark" viewBox="0 0 100 52" preserveAspectRatio="none" role="img" aria-label="Verlaufslinie, ${rows.length} Stichtage von ${esc(datNum(mi,d.nachkomma))} bis ${esc(datNum(ma,d.nachkomma))}"><polyline points="${pts}" fill="none" stroke="var(--green)" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;}
-  body.innerHTML='<p class="dat-erkl" style="margin-bottom:10px">'+esc(d.erklaerung||"")+'</p>'+sp+
+  body.innerHTML='<p class="dat-erkl" style="margin-bottom:10px">'+esc(d.erklaerung||"")+'</p>'+datGrafik(data||[],d)+
     (data&&data.length?`<table class="dat-tab"><thead><tr><th scope="col">Stichtag</th><th scope="col">Wert</th><th scope="col">Veränderung</th></tr></thead><tbody>`+
       data.map((r,i)=>{const v=i>0?datDelta(r.zahl,data[i-1].zahl,d.richtung,d.art,d.nachkomma):null;
         return `<tr><td>${esc(datDatum(r.stichtag))}</td><td>${esc(datFmt(r.zahl,d.art,d.nachkomma,d.einheit)||r.wert||"keine Angabe")}</td><td>${v?`<span class="dat-delta ${v.klasse}">${esc(v.txt)}</span>`:"<span class=\"dat-delta gleich\">erster Wert</span>"}</td></tr>`;}).join("")
