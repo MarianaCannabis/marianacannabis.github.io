@@ -421,6 +421,7 @@
         <button class="btn menu-item" id="btnAufbewahrung" hidden>Aufbewahrung</button>
         <button class="btn menu-item" id="btnAdmins" hidden>Admins verwalten</button>
         <button class="btn menu-item" id="btnAdressen" hidden>Adressen verwalten</button>
+        <button class="btn menu-item" id="btnBereichsleitungen" hidden>Bereichsleitungen verwalten</button>
         <button class="btn menu-item" id="btnTermine" hidden>Termine verwalten</button>
       </div>
     </div>
@@ -829,6 +830,24 @@
   </div>
   <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
 
+<div class="overlay" id="ovBereichsleitungen" hidden role="dialog" aria-modal="true" aria-labelledby="blTitel"><div class="modal modal-wide">
+  <div class="modal-head"><h3 id="blTitel">Bereichsleitungen verwalten</h3><button class="x" data-close aria-label="Schließen">×</button></div>
+  <div class="modal-body">
+    <p class="msg info">Eine Bereichsleitung betreut mehrere Vereine. Wähle unten die <b>Adresse</b> der Bereichsleitung und hake die Vereine an, die sie sehen darf. Häkchen setzt frei, Häkchen weg nimmt zurück. Jede Änderung wirkt sofort.</p>
+    <div class="sec-h" role="heading" aria-level="4">Bereichsleitung wählen</div>
+    <div class="field"><label for="blEmail">E-Mail-Adresse</label><div class="punkt-row"><input id="blEmail" type="email" inputmode="email" placeholder="region-mitte@mariana-cannabis.de" style="flex:1"><button class="btn" id="blOeffnen">Öffnen</button></div></div>
+    <div class="sec-h" role="heading" aria-level="4" style="margin-top:12px">Vorhandene Bereichsleitungen</div>
+    <div id="blVorhanden"><div class="msg info">Lade…</div></div>
+    <div id="blEditor" hidden style="margin-top:16px">
+      <div class="sec-h" role="heading" aria-level="4" id="blEditorTitel">Vereine zuteilen</div>
+      <div class="field"><label for="blSuche">Verein suchen (Name oder Stadt)</label><input id="blSuche" type="search" placeholder="Marburg"></div>
+      <div class="msg info" id="blZahl" role="status"></div>
+      <div class="msg" id="blMsg" role="status" style="margin-top:4px"></div>
+      <div id="blListe"><div class="msg info">Lade…</div></div>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
+
 <div class="overlay" id="ovAufbewahrung" hidden role="dialog" aria-modal="true" aria-label="Aufbewahrung"><div class="modal modal-wide">
   <div class="modal-head"><h3>Aufbewahrung</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
@@ -971,7 +990,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-1";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-2";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1985,6 +2004,7 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
   if($("#btnAdmins"))$("#btnAdmins").hidden=!isAdmin();
   if($("#btnAdressen"))$("#btnAdressen").hidden=!isAdmin();
+  if($("#btnBereichsleitungen"))$("#btnBereichsleitungen").hidden=!isAdmin();
   if($("#btnTermine"))$("#btnTermine").hidden=!isAdmin();
   if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").hidden=!isAdmin();
   if($("#btnVorschlagVorstand"))$("#btnVorschlagVorstand").hidden=!berechtigt;
@@ -2861,6 +2881,14 @@ function datGrafik(reihe,d){
     +`<line x1="${L}" y1="${O}" x2="${L}" y2="${H-U}" stroke="var(--line)" stroke-width="1"/>`
     +g+flaeche+linien+punkte+xl+`</svg>`;}
 
+/* Gruppiert eine Vereinsliste nach Bundesland, alphabetisch sortiert. Genutzt vom Vereins-Picker und von der Bereichsleitungs-Maske. */
+function vLand(v){return (v&&(v.bundesland||v.land))||"Ohne Bundesland";}
+function landGruppen(list){
+  const m=new Map();
+  (list||[]).forEach(v=>{const l=vLand(v);if(!m.has(l))m.set(l,[]);m.get(l).push(v);});
+  return [...m.entries()].map(([land,items])=>({land,items:items.slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"","de"))}))
+    .sort((a,b)=>a.land.localeCompare(b.land,"de"));}
+
 async function datStammLaden(){
   if(!supa)return false;
   if(!DAT_DEF){
@@ -2870,8 +2898,8 @@ async function datStammLaden(){
   if(!DAT_TAGE){
     const {data,error}=await supa.rpc("vd_stichtage");
     if(error){console.error(error);DAT_TAGE=[];}else DAT_TAGE=(data||[]).map(x=>typeof x==="string"?x:(x&&x.vd_stichtage)||x);}
-  if(isAdmin()&&!DAT_VEREINE){
-    const {data}=await supa.from("vereine").select("id,name,stadt").eq("aktiv",true).order("name");
+  if(!DAT_VEREINE){
+    const {data}=await supa.rpc("vd_meine_vereine");
     DAT_VEREINE=data||[];}
   return true;}
 
@@ -2881,11 +2909,11 @@ async function loadDat(){
   $("#datGesamt").hidden=!isAdmin();
   $("#datVerw").hidden=!isAdmin();
   $("#datImport").hidden=!isAdmin();
-  $("#datVereinBox").hidden=!isAdmin();
   if(!await datStammLaden()){if(box)box.innerHTML='<div class="msg warn">Die Kennzahlen sind gerade nicht erreichbar.</div>';return;}
-  if(isAdmin()){
+  $("#datVereinBox").hidden=(DAT_VEREINE.length<=1);
+  if(DAT_VEREINE.length>1){
     const sel=$("#datVerein");
-    sel.innerHTML='<option value="">Verein wählen…</option>'+DAT_VEREINE.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}</option>`).join("");
+    sel.innerHTML='<option value="">Verein wählen…</option>'+landGruppen(DAT_VEREINE).map(g=>`<optgroup label="${esc(g.land)}">`+g.items.map(v=>`<option value="${esc(v.id)}">${esc(v.name)}</option>`).join("")+`</optgroup>`).join("");
     if(DAT_ST.verein)sel.value=DAT_ST.verein;}
   const st=$("#datStichtag");
   if(!DAT_TAGE.length){
@@ -2902,7 +2930,7 @@ async function datWerteLaden(){
   const box=$("#datListe");
   const i=DAT_TAGE.indexOf(DAT_ST.tag);
   DAT_ST.vorTag=(i>=0&&i+1<DAT_TAGE.length)?DAT_TAGE[i+1]:null;
-  const ziel=isAdmin()?(DAT_ST.verein||null):null;
+  const ziel=(DAT_VEREINE.length>1)?(DAT_ST.verein||null):null;
   if(isAdmin()&&!ziel){
     DAT_WERTE=null;DAT_VOR=null;
     $("#datStand").textContent="";
@@ -2985,7 +3013,7 @@ function renderDat(){
     if(d){d.open=true;const s=d.querySelector("summary");if(s)s.scrollIntoView({behavior:"smooth",block:"start"});}
   }));
 
-  const wer=isAdmin()?((DAT_VEREINE.find(v=>v.id===DAT_ST.verein)||{}).name||""):(state.verein||"dein Verein");
+  const wer=(DAT_VEREINE.length>1)?((DAT_VEREINE.find(v=>v.id===DAT_ST.verein)||DAT_VEREINE[0]||{}).name||""):(state.verein||"dein Verein");
   const fehlt=DAT_DEF.length-DAT_WERTE.length;
   $("#datStand").textContent="Stichtag "+datDatum(DAT_ST.tag)+" · "+wer+" · "+DAT_WERTE.length+" von "+DAT_DEF.length+" Kennzahlen"
     +(fehlt>0?(", "+fehlt+" ohne Angabe"):"")
@@ -2997,7 +3025,7 @@ async function datVerlauf(k){
   const ov=$("#ovDatVerlauf"),body=$("#datVlBody");
   $("#datVlTitel").textContent="Verlauf: "+d.name;
   body.innerHTML='<div class="msg info">Lade…</div>';openModal(ov);
-  const ziel=isAdmin()?(DAT_ST.verein||null):null;
+  const ziel=(DAT_VEREINE.length>1)?(DAT_ST.verein||null):null;
   const {data,error}=await supa.rpc("vd_verlauf",{p_schluessel:k,p_verein:ziel});
   if(error){body.innerHTML='<div class="msg warn">'+esc(error.message)+'</div>';return;}
   body.innerHTML='<p class="dat-erkl" style="margin-bottom:10px">'+esc(d.erklaerung||"")+'</p>'+datGrafik(data||[],d)+
@@ -3468,6 +3496,98 @@ if($("#adrSave"))$("#adrSave").onclick=()=>adrSave();
 if($("#adrReset"))$("#adrReset").onclick=()=>adrReset();
 if($("#adrVerein"))$("#adrVerein").onchange=e=>{$("#adrNeuBox").hidden=e.target.value!=="__neu";};
 if($("#adrSuche"))$("#adrSuche").oninput=e=>{ADR_Q=e.target.value;renderAdressen();};
+
+/* ---- Bereichsleitungen verwalten (Admin): eine Adresse betreut mehrere Vereine ----
+   DB liefert alles, das Frontend ruft nur: vd_meine_vereine, bl_alle_zuordnungen,
+   bl_status(email), bl_setzen(email,verein,an), bl_setzen_bundesland(email,bundesland,an).
+   Parameter folgen der Namenskonvention der uebrigen RPCs (p_...). */
+let BL_VEREINE=null, BL_ZUORD=[], BL_EMAIL=null, BL_SET=new Set(), BL_Q="";
+async function openBereichsleitungen(){if(!isAdmin()){announce("Nur für Admins.");return;}
+  BL_EMAIL=null;BL_SET=new Set();BL_Q="";
+  $("#blEmail").value="";$("#blSuche").value="";$("#blMsg").textContent="";$("#blMsg").className="msg";
+  $("#blEditor").hidden=true;
+  openModal($("#ovBereichsleitungen"));
+  await blVereineLaden(true);await blZuordLaden();}
+async function blVereineLaden(zeigeFehler){
+  if(BL_VEREINE)return BL_VEREINE;
+  let r=await supa.from("vereine").select("id,name,stadt,bundesland").order("name");
+  if(r.error)r=await supa.from("vereine").select("id,name,stadt").order("name");
+  if(r.error){if(zeigeFehler){$("#blMsg").className="msg err";$("#blMsg").textContent="Vereine konnten nicht geladen werden: "+esc(r.error.message||String(r.error));}BL_VEREINE=[];return BL_VEREINE;}
+  BL_VEREINE=r.data||[];return BL_VEREINE;}
+async function blZuordLaden(){const box=$("#blVorhanden");box.innerHTML='<div class="msg info">Lade…</div>';
+  try{const {data,error}=await supa.rpc("bl_alle_zuordnungen");if(error)throw error;
+    BL_ZUORD=data||[];renderBlVorhanden();
+  }catch(e){box.innerHTML=`<div class="msg err">Konnte nicht laden: ${esc(e.message||String(e))}</div>`;}}
+function blAnzahl(r){const n=r&&(r.anzahl??r.anzahl_vereine??r.verein_count??r.count??r.vereine);return typeof n==="number"?n:null;}
+function renderBlVorhanden(){const box=$("#blVorhanden");if(!box)return;
+  if(!BL_ZUORD.length){box.innerHTML='<div class="msg info">Noch keine Bereichsleitung eingetragen. Gib oben eine Adresse ein und teile ihr Vereine zu.</div>';return;}
+  box.innerHTML=BL_ZUORD.map(r=>{const em=r.email||r.mail||"";
+    const n=(BL_EMAIL&&em===BL_EMAIL)?BL_SET.size:blAnzahl(r);
+    const txt=(n!=null)?(n+" "+(n===1?"Verein":"Vereine")):"Vereine zugeteilt";
+    return `<div class="qrow"><div><b>${esc(em)}</b><div class="msg info">${esc(txt)}</div></div>
+      <button class="btn small" data-bl-oeffnen="${esc(em)}">Öffnen</button></div>`;}).join("");
+  box.querySelectorAll("[data-bl-oeffnen]").forEach(b=>b.onclick=()=>blOeffnen(b.dataset.blOeffnen));}
+function blSetVon(data){const s=new Set();
+  (data||[]).forEach(x=>{if(x==null)return;
+    if(typeof x==="string"){s.add(x);return;}
+    if(("zugeteilt" in x)&&!x.zugeteilt)return;
+    const id=x.verein_id||x.verein||x.id||x.vid;if(id)s.add(id);});
+  return s;}
+async function blOeffnen(emailRoh){const email=(emailRoh||"").trim().toLowerCase();
+  const m=$("#blMsg");
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){m.className="msg err";m.textContent="Bitte eine gültige E-Mail-Adresse eingeben.";return;}
+  $("#blEmail").value=email;m.className="msg info";m.textContent="Lade…";
+  $("#blEditor").hidden=false;$("#blListe").innerHTML='<div class="msg info">Lade…</div>';
+  try{await blVereineLaden(true);
+    const {data,error}=await supa.rpc("bl_status",{p_email:email});if(error)throw error;
+    BL_EMAIL=email;BL_SET=blSetVon(data);
+    $("#blEditorTitel").textContent="Vereine für "+email;
+    m.textContent="";renderBlEditor();renderBlVorhanden();
+  }catch(e){m.className="msg err";m.textContent="Konnte nicht laden: "+(e.message||e);}}
+function blLandTotal(land){return (BL_VEREINE||[]).filter(v=>vLand(v)===land).length;}
+function blLandAssigned(land){return (BL_VEREINE||[]).filter(v=>vLand(v)===land&&BL_SET.has(v.id)).length;}
+function renderBlCounts(){
+  const z=$("#blZahl");if(z)z.textContent=`${BL_SET.size} von ${(BL_VEREINE||[]).length} Vereinen zugeteilt`;
+  document.querySelectorAll("[data-bl-landzahl]").forEach(el=>{const l=el.dataset.blLandzahl;el.textContent=blLandAssigned(l)+" von "+blLandTotal(l);});
+  renderBlVorhanden();}
+function renderBlEditor(){const box=$("#blListe");if(!box)return;
+  const q=(BL_Q||"").trim().toLowerCase();
+  const gruppen=landGruppen(BL_VEREINE||[]);
+  const html=gruppen.map(g=>{
+    const treffer=g.items.filter(v=>!q||(v.name||"").toLowerCase().includes(q)||(v.stadt||"").toLowerCase().includes(q));
+    if(!treffer.length)return "";
+    const boxen=treffer.map(v=>`<label class="toggle"><input type="checkbox" data-bl-v="${esc(v.id)}"${BL_SET.has(v.id)?" checked":""}> ${esc(v.name)}${v.stadt?(" ("+esc(v.stadt)+")"):""}</label>`).join("");
+    return `<details class="dat-gruppe-box" open><summary class="dat-gruppe">${esc(g.land)}<span class="dat-gruppe-zahl" data-bl-landzahl="${esc(g.land)}">${blLandAssigned(g.land)} von ${blLandTotal(g.land)}</span></summary>
+      <div class="punkt-row" style="margin:6px 0 8px">
+        <button class="btn small" data-bl-alle="${esc(g.land)}">alle</button>
+        <button class="btn small" data-bl-keine="${esc(g.land)}">keine</button></div>
+      <div style="display:flex;flex-direction:column;gap:4px">${boxen}</div></details>`;}).join("");
+  box.innerHTML=html||'<div class="msg info">Kein Verein passt zu deiner Suche.</div>';
+  renderBlCounts();
+  box.querySelectorAll("[data-bl-v]").forEach(cb=>cb.onchange=()=>blToggle(cb,cb.dataset.blV,cb.checked));
+  box.querySelectorAll("[data-bl-alle]").forEach(b=>b.onclick=()=>blLand(b.dataset.blAlle,true));
+  box.querySelectorAll("[data-bl-keine]").forEach(b=>b.onclick=()=>blLand(b.dataset.blKeine,false));}
+async function blToggle(cb,verein,an){const m=$("#blMsg");
+  if(!BL_EMAIL)return;
+  m.className="msg info";m.textContent="Speichern…";
+  try{const {error}=await supa.rpc("bl_setzen",{p_email:BL_EMAIL,p_verein_id:verein,p_aktiv:!!an});if(error)throw error;
+    if(an)BL_SET.add(verein);else BL_SET.delete(verein);
+    m.className="msg ok";m.textContent=an?"Zugeteilt.":"Zurückgenommen.";announce("Gespeichert.");
+    renderBlCounts();
+  }catch(e){cb.checked=!an;m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}}
+async function blLand(land,an){const m=$("#blMsg");
+  if(!BL_EMAIL)return;
+  m.className="msg info";m.textContent="Speichern…";
+  try{const s=await supa.rpc("bl_setzen_bundesland",{p_email:BL_EMAIL,p_bundesland:land,p_aktiv:!!an});if(s.error)throw s.error;
+    const st=await supa.rpc("bl_status",{p_email:BL_EMAIL});if(st.error)throw st.error;
+    BL_SET=blSetVon(st.data);
+    m.className="msg ok";m.textContent=an?("Alle Vereine in "+land+" zugeteilt."):("Alle Vereine in "+land+" zurückgenommen.");announce("Gespeichert.");
+    renderBlEditor();
+  }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}}
+if($("#btnBereichsleitungen"))$("#btnBereichsleitungen").onclick=()=>openBereichsleitungen();
+if($("#blOeffnen"))$("#blOeffnen").onclick=()=>blOeffnen($("#blEmail").value);
+if($("#blEmail"))$("#blEmail").addEventListener("keydown",e=>{if(e.key==="Enter")blOeffnen($("#blEmail").value);});
+if($("#blSuche"))$("#blSuche").oninput=e=>{BL_Q=e.target.value;renderBlEditor();};
 
 function openAufbewahrung(){if(!isAdmin()){announce("Nur für den Admin.");return;}$("#aufbMsg").textContent="";const el=$("#aufbMonate");if(el)el.value=AUFB_MONATE;renderAufbewahrung();openModal($("#ovAufbewahrung"));}
 function renderAufbewahrung(){const box=$("#aufbListe");if(!box)return;
