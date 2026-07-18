@@ -93,6 +93,9 @@
   .hl{background:rgba(249,199,79,.28);color:#fff;border-radius:3px;padding:0 2px}.hl.cur{background:var(--gold);color:#1c1606}
   .detail{background:var(--panel-solid);border:1px solid var(--line);border-radius:var(--radius);min-height:60vh;overflow:hidden}
   .empty{padding:64px 28px;text-align:center;color:var(--muted)}.empty .em-mark{font-size:40px;margin-bottom:12px;opacity:.5}
+  .only-mobile{display:none}
+  @media(max-width:880px){.only-mobile{display:inline-flex}.detail.leer{display:none;min-height:auto}}
+  body.mobile .only-mobile{display:inline-flex}body.mobile .detail.leer{display:none;min-height:auto}
   .dhead{padding:22px 24px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0f1f15,transparent)}
   .dhead .date{font-size:12px;color:var(--gold);letter-spacing:.06em;font-weight:600}
   .dhead h2{font-size:22px;margin:6px 0 10px;line-height:1.2}
@@ -482,6 +485,7 @@
     <div class="dat-knoepfe">
       <button class="btn" id="datKompakt" aria-pressed="false">Kompakt</button>
       <button class="btn" id="datGesamt" hidden>Gesamtübersicht</button>
+      <button class="btn" id="datEigene" hidden title="Zusammenfassung über deine Vereine">Meine Vereine</button>
       <button class="btn" id="datVerw" hidden>Kennzahlen verwalten</button>
       <button class="btn primary" id="datImport" hidden>Kennzahlen einspielen</button>
     </div>
@@ -513,7 +517,7 @@
     <div class="count"><span id="count"></span></div>
     <div class="list" id="list" role="region" aria-label="Stammtische"></div>
   </aside>
-  <section class="detail" id="detail" tabindex="-1" aria-label="Stammtisch-Details"><div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Lade Daten…</p></div></section>
+  <section class="detail leer" id="detail" tabindex="-1" aria-label="Stammtisch-Details"><div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Lade Daten…</p></div></section>
 </main>
 
 <div class="overlay" id="ovDatVerw" hidden role="dialog" aria-modal="true" aria-labelledby="datVwTitel"><div class="modal modal-wide">
@@ -747,16 +751,20 @@
 <div class="overlay" id="ovZugaenge" hidden role="dialog" aria-modal="true" aria-labelledby="zgTitel"><div class="modal">
   <div class="modal-head"><h3 id="zgTitel">Zugänge verwalten</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
-    <p class="msg info">Hier steuerst du an einer Stelle, wer sich anmelden darf und mit welchen Rechten. Wähle den passenden Bereich.</p>
+    <p class="msg info" id="zgIntro">Hier steuerst du an einer Stelle, wer sich anmelden darf und mit welchen Rechten. Wähle den passenden Bereich.</p>
+    <div id="zgSecAdmins">
     <div class="sec-h">Admins</div>
     <p style="color:var(--muted);margin:2px 0 0">Dürfen alles verwalten. Brauchen zusätzlich ein Anmeldekonto mit Passwort.</p>
     <button class="btn primary" id="zgAdmins" style="margin-top:6px">Admins verwalten</button>
+    </div>
     <div class="sec-h" style="margin-top:18px">Vorstände und Ansprechpersonen</div>
     <p style="color:var(--muted);margin:2px 0 0">Zugang je Vereinsadresse. Vorstand sieht alle fünf Ebenen, Ansprechperson ohne Vereinsdaten und Dokumente.</p>
     <button class="btn primary" id="zgVorstand" style="margin-top:6px">Vorstände und Ansprechpersonen verwalten</button>
+    <div id="zgSecBl">
     <div class="sec-h" style="margin-top:18px">Bereichsleitungen</div>
     <p style="color:var(--muted);margin:2px 0 0">Betreuen mehrere Vereine über eine eigene Adresse. Dort schaltest du die Adresse für den Login frei und teilst ihr die Vereine zu.</p>
     <button class="btn primary" id="zgBl" style="margin-top:6px">Bereichsleitungen verwalten</button>
+    </div>
   </div>
   <div class="modal-foot"><button class="btn" data-close>Schließen</button></div></div></div>
 
@@ -1007,7 +1015,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-4";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-6";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1150,8 +1158,8 @@ async function renderTermine(){
       rrule:t.art==="woechentlich"?("FREQ=WEEKLY;BYDAY="+["SU","MO","TU","WE","TH","FR","SA"][t.wochentag]):""})
       .replace(/T190000/g,"T"+zeit);
     ladeICS(ics,terminIcsName(t));});}
-/* ---- Termin-Verwaltung (Admin) ---- */
-async function openTermine(){if(!isAdmin()){announce("Nur für Admins.");return;}
+/* ---- Termin-Verwaltung (Recht: termine) ---- */
+async function openTermine(){if(!hatRecht("termine")){announce("Dafür fehlt die Berechtigung.");return;}
   $("#tmMsg").textContent="";$("#tmTitelIn").value="";$("#tmNotiz").value="";
   openModal($("#ovTermine"));await renderTermineListe();}
 function tmArtUmschalten(){const a=$("#tmArt").value;
@@ -1315,12 +1323,13 @@ $("#list").addEventListener("keydown",e=>{if(e.key!=="ArrowDown"&&e.key!=="Arrow
 /* ---- detail (mit persistentem Player) ---- */
 function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$("#detail");
   if(SPEAKING&&SPEAKING!==state.current)stopSpeak();
-  if(!d){det.innerHTML=`<div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Wähle links einen Stammtisch.</p></div>`;return;}
+  if(!d){det.classList.add("leer");det.innerHTML=`<div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Wähle einen Eintrag aus der Liste.</p></div>`;return;}
+  det.classList.remove("leer");
   if(state.tab==="slides"&&!(d.folien&&d.folien.length))state.tab="summary";
   const src=d.audio_pfad?((ebenePrivat()&&!d.ist_testdaten)?null:pubUrl("audio",d.audio_pfad)):null;
   const noDL=state.authed?"":'controlslist="nodownload noplaybackrate" oncontextmenu="return false"';
   const order=filtered();const oIdx=order.findIndex(x=>x.id===d.id);const oN=order.length;
-  const nav=`<div class="dnav"><button class="btn small" id="dPrev" ${oIdx<=0?'disabled':''} title="Vorheriger Stammtisch">◀ Vorheriger</button><span class="dnav-pos">${oIdx>=0?`${oIdx+1} / ${oN}`:""}</span><button class="btn small" id="dNext" ${(oIdx<0||oIdx>=oN-1)?'disabled':''} title="Nächster Stammtisch">Nächster ▶</button></div>`;
+  const nav=`<div class="dnav"><button class="btn small" id="dPrev" ${oIdx<=0?'disabled':''} title="Vorheriger Stammtisch">◀ Vorheriger</button><span class="dnav-pos">${oIdx>=0?`${oIdx+1} / ${oN}`:""}</span><button class="btn small" id="dNext" ${(oIdx<0||oIdx>=oN-1)?'disabled':''} title="Nächster Stammtisch">Nächster ▶</button><button class="btn small only-mobile" id="dToList" title="Zur Liste">↑ Zur Liste</button></div>`;
   det.innerHTML=`<div class="dhead">${nav}<span class="date">${fmtDate(d.datum)} ${isNew(d)?'· <span style="color:var(--green)">Neu</span>':''}</span><h2>${esc(d.titel)}</h2>${d.ist_testdaten?'<div class="msg" role="note" style="margin:8px 0;padding:10px 12px;border:1px solid var(--gold);border-radius:9px;background:rgba(249,199,79,.12);color:var(--gold)"><b>🧪 Testdaten</b> — Diese Sitzung ist nicht echt. Sie dient nur zum Ausprobieren des Vorstandsbereichs und kann jederzeit gelöscht werden.</div>':''}
     <div class="sub"><span><b>Ort</b> ${esc(d.ort)}</span><span><b>Dauer</b> ${fmt(d.dauer)}</span><span><b>Themen</b> ${(d.themen||[]).length?(d.themen||[]).map(t=>`<button class="topic-chip${isWatched(t)?' on':''}" data-watch="${esc(t)}" aria-pressed="${isWatched(t)}" aria-label="${isWatched(t)?('Thema '+esc(t)+' nicht mehr merken'):('Thema '+esc(t)+' merken')}">${isWatched(t)?'★':'☆'} ${esc(t)}</button>`).join(" "):"–"}</span></div>
     <div class="speakers">${(d.sprecher||[]).map((s,i)=>`<span class="sp-tag"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</span>`).join("")}</div>
@@ -1356,6 +1365,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   }
   if($("#dPrev"))$("#dPrev").onclick=()=>stepEntry(-1);
   if($("#dNext"))$("#dNext").onclick=()=>stepEntry(1);
+  if($("#dToList"))$("#dToList").onclick=()=>{const r=document.querySelector(".rail");if(r)r.scrollIntoView({behavior:"smooth",block:"start"});};
   $("#dBook").onclick=()=>{toggleBookmark(d.id);$("#dBook").textContent=isBookmarked(d.id)?'★ Lesezeichen gesetzt':'☆ Lesezeichen';renderList();};
   if($("#dRead"))$("#dRead").onclick=()=>{if(SPEAKING===d.id)stopSpeak();else speakSummary(d);};
   updateReadBtn();
@@ -2019,9 +2029,9 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   ["#menuAuswertung","#menuVerwaltung","#menuVorstand"].forEach(sel=>{const el=$(sel);if(el){el.hidden=!berechtigt;el.style.display=berechtigt?"":"none";}});
   if($("#btnRechte"))$("#btnRechte").hidden=!isAdmin();
   if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
-  if($("#btnZugaenge"))$("#btnZugaenge").hidden=!isAdmin();
-  if($("#btnTermine"))$("#btnTermine").hidden=!isAdmin();
-  if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").hidden=!isAdmin();
+  if($("#btnZugaenge"))$("#btnZugaenge").hidden=!(berechtigt&&hatRecht("adressen"));
+  if($("#btnTermine"))$("#btnTermine").hidden=!(berechtigt&&hatRecht("termine"));
+  if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").hidden=!(berechtigt&&hatRecht("vorschlaege"));
   if($("#btnVorschlagVorstand"))$("#btnVorschlagVorstand").hidden=!berechtigt;
   if($("#btnAufgaben"))$("#btnAufgaben").hidden=!(berechtigt&&hatRecht("aufgaben"));
   if($("#btnOffenePunkte"))$("#btnOffenePunkte").hidden=!isAdmin();
@@ -2139,7 +2149,7 @@ function logIntern(aktion,sid,detail){if(!supa||!state.email)return;
   try{supa.from("intern_zugriff_log").insert({email:state.email,aktion,stammtisch_id:sid,detail}).then(()=>{},()=>{});}catch(e){}}
 
 /* ---- Phase 1: Rechte-Verwaltung + Allowlist (Admin) ---- */
-const RECHTE_DEF=[["aufgaben","Aufgaben"],["freigabe","Freigabe"],["agenda","Agenda"]];
+const RECHTE_DEF=[["aufgaben","Aufgaben"],["freigabe","Freigabe"],["agenda","Agenda"],["dat_eigene","Zusammenfassung eigene Vereine"],["adressen","Vereins-Adressen"],["termine","Termine"],["vorschlaege","Vorschläge"]];
 let RECHTE_ALLOW=[],RECHTE_MAP={};
 async function openRechte(){if(!isAdmin()){announce("Nur für den Admin.");return;}$("#rechteMsg").textContent="";openModal($("#ovRechte"));await loadRechte();}
 async function loadRechte(){const box=$("#rechteListe");if(!box)return;box.innerHTML='<div class="msg info">Lade…</div>';
@@ -2204,7 +2214,7 @@ if($("#btnVorschlagVorstand"))$("#btnVorschlagVorstand").onclick=()=>openVorschl
 if($("#vorschlagSend"))$("#vorschlagSend").onclick=()=>vorschlagSend();
 
 let VS_TAB="mitglied",VS_DATA=[];
-async function openVorschlaege(){if(!isAdmin()){announce("Nur für den Admin.");return;}$("#vsMsg").textContent="";openModal($("#ovVorschlaege"));await loadVorschlaege();}
+async function openVorschlaege(){if(!hatRecht("vorschlaege")){announce("Dafür fehlt die Berechtigung.");return;}$("#vsMsg").textContent="";openModal($("#ovVorschlaege"));await loadVorschlaege();}
 async function loadVorschlaege(){const box=$("#vsBody");if(!box)return;box.innerHTML='<div class="msg info">Lade…</div>';
   try{const {data,error}=await supa.from("vorschlaege").select("*").order("erstellt_am",{ascending:false});if(error)throw error;VS_DATA=data||[];renderVorschlaege();}
   catch(e){box.innerHTML=`<div class="msg err">Konnte nicht laden: ${esc(e.message||e)}</div>`;}}
@@ -2922,6 +2932,7 @@ async function loadDat(){
   datMelde("");datHinweis("");
   const box=$("#datListe");if(box)box.innerHTML='<div class="msg info">Lade…</div>';
   $("#datGesamt").hidden=!isAdmin();
+  $("#datEigene").hidden=!hatRecht("dat_eigene");
   $("#datVerw").hidden=!isAdmin();
   $("#datImport").hidden=!isAdmin();
   if(!await datStammLaden()){if(box)box.innerHTML='<div class="msg warn">Die Kennzahlen sind gerade nicht erreichbar.</div>';return;}
@@ -3064,10 +3075,11 @@ async function datAlleVereine(k){
     rows.map(r=>`<tr><td>${esc(r.verein)}</td><td>${r.zahl!=null?esc(datFmt(r.zahl,d.art,d.nachkomma,d.einheit)):'<span style="color:var(--muted)">keine Angabe</span>'}</td></tr>`).join("")+
     `</tbody></table>`;}
 
-async function datGesamtAuf(){
+async function datAggAuf(rpc,titel){
   const ov=$("#ovDatGesamt"),body=$("#datGsBody");
+  const tt=$("#datGsTitel");if(tt)tt.textContent=titel;
   body.innerHTML='<div class="msg info">Lade…</div>';openModal(ov);
-  const {data,error}=await supa.rpc("vd_aggregat",{p_stichtag:DAT_ST.tag});
+  const {data,error}=await supa.rpc(rpc,{p_stichtag:DAT_ST.tag});
   if(error){body.innerHTML='<div class="msg warn">'+esc(error.message)+'</div>';return;}
   const rows=data||[];
   if(!rows.length){body.innerHTML='<div class="msg info">Für diesen Stichtag liegen keine Kennzahlen vor.</div>';return;}
@@ -3080,6 +3092,8 @@ async function datGesamtAuf(){
     html+=`<tr><td>${esc(r.name)}</td><td>${r.anzahl}</td><td>${z(r.summe,r)}</td><td>${z(r.mittel,r)}</td><td>${z(r.median,r)}</td><td>${z(r.kleinstes,r)}</td><td>${z(r.groesstes,r)}</td></tr>`;});
   html+='</tbody></table>';
   body.innerHTML=html;}
+async function datGesamtAuf(){return datAggAuf("vd_aggregat","Gesamtübersicht über alle Vereine");}
+async function datEigeneAuf(){return datAggAuf("vd_aggregat_eigene","Zusammenfassung meiner Vereine");}
 
 /* ---- CSV einspielen, nur Admin ----
    Der Export kommt mit \r\r\n und englischem Zahlenformat, fehlende Werte stehen als 'null'.
@@ -3333,6 +3347,7 @@ if($("#datKompakt"))$("#datKompakt").onclick=()=>{
   b.setAttribute("aria-pressed",sichtbar?"true":"false");
 };
 if($("#datGesamt"))$("#datGesamt").onclick=datGesamtAuf;
+if($("#datEigene"))$("#datEigene").onclick=datEigeneAuf;
 if($("#datImport"))$("#datImport").onclick=datImportAuf;
 function datImTagPruefen(){
   const w=$("#datImTagWarn");if(!w)return;
@@ -3420,7 +3435,7 @@ if($("#helpIntro"))$("#helpIntro").onclick=()=>{closeModal($("#ovHelp"));
 
 /* ---- Adressen-Verwaltung (Admin): wer darf in den Vorstandsbereich ---- */
 let ADR_DATA=[],ADR_VEREINE=[],ADR_EDIT=null,ADR_Q="";
-async function openAdressen(){if(!isAdmin()){announce("Nur für Admins.");return;}
+async function openAdressen(){if(!hatRecht("adressen")){announce("Dafür fehlt die Berechtigung.");return;}
   adrReset();$("#adrSuche").value="";ADR_Q="";
   openModal($("#ovAdressen"));await loadAdressen();}
 function adrReset(){ADR_EDIT=null;$("#adrFormTitel").textContent="Adresse hinzufügen";
@@ -3428,11 +3443,17 @@ function adrReset(){ADR_EDIT=null;$("#adrFormTitel").textContent="Adresse hinzuf
   $("#adrNeuStadt").value="";$("#adrNeuSchluessel").value="";$("#adrNeuBox").hidden=true;
   $("#adrReset").hidden=true;$("#adrMsg").textContent="";$("#adrMsg").className="msg";}
 function adrVereinOptionen(){const sel=$("#adrVerein");const alt=sel.value;
-  sel.innerHTML='<option value="">Bitte wählen</option>'+ADR_VEREINE.map(v=>`<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.stadt)})</option>`).join("")+'<option value="__neu">Neuen Verein anlegen…</option>';
+  sel.innerHTML='<option value="">Bitte wählen</option>'+ADR_VEREINE.map(v=>`<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.stadt)})</option>`).join("")+(isAdmin()?'<option value="__neu">Neuen Verein anlegen…</option>':'');
   sel.value=alt;}
 async function loadAdressen(){const box=$("#adrListe");box.innerHTML='<div class="msg info">Lade…</div>';
-  try{const v=await supa.from("vereine").select("id,schluessel,name,stadt").order("stadt");if(v.error)throw v.error;
-    ADR_VEREINE=v.data||[];
+  try{
+    if(isAdmin()){
+      const v=await supa.from("vereine").select("id,schluessel,name,stadt").order("stadt");if(v.error)throw v.error;
+      ADR_VEREINE=v.data||[];
+    }else{
+      const v=await supa.rpc("vd_meine_vereine");if(v.error)throw v.error;
+      ADR_VEREINE=(v.data||[]).slice().sort((a,b)=>(a.stadt||"").localeCompare(b.stadt||"","de"));
+    }
     const a=await supa.from("vereins_adressen").select("email,rolle,name,aktiv,verein_id").order("email");if(a.error)throw a.error;
     ADR_DATA=a.data||[];adrVereinOptionen();renderAdressen();
   }catch(e){box.innerHTML=`<div class="msg err">Konnte nicht laden: ${esc(e.message||String(e))}</div>`;}}
@@ -3623,7 +3644,10 @@ if($("#blEmail"))$("#blEmail").addEventListener("keydown",e=>{if(e.key==="Enter"
 if($("#blSuche"))$("#blSuche").oninput=e=>{BL_Q=e.target.value;renderBlEditor();};
 
 /* Sammelpunkt Zugaenge: ein Menuepunkt, drei Bereiche. Jeder Bereich schliesst den Hub und oeffnet das erprobte Werkzeug. */
-function openZugaenge(){if(!isAdmin()){announce("Nur für Admins.");return;}openModal($("#ovZugaenge"));}
+function openZugaenge(){if(!hatRecht("adressen")){announce("Dafür fehlt die Berechtigung.");return;}
+  const ad=isAdmin();if($("#zgSecAdmins"))$("#zgSecAdmins").hidden=!ad;if($("#zgSecBl"))$("#zgSecBl").hidden=!ad;
+  const it=$("#zgIntro");if(it)it.textContent=ad?"Hier steuerst du an einer Stelle, wer sich anmelden darf und mit welchen Rechten. Wähle den passenden Bereich.":"Hier verwaltest du die Vorstände und Ansprechpersonen deiner Vereine.";
+  openModal($("#ovZugaenge"));}
 if($("#btnZugaenge"))$("#btnZugaenge").onclick=()=>openZugaenge();
 if($("#zgAdmins"))$("#zgAdmins").onclick=()=>{closeModal($("#ovZugaenge"));openAdmins();};
 if($("#zgVorstand"))$("#zgVorstand").onclick=()=>{closeModal($("#ovZugaenge"));openAdressen();};
