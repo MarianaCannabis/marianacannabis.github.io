@@ -1015,7 +1015,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-6";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-8";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1024,9 +1024,11 @@ const EBENE_IMODE={pub:"fill",int:"fill_intern",mit:"fill_mitglieder"};
 const EBENE_WORT={pub:"Stammtisch",int:"Stammtisch",mit:"Mitgliederabend"};
 /* Wer darf welche Ebene sehen. Neue Ebene HIER eintragen, nicht verstreuen.
    Massgeblich ist die Backend-Funktion darf_ebene(), das hier ist nur die Anzeige. */
-const EBENE_ROLLEN={pub:["admin","vorstand","ap"],int:["admin","vorstand","ap"],mit:["admin","vorstand","ap"],dat:["admin","vorstand"],dok:["admin","vorstand"]};
-function darfEbene(e){const r=state.rolle;if(!r)return false;return (EBENE_ROLLEN[e]||[]).includes(r);}
-const ROLLE_WORT={admin:"Admin",vorstand:"Vorstand",ap:"Ansprechperson"};
+const EBENE_ROLLEN={pub:["admin","vorstand","ap","bereichsleitung"],int:["admin","vorstand","ap","bereichsleitung"],mit:["admin","vorstand","ap","bereichsleitung"],dat:["admin","vorstand"],dok:["admin","vorstand"]};
+function darfEbene(e){const r=state.rolle;if(!r)return false;
+  if(r==="bereichsleitung"){if(e==="dat")return hatRecht("dat_eigene");if(e==="dok")return hatRecht("dokumente");}
+  return (EBENE_ROLLEN[e]||[]).includes(r);}
+const ROLLE_WORT={admin:"Admin",vorstand:"Vorstand",ap:"Ansprechperson",bereichsleitung:"Bereichsleitung"};
 function ebenePrivat(){return state.mode==="int"||state.mode==="mit";}
 let state={authed:false,email:null,internOk:false,isAdmin:false,rolle:null,vereinId:null,verein:null,vb:false,rechte:[],mode:"pub",q:"",years:new Set(),speakers:new Set(),themes:new Set(),onlySlides:false,onlyBookmarks:false,sort:"new",current:null,tab:"summary",txQ:"",txSp:null,hits:[],hit:-1,collapsedYears:new Set(),autohit:null,sinceCount:0,sinceLabel:"",sinceDismissed:false,facetSp:false,facetTh:false};
 let wz={step:1,files:[],folien:null,ort:""};
@@ -2149,7 +2151,7 @@ function logIntern(aktion,sid,detail){if(!supa||!state.email)return;
   try{supa.from("intern_zugriff_log").insert({email:state.email,aktion,stammtisch_id:sid,detail}).then(()=>{},()=>{});}catch(e){}}
 
 /* ---- Phase 1: Rechte-Verwaltung + Allowlist (Admin) ---- */
-const RECHTE_DEF=[["aufgaben","Aufgaben"],["freigabe","Freigabe"],["agenda","Agenda"],["dat_eigene","Zusammenfassung eigene Vereine"],["adressen","Vereins-Adressen"],["termine","Termine"],["vorschlaege","Vorschläge"]];
+const RECHTE_DEF=[["aufgaben","Aufgaben"],["freigabe","Freigabe"],["agenda","Agenda"],["dat_eigene","Zusammenfassung eigene Vereine"],["adressen","Vereins-Adressen"],["termine","Termine"],["vorschlaege","Vorschläge"],["dokumente","Dokumente (Bereichsleitung)"]];
 let RECHTE_ALLOW=[],RECHTE_MAP={};
 async function openRechte(){if(!isAdmin()){announce("Nur für den Admin.");return;}$("#rechteMsg").textContent="";openModal($("#ovRechte"));await loadRechte();}
 async function loadRechte(){const box=$("#rechteListe");if(!box)return;box.innerHTML='<div class="msg info">Lade…</div>';
@@ -2363,6 +2365,9 @@ function dokWurzel(d){return d.original_id||d.id;}
 function dokGemeinsam(d){return !d.verein_id;}
 function darfDokSchreiben(d){if(state.rolle==="admin")return true;
   return state.rolle==="vorstand"&&!!d.verein_id&&d.verein_id===state.vereinId;}
+function darfDokDownload(d){if(state.rolle==="admin")return true;
+  if(state.rolle==="bereichsleitung"&&hatRecht("dokumente"))return !!d.verein_id;
+  return false;}
 function darfDokLoeschen(d){if(state.rolle==="admin")return true;return darfDokSchreiben(d)&&d.hochgeladen_von===state.email;}
 function darfDokUnterschreiben(){return state.rolle==="admin"||state.rolle==="vorstand";}
 function dokGroesse(n){if(!n)return "";const mb=n/1048576;return mb>=1?(mb.toFixed(1)+" MB"):(Math.round(n/1024)+" kB");}
@@ -2379,9 +2384,17 @@ function dokZeigeNeu(){
   try{el.scrollIntoView({block:"start",behavior:"smooth"});}catch(e){el.scrollIntoView();}
   setTimeout(()=>{const w=document.querySelector(".dok-neu");if(w)w.classList.remove("dok-neu");DOK_NEU=null;},6000);}
 async function loadDok(){
+  if($("#dokNeu"))$("#dokNeu").hidden=!(state.rolle==="admin"||state.rolle==="vorstand");
   try{
-    if(!DOK_VEREINE.length){const v=await supa.from("vereine").select("id,schluessel,name,stadt").order("stadt");
-      if(v.error)throw v.error;DOK_VEREINE=v.data||[];}
+    if(!DOK_VEREINE.length){
+      if(state.rolle==="admin"||state.rolle==="vorstand"){
+        const v=await supa.from("vereine").select("id,schluessel,name,stadt").order("stadt");
+        if(v.error)throw v.error;DOK_VEREINE=v.data||[];
+      }else{
+        const v=await supa.rpc("vd_meine_vereine");
+        if(v.error)throw v.error;DOK_VEREINE=(v.data||[]).map(x=>({id:x.id,schluessel:null,name:x.name,stadt:x.stadt}));
+      }
+    }
     const d=await supa.from("dokumente_intern").select("*").order("hochgeladen_am",{ascending:false});
     if(d.error)throw d.error;DOK_DATA=d.data||[];
   }catch(e){DOK_DATA=[];const b=$("#dokListe");
@@ -2436,7 +2449,7 @@ function renderDok(){
         <button class="btn small" data-dok-view="${d.id}">Ansehen</button>
         ${darfDokUnterschreiben()?`<button class="btn small" data-dok-sign="${d.id}">Jetzt unterschreiben</button>`:""}
         ${darfDokSchreiben(d)?`<button class="btn small" data-dok-edit="${d.id}">Bearbeiten</button>`:""}
-        ${isAdmin()?`<button class="btn small" data-dok-down="${d.id}">Herunterladen</button>`:""}
+        ${darfDokDownload(d)?`<button class="btn small" data-dok-down="${d.id}">Herunterladen</button>`:""}
         ${alle.length>1?`<button class="btn small" data-dok-hist="${w}" aria-expanded="${off?"true":"false"}">Fassungen (${alle.length})</button>`:""}
         ${darfDokLoeschen(d)?`<button class="btn small danger" data-dok-del="${d.id}">Löschen</button>`:""}
       </div>
@@ -2473,7 +2486,7 @@ async function dokView(id){
   const d=DOK_DATA.find(x=>x.id===id);if(!d)return;
   V_D=d;V_SEITE=1;V_PDF=null;
   $("#dokVTitel").textContent=d.titel||"Unterlage";
-  $("#dokVDown").hidden=!isAdmin();
+  $("#dokVDown").hidden=!darfDokDownload(d);
   const m=$("#dokVMsg");m.className="msg info";m.textContent="Lade Unterlage…";
   openModal($("#ovDokView"));
   try{
@@ -2495,8 +2508,8 @@ if($("#dokVNext"))$("#dokVNext").onclick=()=>vSeite(V_SEITE+1);
 if($("#dokVDown"))$("#dokVDown").onclick=()=>{if(V_D)dokDownload(V_D.id);};
 
 async function dokDownload(id){
-  if(!isAdmin()){announce("Herunterladen ist nur für den Admin vorgesehen.");return;}
   const d=DOK_DATA.find(x=>x.id===id);if(!d)return;
+  if(!darfDokDownload(d)){announce("Herunterladen ist hier nicht vorgesehen.");return;}
   try{
     const bytes=await dokBytes(d);
     const url=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
@@ -3369,7 +3382,7 @@ if($("#datImGo"))$("#datImGo").onclick=datImportGo;
 /* ---- Hilfe und Einfuehrung, rollenabhaengig in vier aufbauenden Stufen ----
    Stufe 0 Mitglied, 1 Ansprechperson, 2 Vorstand, 3 Admin. Jede Stufe sieht alles
    der darunterliegenden. Neue Rolle: HIER eintragen, nicht verstreuen. */
-const ROLLE_STUFE={ap:1,vorstand:2,admin:3};
+const ROLLE_STUFE={ap:1,bereichsleitung:2,vorstand:2,admin:3};
 function meineStufe(){if(!state.authed||!state.rolle)return 0;return ROLLE_STUFE[state.rolle]||0;}
 const HILFE_STUFEN=[
  {ab:1,t:"Der Vorstandsbereich",p:["Über „Vorstandsbereich öffnen\" kommst du in den geschützten Teil. Alles dort ist für Mitglieder unsichtbar. Oben siehst du jederzeit, als wer du angemeldet bist und welche Rolle du hast."]},
@@ -3384,13 +3397,26 @@ const HILFE_STUFEN=[
  {ab:3,t:"Adressen und Admins",p:["„Adressen verwalten\" bestimmt, wer überhaupt in den Vorstandsbereich kommt. Vorstand sieht alle fünf Ebenen, Ansprechperson sieht die drei Ebenen ohne Vereinsdaten und Dokumente. Wer dort nicht steht, kommt nicht rein.","Sperren ist zurücknehmbar und meistens die bessere Wahl als Löschen. Unter „Admins verwalten\" kommen weitere Admins dazu. Der letzte aktive Admin lässt sich nicht entfernen, damit sich niemand aussperrt."]},
  {ab:3,t:"Verantwortung",p:["Jeder Zugriff im Vorstandsbereich wird protokolliert. Das Archiv enthält personenbezogene Daten, gib Zugänge deshalb sparsam und nur an Rollen-Postfächer, nicht an private Adressen."]}
 ];
-function helpRender(){const box=$("#helpRolle");if(!box)return;const st=meineStufe();
+const HILFE_BL=[
+ {t:"Deine Rolle: Bereichsleitung",p:["Du betreust mehrere Vereine über deine eigene Adresse. Du siehst genau die Vereine, die dir zugeteilt sind, und nur die.","Welche Bereiche du hast, hängt an den Rechten, die dir der Admin gibt. Nur die dazu passenden Reiter tauchen bei dir auf."]},
+ {t:"Die Ebenen",p:["Stammtische, interne Stammtische und den Mitgliederabend siehst du wie ein Vorstand. Suche, Filter und Transkripte funktionieren in jeder Ebene gleich.","Vereinsdaten und Dokumente erscheinen, wenn dir das jeweilige Recht gegeben wurde."]},
+ {recht:"dat_eigene",t:"Zusammenfassung deiner Vereine",p:["In der Ebene Vereinsdaten findest du den Knopf „Meine Vereine\". Er zeigt Summe, Mittel, Median, Kleinstes und Größtes über genau deine zugeteilten Vereine, zu jeder Kennzahl mit Erklärung.","Du siehst nur deine Vereine, und nur lesend. Einzelwerte fremder Vereine bekommst du nicht. Es gibt keinen Export, jeder Zugriff wird protokolliert."]},
+ {recht:"adressen",t:"Vereins-Adressen",p:["Unter „Zugänge verwalten\" pflegst du die Vorstände und Ansprechpersonen deiner Vereine, also wer sich mit welcher Adresse anmelden darf. In der Vereinsauswahl erscheinen nur deine Vereine.","Anlegen, sperren oder freigeben wirkt sofort. Sperren ist die sanftere Wahl als Löschen und lässt sich leichter zurücknehmen."]},
+ {recht:"dokumente",t:"Dokumente",p:["Du siehst die Unterlagen deiner Vereine, kannst sie ansehen und, nur in deinen Vereinen, herunterladen. Gemeinsame Vorlagen kannst du ansehen.","Hochladen, Bearbeiten und Unterschreiben bleibt beim Vorstand des Vereins und beim Admin. Jedes Ansehen und jeder Download wird protokolliert.","Ehrlich dazu: Das Ansehen lädt die PDF ohnehin in deinen Browser. Der fehlende Download-Knopf bei gemeinsamen Vorlagen ist eine Grenze der Bedienung, keine technische Sperre."]}
+];
+function helpRender(){const box=$("#helpRolle");if(!box)return;
+  if(state.rolle==="bereichsleitung"){
+    const blh=HILFE_BL.filter(b=>!b.recht||hatRecht(b.recht));
+    box.innerHTML='<div class="sec-h" style="margin-top:18px;color:var(--gold)">Für dich als Bereichsleitung</div>'
+      +blh.map(b=>`<div class="sec-h">${b.t}</div>`+b.p.map(x=>`<p>${x}</p>`).join("")).join("");
+    const ib0=$("#helpIntro");if(ib0)ib0.hidden=false;return;}
+  const st=meineStufe();
   const bl=HILFE_STUFEN.filter(b=>st>=b.ab);
   box.innerHTML=bl.length?('<div class="sec-h" style="margin-top:18px;color:var(--gold)">Zusätzlich für dich freigeschaltet</div>'
     +bl.map(b=>`<div class="sec-h">${b.t}</div>`+b.p.map(x=>`<p>${x}</p>`).join("")).join("")):"";
   const ib=$("#helpIntro");if(ib)ib.hidden=false;}
 
-const INTRO_MERKER={mitglied:"st_intro_ok",ap:"st_intro_ap_ok",vorstand:"st_intro_vorstand_ok",admin:"st_intro_admin_ok"};
+const INTRO_MERKER={mitglied:"st_intro_ok",ap:"st_intro_ap_ok",vorstand:"st_intro_vorstand_ok",bereichsleitung:"st_intro_bl_ok",admin:"st_intro_admin_ok"};
 const INTRO={
  mitglied:[{t:"Kurz vorab",p:["Schön, dass du reinschaust. Ein kurzer Hinweis, bevor es losgeht.","Die Zusammenfassungen und Transkripte in diesem Archiv werden automatisch erstellt und können Fehler enthalten, etwa bei Namen, Zahlen oder undeutlichen Stellen. Sie sind als Orientierung und zum schnellen Finden gedacht, nicht als wortgenaues Protokoll.","Wenn es auf den genauen Inhalt ankommt, hör dir bitte immer die eigentliche Aufnahme an und sieh dir die zugehörigen Folien an. Die Audioaufnahme ist die verlässliche Quelle, der Text hilft dir nur beim Einordnen.",'<span class="msg info">Diesen Hinweis findest du später jederzeit wieder unter „Hilfe".</span>']}],
  ap:[
@@ -3402,6 +3428,10 @@ const INTRO={
   {t:"Die fünf Ebenen",p:["Oben stehen Reiter: <b>Stammtische</b>, <b>Interne Stammtische</b>, <b>Mitgliederabend</b>, <b>Vereinsdaten</b> und <b>Dokumente</b>. Mit den Pfeiltasten wechselst du zwischen ihnen.","Manche Funktionen kommen in mehreren Ebenen doppelt vor. Das ist Absicht und soll dir Wege sparen."]},
   {t:"Vereinsdaten",p:["Hier stehen die Kennzahlen deines Vereins mit Verlauf über die Stichtage. Zu jeder Zahl gehört eine Erklärung, und neben dem Wert steht, wie er sich seit dem letzten Stichtag verändert hat.","Du siehst nur deinen eigenen Verein, und nur lesend. Zahlen anderer Vereine bekommst du nicht. Es gibt bewusst keinen Export-Knopf. Ehrlich dazu: Ein Bildschirmfoto lässt sich technisch nicht verhindern. Belastbar ist das Zugriffsprotokoll, nicht die Sperre."]},
   {t:"Dokumente",p:["Die Unterlagen deines Vereins, dazu gemeinsame Vorlagen für alle Vorstände. Hochladen, ansehen und unterschreiben geht direkt hier, ohne Umweg über den Rechner.","Unterschreiben: zeichnen mit dem Finger oder der Maus, oder ein Bild deiner Unterschrift hochladen, dann auf die Stelle tippen. Die Unterschrift steht danach fest in der PDF. Es entsteht eine <b>neue Fassung</b>, die alte bleibt erhalten.","Ein Herunterladen ist nicht vorgesehen. Jedes Ansehen und jede Unterschrift wird protokolliert.",'<span class="msg info">Die ausführliche Anleitung findest du jederzeit unter „Hilfe".</span>']}],
+ bereichsleitung:[
+  {t:"Willkommen, Bereichsleitung",p:["Du bist als Bereichsleitung angemeldet. Anders als ein Vorstand bist du nicht an einen einzelnen Verein gebunden, sondern betreust mehrere Vereine über deine eigene Adresse.","Dein Zugang hängt an dieser Adresse. Wer das Postfach lesen kann, bekommt den Magic Link und kommt rein. Geh deshalb sorgsam mit dem Postfach um."]},
+  {t:"Was du siehst",p:["Oben stehen die Ebenen als Reiter. <b>Stammtische</b>, <b>Interne Stammtische</b> und <b>Mitgliederabend</b> siehst du wie ein Vorstand. Mit den Pfeiltasten wechselst du zwischen ihnen.","<b>Vereinsdaten</b>, <b>Zugänge</b> und <b>Dokumente</b> erscheinen genau dann, wenn dir der Admin das jeweilige Recht gegeben hat. Fehlt ein Bereich, ist das kein Fehler, sondern eine Frage der Rechte."]},
+  {t:"Deine Vereine, nur deine",p:["Überall, wo du Zahlen, Adressen oder Unterlagen siehst, sind es ausschließlich deine zugeteilten Vereine. Fremde Vereine bekommst du nicht, auch nicht als Einzelwert.","Dokumente darfst du ansehen und, in deinen Vereinen, herunterladen. Hochladen und Unterschreiben bleibt beim Vorstand des Vereins. Jeder Zugriff wird protokolliert.",'<span class="msg info">Die ausführliche Anleitung findest du jederzeit unter „Hilfe".</span>']}],
  admin:[
   {t:"Du bist Admin",p:["Als Admin siehst du alle Ebenen aller Vereine und darfst alles verwalten. Das ist die weitreichendste Rolle im Archiv, geh entsprechend sorgsam damit um."]},
   {t:"Aufnahmen und Warteschlange",p:["„Neue Aufnahme\" lädt Audio und Folien hoch und legt einen Auftrag an. Die eigentliche Verarbeitung läuft danach lokal auf Andres Rechner, nicht in der Cloud: Transkript, Sprechertrennung, Zusammenfassung.","Unter „Status & Warteschlange\" siehst du, was gerade läuft. Achte beim Hochladen auf die Ebene, in der du stehst, dort landet die Aufnahme."]},
