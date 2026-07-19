@@ -682,7 +682,7 @@
 
 <div class="overlay" id="ovVorschlaege" hidden role="dialog" aria-modal="true" aria-label="Vorschläge auswerten"><div class="modal modal-wide">
   <div class="modal-head"><h3>💡 Vorschläge</h3><button class="x" data-close aria-label="Schließen">×</button></div>
-  <div class="tabs" role="tablist" id="vsTabs"><button role="tab" data-vs="mitglied" class="on">Von Mitgliedern</button><button role="tab" data-vs="vorstand">Vom Vorstand</button></div>
+  <div class="tabs" role="tablist" id="vsTabs"><button role="tab" data-vs="mitglied" class="on" aria-selected="true">Von Mitgliedern</button><button role="tab" data-vs="vorstand" aria-selected="false">Vom Vorstand</button></div>
   <div class="modal-body" id="vsBody"><div class="msg info">Lade…</div></div>
   <div class="modal-foot"><span class="msg" id="vsMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
 
@@ -895,10 +895,10 @@
 <div class="overlay" id="ovPflege" hidden role="dialog" aria-modal="true" aria-label="Pflege"><div class="modal">
   <div class="modal-head"><h3>Pflege</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="tabs" id="pflegeTabs" role="tablist">
-    <button role="tab" data-pf="fehlt" class="active">Was fehlt</button>
-    <button role="tab" data-pf="themen">Themen aufräumen</button>
-    <button role="tab" data-pf="personen">Personen</button>
-    <button role="tab" data-pf="meldungen">Meldungen</button>
+    <button role="tab" data-pf="fehlt" class="active" aria-selected="true">Was fehlt</button>
+    <button role="tab" data-pf="themen" aria-selected="false">Themen aufräumen</button>
+    <button role="tab" data-pf="personen" aria-selected="false">Personen</button>
+    <button role="tab" data-pf="meldungen" aria-selected="false">Meldungen</button>
   </div>
   <div class="modal-body" id="pflegeBody"></div>
   <div class="modal-foot"><span class="msg" id="pflegeMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
@@ -952,7 +952,7 @@
 <div class="overlay" id="ovDocs" hidden role="dialog" aria-modal="true" aria-label="Dokumente"><div class="modal modal-wide">
   <div class="modal-head"><h3>Dokumentenablage (intern)</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body">
-    <div class="tabs" role="tablist" id="docTabs"><button role="tab" data-dt="browse" class="on">Durchsuchen</button><button role="tab" data-dt="upload">Hochladen</button></div>
+    <div class="tabs" role="tablist" id="docTabs"><button role="tab" data-dt="browse" class="on" aria-selected="true">Durchsuchen</button><button role="tab" data-dt="upload" aria-selected="false">Hochladen</button></div>
     <div id="docBrowse">
       <div class="rech-tools">
         <input type="search" id="docQ" placeholder="Suche in Titel, Beschreibung, Schlagworten und Dokumenttext…" autocomplete="off" aria-label="Dokumente durchsuchen">
@@ -1015,7 +1015,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-11";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-12";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1869,7 +1869,7 @@ $("#rechQ").oninput=research;$("#rechSort").onchange=research;$("#rechPdf").oncl
 let DOCS=[];
 $("#btnDocs").onclick=()=>openDocs();
 $("#btnLog").onclick=()=>openLog();
-document.querySelectorAll('#docTabs [data-dt]').forEach(b=>b.onclick=()=>{document.querySelectorAll('#docTabs [data-dt]').forEach(x=>x.classList.toggle("on",x===b));const up=b.dataset.dt==="upload";$("#docUpload").hidden=!up;$("#docBrowse").hidden=up;});
+document.querySelectorAll('#docTabs [data-dt]').forEach(b=>b.onclick=()=>{document.querySelectorAll('#docTabs [data-dt]').forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-selected",on);});const up=b.dataset.dt==="upload";$("#docUpload").hidden=!up;$("#docBrowse").hidden=up;});
 async function openDocs(){openModal($("#ovDocs"));$("#docList").innerHTML='<div class="msg info">Lade…</div>';await loadDocs();renderDocs();}
 async function loadDocs(){if(!supa)return;try{const {data,error}=await supa.from("dokumente_intern").select("*").order("dok_datum",{ascending:false,nullsFirst:false}).order("hochgeladen_am",{ascending:false});if(error)throw error;DOCS=data||[];
     const cats=[...new Set(DOCS.map(d=>d.kategorie).filter(Boolean))].sort();
@@ -1971,7 +1971,7 @@ function boardReport(von,bis){let list=DATA.filter(d=>(!von||d.datum>=von)&&(!bi
 
 /* ---- Pflege (admin) ---- */
 $("#btnPflege").onclick=()=>{state.pfTab=state.pfTab||"fehlt";$("#pflegeMsg").textContent="";renderPflegeTabs();renderPflege();openModal($("#ovPflege"));};
-function renderPflegeTabs(){$("#pflegeTabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.pf===state.pfTab;b.classList.toggle("active",on);b.onclick=()=>{state.pfTab=b.dataset.pf;renderPflegeTabs();renderPflege();};});}
+function renderPflegeTabs(){$("#pflegeTabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.pf===state.pfTab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.onclick=()=>{state.pfTab=b.dataset.pf;renderPflegeTabs();renderPflege();};});}
 function pflegeJump(id){closeModal($("#ovPflege"));state.current=id;state.tab="summary";renderList();renderDetail(true);}
 async function renderPflege(){const box=$("#pflegeBody");
   if(state.pfTab==="fehlt"){const offen=DATA.filter(d=>d.verarbeitung==="offen"),noSum=DATA.filter(d=>d.verarbeitung!=="offen"&&!((d.zusammenfassung||{}).lead)),noFol=DATA.filter(d=>!(d.folien&&d.folien.length)),anon=DATA.filter(d=>(d.sprecher||[]).some(s=>/^Sprecher\s+[A-Z0-9]+$/.test(s)));
@@ -2244,7 +2244,7 @@ async function vsDelete(id){const msg=$("#vsMsg");
   try{const {error}=await supa.from("vorschlaege").delete().eq("id",id);if(error)throw error;msg.textContent="Gelöscht.";msg.className="msg ok";announce("Vorschlag gelöscht.");await loadVorschlaege();}
   catch(e){msg.textContent="Fehler: "+(e.message||e);msg.className="msg err";}}
 if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").onclick=()=>openVorschlaege();
-if($("#vsTabs"))$("#vsTabs").querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{VS_TAB=b.dataset.vs;$("#vsTabs").querySelectorAll("[data-vs]").forEach(x=>x.classList.toggle("on",x===b));renderVorschlaege();});
+if($("#vsTabs"))$("#vsTabs").querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{VS_TAB=b.dataset.vs;$("#vsTabs").querySelectorAll("[data-vs]").forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-selected",on);});renderVorschlaege();});
 
 /* ---- Phase 4a: Aufgaben-Tracker (Admin oder Recht 'aufgaben') ---- */
 let AUF_DATA=[],AUF_EDIT=null,AUF_FILTER="offen_arbeit",AUF_SORT="frist";
