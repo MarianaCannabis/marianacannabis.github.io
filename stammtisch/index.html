@@ -864,7 +864,7 @@
       <div class="sec-h" role="heading" aria-level="4" id="blEditorTitel">Vereine zuteilen</div>
       <div class="qrow" id="blLoginBox" style="margin:8px 0">
         <div><b>Anmeldung</b><div class="msg info" id="blLoginStatus"></div></div>
-        <button class="btn small" id="blLoginBtn"></button></div>
+        <button class="btn small" id="blLoginBtn">Freischalten</button></div>
       <div class="field"><label for="blSuche">Verein suchen (Name oder Stadt)</label><input id="blSuche" type="search" placeholder="Marburg"></div>
       <div class="msg info" id="blZahl" role="status"></div>
       <div class="msg" id="blMsg" role="status" style="margin-top:4px"></div>
@@ -1015,7 +1015,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-9";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-10";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -2026,7 +2026,7 @@ async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.a
 function isAdmin(){return state.authed&&!!state.isAdmin;}
 function hatRecht(r){return isAdmin()||(state.rechte||[]).includes(r);}
 function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechtigt;
-  $("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!berechtigt;
+  $("#btnAdmin").hidden=on;$("#btnLogout").hidden=!on;$("#btnWizard").hidden=!isAdmin();
   if($("#btnVorstandLogin"))$("#btnVorstandLogin").hidden=berechtigt;
   ["#menuAuswertung","#menuVerwaltung","#menuVorstand"].forEach(sel=>{const el=$(sel);if(el){el.hidden=!berechtigt;el.style.display=berechtigt?"":"none";}});
   if($("#btnRechte"))$("#btnRechte").hidden=!isAdmin();
@@ -3803,11 +3803,11 @@ const WZ_ZIEL={
   pub:{cls:"pub",   titel:"Stammtisch hochladen",
        txt:'🌐 <b>Öffentlicher Upload · Stammtisch.</b> Diese Aufnahme(n) sind nach dem Hochladen für alle Besucher sichtbar.'},
   int:{cls:"intern",titel:"Internen Stammtisch hochladen",
-       txt:'🔒 <b>Interner Upload · Interner Stammtisch.</b> Diese Aufnahme(n) landen im Vorstandsbereich und sind nur für Vorstand und Admin sichtbar.'},
+       txt:'🔒 <b>Interner Upload · Interner Stammtisch.</b> Diese Aufnahme(n) landen im Vorstandsbereich und sind dort für alle angemeldeten Rollen sichtbar, nicht für Mitglieder.'},
   mit:{cls:"intern",titel:"Mitgliederabend hochladen",
-       txt:'🔒 <b>Interner Upload · Mitgliederabend.</b> Diese Aufnahme(n) landen in der Ebene Mitgliederabend und sind nur für Vorstand und Admin sichtbar.'}
+       txt:'🔒 <b>Interner Upload · Mitgliederabend.</b> Diese Aufnahme(n) landen in der Ebene Mitgliederabend und sind im Vorstandsbereich für alle angemeldeten Rollen sichtbar, nicht für Mitglieder.'}
 };
-function openWizard(){const eb=state.vb?state.mode:"pub";const ziel=WZ_ZIEL[eb];
+function openWizard(){if(!isAdmin()){announce("Aufnahmen kann nur der Admin hochladen.");return;}const eb=state.vb?state.mode:"pub";const ziel=WZ_ZIEL[eb];
   if(!ziel){announce("In dieser Ebene können keine Aufnahmen hochgeladen werden.");return;}
   wz={step:1,files:[],folien:null,ort:"",ebene:eb,intern:eb!=="pub"};$("#wzMsg").textContent="";
   const t=$("#wzTarget");t.className="wz-target "+ziel.cls;t.innerHTML=ziel.txt;
