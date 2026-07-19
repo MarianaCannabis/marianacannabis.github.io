@@ -864,7 +864,7 @@
       <div class="sec-h" role="heading" aria-level="4" id="blEditorTitel">Vereine zuteilen</div>
       <div class="qrow" id="blLoginBox" style="margin:8px 0">
         <div><b>Anmeldung</b><div class="msg info" id="blLoginStatus"></div></div>
-        <button class="btn small" id="blLoginBtn">Freischalten</button></div>
+      </div>
       <div class="field"><label for="blSuche">Verein suchen (Name oder Stadt)</label><input id="blSuche" type="search" placeholder="Marburg"></div>
       <div class="msg info" id="blZahl" role="status"></div>
       <div class="msg" id="blMsg" role="status" style="margin-top:4px"></div>
@@ -1015,7 +1015,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-12";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-13";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -3568,34 +3568,32 @@ if($("#adrSuche"))$("#adrSuche").oninput=e=>{ADR_Q=e.target.value;renderAdressen
    DB liefert alles, das Frontend ruft nur: vd_meine_vereine, bl_alle_zuordnungen,
    bl_status(email), bl_setzen(email,verein,an), bl_setzen_bundesland(email,bundesland,an).
    Parameter folgen der Namenskonvention der uebrigen RPCs (p_...). */
-let BL_VEREINE=[], BL_ZUORD=[], BL_EMAIL=null, BL_SET=new Set(), BL_ALLOW=new Set(), BL_Q="";
+let BL_VEREINE=[], BL_ZUORD=[], BL_EMAIL=null, BL_SET=new Set(), BL_Q="";
 async function openBereichsleitungen(){if(!isAdmin()){announce("Nur für Admins.");return;}
-  BL_EMAIL=null;BL_SET=new Set();BL_VEREINE=[];BL_ALLOW=new Set();BL_Q="";
+  BL_EMAIL=null;BL_SET=new Set();BL_VEREINE=[];BL_Q="";
   $("#blEmail").value="";$("#blSuche").value="";$("#blMsg").textContent="";$("#blMsg").className="msg";
   $("#blEditor").hidden=true;
   openModal($("#ovBereichsleitungen"));
   await blZuordLaden();}
 async function blZuordLaden(){const box=$("#blVorhanden");box.innerHTML='<div class="msg info">Lade…</div>';
-  try{const [z,al]=await Promise.all([supa.rpc("bl_alle_zuordnungen"),supa.from("intern_allowlist").select("email")]);
+  try{const z=await supa.rpc("bl_alle_zuordnungen");
     if(z.error)throw z.error;
     BL_ZUORD=z.data||[];
-    BL_ALLOW=new Set((al&&al.data||[]).map(r=>(r.email||"").toLowerCase()).filter(Boolean));
     renderBlVorhanden();
   }catch(e){box.innerHTML=`<div class="msg err">Konnte nicht laden: ${esc(e.message||String(e))}</div>`;}}
 function blAnzahl(r){const n=r&&(r.anzahl??r.anzahl_vereine??r.verein_count??r.count??r.vereine);return typeof n==="number"?n:null;}
 function renderBlVorhanden(){const box=$("#blVorhanden");if(!box)return;
   const emails=new Set();
   BL_ZUORD.forEach(r=>{const em=(r.email||r.mail||"").toLowerCase();if(em)emails.add(em);});
-  BL_ALLOW.forEach(em=>{if(em)emails.add(em);});
-  if(!emails.size){box.innerHTML='<div class="msg info">Noch keine Bereichsleitung eingetragen. Gib oben eine Adresse ein, schalte sie frei und teile ihr Vereine zu.</div>';return;}
+  if(!emails.size){box.innerHTML='<div class="msg info">Noch keine Bereichsleitung eingetragen. Gib oben eine Adresse ein und teile ihr Vereine zu, dadurch kann sie sich anmelden.</div>';return;}
   const liste=[...emails].sort((a,b)=>a.localeCompare(b,"de"));
   box.innerHTML=liste.map(em=>{
     const zr=BL_ZUORD.find(r=>(r.email||r.mail||"").toLowerCase()===em);
     const n=(BL_EMAIL&&em===BL_EMAIL)?BL_SET.size:(zr?(blAnzahl(zr)||0):0);
     const txt=n+" "+(n===1?"Verein":"Vereine");
-    const login=BL_ALLOW.has(em);
+    const login=n>0;
     return `<div class="qrow"><div><b>${esc(em)}</b><div class="msg info">${esc(txt)}</div></div>
-      <span class="qstatus ${login?'done':'error'}">${login?'anmeldeberechtigt':'kein Login'}</span>
+      <span class="qstatus ${login?'done':'error'}">${login?'anmeldeberechtigt':'kein Zugang'}</span>
       <button class="btn small" data-bl-oeffnen="${esc(em)}">Öffnen</button></div>`;}).join("");
   box.querySelectorAll("[data-bl-oeffnen]").forEach(b=>b.onclick=()=>blOeffnen(b.dataset.blOeffnen));}
 /* bl_status liefert genau die aktiven Vereine samt zugeteilt-Flag, daraus bauen wir Liste und Haekchen. */
@@ -3612,28 +3610,20 @@ async function blOeffnen(emailRoh){const email=(emailRoh||"").trim().toLowerCase
     $("#blEditorTitel").textContent="Vereine für "+email;
     m.textContent="";renderBlLogin();renderBlEditor();renderBlVorhanden();
   }catch(e){m.className="msg err";m.textContent="Konnte nicht laden: "+(e.message||e);}}
-/* Login-Freischaltung: Eintrag in intern_allowlist macht die Adresse anmeldefaehig und gibt ihr die Rolle Vorstand. */
+/* Zugang folgt der Zuteilung: wer aktive Vereine hat, ist ueber die Rolle Bereichsleitung intern anmeldefaehig. Kein separater Allowlist-Eintrag mehr. */
 function renderBlLogin(){const box=$("#blLoginStatus"),btn=$("#blLoginBtn");
-  if(!box||!btn||!BL_EMAIL)return;
-  const an=BL_ALLOW.has(BL_EMAIL);
-  box.textContent=an?"Diese Adresse darf sich anmelden.":"Diese Adresse kann sich noch nicht anmelden. Erst freischalten, sonst sieht sie nichts.";
-  btn.textContent=an?"Login-Freischaltung entfernen":"Für den Login freischalten";
-  btn.className="btn small"+(an?" danger":" primary");
-  btn.onclick=()=>blLoginSetzen(BL_EMAIL,!an);}
-async function blLoginSetzen(email,an){const m=$("#blMsg");
-  m.className="msg info";m.textContent="Speichern…";
-  try{
-    if(an){const {error}=await supa.from("intern_allowlist").insert({email:email,notiz:"Bereichsleitung"});if(error)throw error;BL_ALLOW.add(email);}
-    else{const {error}=await supa.from("intern_allowlist").delete().eq("email",email);if(error)throw error;BL_ALLOW.delete(email);}
-    m.className="msg ok";m.textContent=an?"Für den Login freigeschaltet.":"Login-Freischaltung entfernt.";announce("Gespeichert.");
-    renderBlLogin();renderBlVorhanden();
-  }catch(e){m.className="msg err";m.textContent="Nicht gespeichert: "+(e.message||e);}}
+  if(!box||!BL_EMAIL)return;
+  const n=BL_SET.size,an=n>0;
+  box.textContent=an
+    ?("Diese Adresse darf sich anmelden, sie hat "+n+" "+(n===1?"Verein":"Vereine")+" zugeteilt.")
+    :"Diese Adresse hat noch keine Vereine zugeteilt und kann sich daher nicht anmelden. Teile ihr unten Vereine zu.";
+  if(btn)btn.hidden=true;}
 function blLandTotal(land){return (BL_VEREINE||[]).filter(v=>vLand(v)===land).length;}
 function blLandAssigned(land){return (BL_VEREINE||[]).filter(v=>vLand(v)===land&&BL_SET.has(v.id)).length;}
 function renderBlCounts(){
   const z=$("#blZahl");if(z)z.textContent=`${BL_SET.size} von ${(BL_VEREINE||[]).length} Vereinen zugeteilt`;
   document.querySelectorAll("[data-bl-landzahl]").forEach(el=>{const l=el.dataset.blLandzahl;el.textContent=blLandAssigned(l)+" von "+blLandTotal(l);});
-  renderBlVorhanden();}
+  renderBlLogin();renderBlVorhanden();}
 function renderBlEditor(){const box=$("#blListe");if(!box)return;
   const q=(BL_Q||"").trim().toLowerCase();
   const gruppen=landGruppen(BL_VEREINE||[]);
