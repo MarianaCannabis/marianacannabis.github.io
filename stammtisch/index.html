@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: https://odggiivgoaficsyekfmd.supabase.co; connect-src 'self' https://odggiivgoaficsyekfmd.supabase.co wss://odggiivgoaficsyekfmd.supabase.co; font-src 'self'; worker-src blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: https://odggiivgoaficsyekfmd.supabase.co; connect-src 'self' https://odggiivgoaficsyekfmd.supabase.co wss://odggiivgoaficsyekfmd.supabase.co; font-src 'self'; worker-src blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
 <meta name="robots" content="noindex,nofollow">
 <title>Vereinsarchiv</title>
 <style>
@@ -493,7 +493,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-17";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-18";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -806,7 +806,8 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   if(!d){det.classList.add("leer");det.innerHTML=`<div class="empty"><div class="em-mark" aria-hidden="true">📋</div><p>Wähle einen Eintrag aus der Liste.</p></div>`;return;}
   det.classList.remove("leer");
   if(state.tab==="slides"&&!(d.folien&&d.folien.length))state.tab="summary";
-  const src=d.audio_pfad?((ebenePrivat()&&!d.ist_testdaten)?null:pubUrl("audio",d.audio_pfad)):null;
+  const hatAudio=!!d.audio_pfad;
+  const src=d.audio_pfad?((ebenePrivat()&&!d.ist_testdaten)?"":pubUrl("audio",d.audio_pfad)):"";
   const noDL=state.authed?"":'controlslist="nodownload noplaybackrate" oncontextmenu="return false"';
   const order=filtered();const oIdx=order.findIndex(x=>x.id===d.id);const oN=order.length;
   const nav=`<div class="dnav"><button class="btn small" id="dPrev" ${oIdx<=0?'disabled':''} title="Vorheriger Stammtisch">◀ Vorheriger</button><span class="dnav-pos">${oIdx>=0?`${oIdx+1} / ${oN}`:""}</span><button class="btn small" id="dNext" ${(oIdx<0||oIdx>=oN-1)?'disabled':''} title="Nächster Stammtisch">Nächster ▶</button><button class="btn small only-mobile" id="dToList" title="Zur Liste">↑ Zur Liste</button></div>`;
@@ -818,10 +819,10 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
     <div id="noteBox" hidden style="margin-top:8px"><textarea id="dNote" aria-label="Persönliche Notiz zu dieser Sitzung" placeholder="Persönliche Notiz (nur auf diesem Gerät gespeichert)" style="width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px">${esc(NOTES[d.id]||"")}</textarea></div>
     ${isAdmin()&&d.aufbewahrung_markiert?`<div class="msg info" style="margin-top:8px;color:var(--gold)">🗄 Zur Aufbewahrungsprüfung markiert${d.markiert_grund?': '+esc(d.markiert_grund):''}</div>`:''}
     ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button>${isAdmin()?'<button class="btn small" id="dProtokoll">🖨 Protokoll</button>':''}<button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
-    ${src?`<div class="miniplayer" id="player">
+    ${hatAudio?`<div class="miniplayer" id="player">
       <div class="pl-label">🎧 Original-Aufnahme <span>die verlässliche Quelle. Das Transkript hilft nur beim Finden und Einordnen.</span></div>
       <canvas id="wave" class="wave" height="64" title="Klicken zum Springen" aria-hidden="true"></canvas>
-      <audio id="aud" controls preload="metadata" src="${src}" aria-label="Audioaufnahme des Stammtischs" ${noDL}></audio>
+      <audio id="aud" controls preload="metadata" ${src?`src="${src}"`:""} aria-label="Audioaufnahme des Stammtischs" ${noDL}></audio>
       <div class="mp-row">
         <button class="btn small" id="plBack" title="15 Sekunden zurück">⟲ 15s</button>
         <button class="btn small" id="plFwd" title="15 Sekunden vor">15s ⟳</button>
@@ -830,7 +831,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
         <label class="pl-follow"><input type="checkbox" id="plFollow"> Transkript folgt der Aufnahme</label>
         <button class="btn small ghost" id="plToLine">↧ Aktuelle Stelle</button>
         <span id="curChap"></span>
-        ${state.authed?'<button class="btn small ghost" id="shareAt">🔗 Stelle teilen</button>':''}${state.authed?`<a class="btn small" href="${src}" download>Audio herunterladen</a>`:""}
+        ${state.authed?'<button class="btn small ghost" id="shareAt">🔗 Stelle teilen</button>':''}${state.authed&&src?`<a class="btn small" href="${src}" download>Audio herunterladen</a>`:""}
       </div>
       <div class="chapters" id="chapters"></div></div>`:`<div class="miniplayer"><div class="msg info">Für diesen Termin liegt keine Aufnahme vor.</div></div>`}
     <div class="tabs" role="tablist" id="tabs">
