@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: https://odggiivgoaficsyekfmd.supabase.co; connect-src 'self' https://odggiivgoaficsyekfmd.supabase.co wss://odggiivgoaficsyekfmd.supabase.co; font-src 'self'; worker-src blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
 <meta name="robots" content="noindex,nofollow">
+<style id="antiClickjack">body{display:none !important}</style>
+<script>/* Clickjacking-Schutz fuer die oeffentliche Seite (GitHub Pages ohne Header). Wenn nicht in einem Frame, Inhalt zeigen, sonst ausbrechen bzw. verborgen lassen. */
+if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.parentNode)_ac.parentNode.removeChild(_ac);}else{try{top.location=self.location;}catch(e){}}</script>
 <title>Vereinsarchiv</title>
 <style>
   :root{--bg:#08100b;--bg-2:#0d1812;--panel-solid:#0f1d14;--line:#1d3325;--green:#4caf6a;--green-dim:#3c8a54;--gold:#f9c74f;--red:#d9694e;--text:#e8f1ea;--muted:#8aa394;--muted-2:#7d9585;--radius:14px;--maxw:1180px;--sp1:#4caf6a;--sp2:#f9c74f;--sp3:#6fa8dc;--sp4:#c98bdb;--sp5:#e0936a;--sp6:#7ec8a0;--amber:#e0a63a;--panel:#0d1812;}
@@ -493,7 +496,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-18";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-19";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
