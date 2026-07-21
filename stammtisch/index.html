@@ -413,6 +413,14 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   .dat-tab thead th{color:var(--muted);font-weight:600;font-size:11.5px;letter-spacing:.03em;text-transform:uppercase}
   .dat-tab tbody tr:hover{background:rgba(255,255,255,.03)}
   .dat-spark-mini{display:block;width:100%;height:26px;margin:2px 0 0;overflow:visible}
+  .dat-gs-tabs{display:inline-flex;gap:4px;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:3px;margin-bottom:14px;flex-wrap:wrap}
+  .dat-gs-tab{background:none;border:0;color:var(--muted);font-size:13px;padding:7px 12px;border-radius:8px;cursor:pointer}
+  .dat-gs-tab:hover{color:var(--text)}
+  .dat-gs-tab.on{background:rgba(76,175,106,.16);color:var(--green)}
+  .dat-vl-metrik{font-size:11px;color:var(--muted-2);margin-top:2px}
+  .dat-tab-vl td{vertical-align:middle}
+  .dat-vl-spark{min-width:130px}
+  .dat-vl-spark .dat-spark-mini{width:120px;margin:0}
   .dat-grafik{display:block;width:100%;height:auto;margin:4px 0 14px}
   .dat-imp-zeile{display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line)}
   .dat-imp-zeile b{flex:1 1 auto;font-weight:600}
@@ -524,7 +532,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-22";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-23";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
