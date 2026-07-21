@@ -417,6 +417,8 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   .dat-gs-tab{background:none;border:0;color:var(--muted);font-size:13px;padding:7px 12px;border-radius:8px;cursor:pointer}
   .dat-gs-tab:hover{color:var(--text)}
   .dat-gs-tab.on{background:rgba(76,175,106,.16);color:var(--green)}
+  @keyframes ctxHebe{0%{background:rgba(249,199,79,.28)}100%{background:transparent}}
+  .ctx-hebe{animation:ctxHebe 1.7s ease-out;border-radius:8px}
   .dat-vl-metrik{font-size:11px;color:var(--muted-2);margin-top:2px}
   .dat-tab-vl td{vertical-align:middle}
   .dat-vl-spark{min-width:130px}
@@ -531,7 +533,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-29";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-30";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -1328,14 +1330,26 @@ function helpRender(){const box=$("#helpRolle");if(!box)return;
   if(state.rolle==="bereichsleitung"){
     const blh=HILFE_BL.filter(b=>!b.recht||hatRecht(b.recht));
     box.innerHTML='<div class="sec-h" style="margin-top:18px;color:var(--gold)">Für dich als Bereichsleitung</div>'
-      +blh.map(b=>`<div class="sec-h">${b.t}</div>`+b.p.map(x=>`<p>${x}</p>`).join("")).join("");
+      +blh.map(b=>`<div class="sec-h" data-ctx="${b.ctx||''}">${b.t}</div>`+b.p.map(x=>`<p>${x}</p>`).join("")).join("");
     const ib0=$("#helpIntro");if(ib0)ib0.hidden=false;return;}
   const st=meineStufe();
   const bl=HILFE_STUFEN.filter(b=>st>=b.ab);
   box.innerHTML=bl.length?('<div class="sec-h" style="margin-top:18px;color:var(--gold)">Zusätzlich für dich freigeschaltet</div>'
-    +bl.map(b=>`<div class="sec-h">${b.t}</div>`+b.p.map(x=>`<p>${x}</p>`).join("")).join("")):"";
+    +bl.map(b=>`<div class="sec-h" data-ctx="${b.ctx||''}">${b.t}</div>`+b.p.map(x=>`<p>${x}</p>`).join("")).join("")):"";
   const ib=$("#helpIntro");if(ib)ib.hidden=false;}
 
+/* Kontextbezogene Hilfe: oeffnet die vorhandene Hilfe und springt zum Abschnitt der aktuellen Ebene,
+   rollen- und rechtegefiltert ueber helpRender. Keine neuen Inhalte, nur ein Sprung. */
+function helpKontext(ebene){
+  const map={pub:"ebenen",int:"ebenen",mit:"ebenen",dat:"dat",dok:"dok"};
+  const ctx=map[ebene]||"";
+  helpRender();
+  openModal($("#ovHelp"));
+  if(!ctx)return;
+  setTimeout(()=>{const el=$("#helpRolle [data-ctx=\""+ctx+"\"]");
+    if(el){el.scrollIntoView({behavior:"smooth",block:"start"});
+      el.classList.add("ctx-hebe");setTimeout(()=>{el.classList.remove("ctx-hebe");},1700);}},70);
+}
 const INTRO_MERKER={mitglied:"st_intro_ok",ap:"st_intro_ap_ok",vorstand:"st_intro_vorstand_ok",bereichsleitung:"st_intro_bl_ok",admin:"st_intro_admin_ok"};
 const INTRO={
  mitglied:[{t:"Kurz vorab",p:["Schön, dass du reinschaust. Ein kurzer Hinweis, bevor es losgeht.","Die Zusammenfassungen und Transkripte in diesem Archiv werden automatisch erstellt und können Fehler enthalten, etwa bei Namen, Zahlen oder undeutlichen Stellen. Sie sind als Orientierung und zum schnellen Finden gedacht, nicht als wortgenaues Protokoll.","Wenn es auf den genauen Inhalt ankommt, hör dir bitte immer die eigentliche Aufnahme an und sieh dir die zugehörigen Folien an. Die Audioaufnahme ist die verlässliche Quelle, der Text hilft dir nur beim Einordnen.",'<span class="msg info">Diesen Hinweis findest du später jederzeit wieder unter „Hilfe".</span>']}],
