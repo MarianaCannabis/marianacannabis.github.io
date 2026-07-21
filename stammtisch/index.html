@@ -69,6 +69,12 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   .facet-h .fcaret{margin-left:auto;color:var(--muted-2);font-size:11px}
   .facet-h:hover .flabel{color:var(--text)}
   .fgroup .chips{margin-top:6px}
+  .filter-toggle{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;border-top:1px solid var(--line);padding:11px 0 0;margin-top:12px;cursor:pointer;color:inherit;text-align:left}
+  .filter-toggle .flabel{margin:0;color:var(--muted-2)}
+  .filter-toggle .fmeta{font-size:11px;color:var(--green)}
+  .filter-toggle .fcaret{margin-left:auto;color:var(--muted-2);font-size:11px}
+  .filter-toggle:hover .flabel,.filter-toggle[aria-expanded="true"] .flabel{color:var(--text)}
+  #filterBody[hidden]{display:none}
   .chip{border:1px solid var(--line);background:var(--bg-2);color:var(--muted);font-size:12px;padding:5px 10px;border-radius:999px}.chip:hover{border-color:var(--green-dim);color:var(--text)}.chip.on{background:rgba(76,175,106,.16);border-color:var(--green-dim);color:var(--green)}.chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
   .row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
   select.sel{background:var(--bg-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:16px}
@@ -422,7 +428,8 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
     <button class="btn" id="btnVorschlagMitglied" style="width:100%;margin-bottom:12px;justify-content:center">💡 Punkt oder Frage einreichen</button>
     <div class="search">
       <div class="search-field"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Alles durchsuchen…" aria-label="Stammtische durchsuchen"></div>
-      <div class="filters">
+      <button class="filter-toggle" id="filterToggle" type="button" aria-expanded="true" aria-controls="filterBody"><span class="flabel">Filter</span><span class="fmeta" id="filterMeta"></span><span class="fcaret">▾</span></button>
+      <div class="filters" id="filterBody">
         <div class="fgroup"><button class="facet-h" data-fg="year" aria-expanded="true"><span class="flabel" id="lblYear">Jahr</span><span class="fmeta" id="metaYear"></span><span class="fcaret">▾</span></button><div class="chips" id="fYears" role="group" aria-labelledby="lblYear"></div></div>
         <div class="fgroup"><button class="facet-h" data-fg="spk" aria-expanded="false"><span class="flabel" id="lblSpk">Sprecher</span><span class="fmeta" id="metaSpk"></span><span class="fcaret">▾</span></button><div class="chips" id="fSpeakers" role="group" aria-labelledby="lblSpk" hidden></div></div>
         <div class="fgroup"><button class="facet-h" data-fg="th" aria-expanded="false"><span class="flabel" id="lblTh">Thema</span><span class="fmeta" id="metaTh"></span><span class="fcaret">▾</span></button><div class="chips" id="fThemes" role="group" aria-labelledby="lblTh" hidden></div></div>
@@ -496,7 +503,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-19";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-20";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -755,6 +762,13 @@ function chip(l,on,a){return `<button class="chip ${on?'on':''}" ${a} aria-press
 function facetList(items,limit,open,render){const show=open?items:items.slice(0,limit);let h=show.map(render).join("");if(items.length>limit)h+=`<button class="chip morebtn" data-more="${open?'0':'1'}">${open?'▴ weniger':('▾ alle '+items.length)}</button>`;return h;}
 function fgOpen(k){const v=localStorage.getItem("st_fg2_"+k);return v==null?(k==="year"):v==="1";}
 function applyFg(){[["year","fYears"],["spk","fSpeakers"],["th","fThemes"]].forEach(([k,id])=>{const open=fgOpen(k);const box=$("#"+id);const btn=document.querySelector(`.facet-h[data-fg="${k}"]`);if(box)box.hidden=!open;if(btn){btn.setAttribute("aria-expanded",open);const c=btn.querySelector(".fcaret");if(c)c.textContent=open?"▾":"▸";}});}
+/* ---- ganzen Filterblock ein und ausklappen, Zustand je Ebene ---- */
+function filterKey(){return "st_filt_"+(state.mode||"pub");}
+function filterDefaultOpen(){try{if(document.body.classList.contains("mobile"))return false;if(window.matchMedia&&window.matchMedia("(max-width:880px)").matches)return false;}catch(e){}return true;}
+function filterOpen(){const v=localStorage.getItem(filterKey());return v==null?filterDefaultOpen():v==="1";}
+function filterAktivZahl(){return state.years.size+state.speakers.size+state.themes.size+(state.onlySlides?1:0)+(state.onlyBookmarks?1:0);}
+function filterMetaUpdate(){const m=$("#filterMeta");if(!m)return;const n=filterAktivZahl();m.textContent=n?(n+" aktiv"):"";}
+function applyFilter(){const open=filterOpen();const body=$("#filterBody"),btn=$("#filterToggle");if(body)body.hidden=!open;if(btn){btn.setAttribute("aria-expanded",open?"true":"false");const c=btn.querySelector(".fcaret");if(c)c.textContent=open?"▾":"▸";}filterMetaUpdate();}
 function renderFacets(){const spk=ALL_SPK.filter(o=>!o.anon);
   $("#fYears").innerHTML=ALL_YEARS.map(y=>chip(y,state.years.has(y),`data-yr="${y}"`)).join("")||'<span class="msg info">–</span>';
   $("#fSpeakers").innerHTML=spk.length?facetList(spk,12,state.facetSp,o=>`<button class="chip ${state.speakers.has(o.name)?'on':''}" data-sp="${esc(o.name)}" aria-pressed="${state.speakers.has(o.name)}"><span class="dot" style="background:var(--green)"></span>${esc(o.name)} <span class="cnt">${o.count}</span></button>`):'<span class="msg info">Noch keine benannten Sprecher.</span>';
@@ -763,6 +777,7 @@ function renderFacets(){const spk=ALL_SPK.filter(o=>!o.anon);
   $("#metaSpk").textContent=state.speakers.size?`${state.speakers.size} aktiv`:`${spk.length}`;
   $("#metaTh").textContent=state.themes.size?`${state.themes.size} aktiv`:`${ALL_TH.length}`;
   applyFg();
+  filterMetaUpdate();
   document.querySelectorAll(".facet-h").forEach(btn=>btn.onclick=()=>{const k=btn.dataset.fg;localStorage.setItem("st_fg2_"+k,fgOpen(k)?"0":"1");applyFg();});}
 function snippetFor(d){const q=(state.q||"").trim().toLowerCase();if(!q||!(d.transkript||[]).length)return "";
   const idx=d.transkript.findIndex(l=>!l.red&&l.text.toLowerCase().includes(q));if(idx<0)return "";
@@ -1331,8 +1346,9 @@ $("#btnStats").onclick=()=>{const total=DATA.length,sec=DATA.reduce((s,d)=>s+(d.
 /* ---- rail events ---- */
 $("#q").oninput=e=>{state.q=e.target.value;renderList(true);};
 $("#sort").onchange=e=>{state.sort=e.target.value;renderList();};
-$("#fSlides").onchange=e=>{state.onlySlides=e.target.checked;renderList(true);};
-$("#fBookmarks").onchange=e=>{state.onlyBookmarks=e.target.checked;renderList(true);};
+$("#fSlides").onchange=e=>{state.onlySlides=e.target.checked;renderList(true);filterMetaUpdate();};
+$("#fBookmarks").onchange=e=>{state.onlyBookmarks=e.target.checked;renderList(true);filterMetaUpdate();};
+$("#filterToggle").onclick=()=>{localStorage.setItem(filterKey(),filterOpen()?"0":"1");applyFilter();};
 $("#reset").onclick=()=>{state.q="";state.years.clear();state.speakers.clear();state.themes.clear();state.onlySlides=false;state.onlyBookmarks=false;state.sort="new";$("#q").value="";$("#sort").value="new";$("#fSlides").checked=false;$("#fBookmarks").checked=false;renderFacets();renderList(true);};
 $("#fYears").onclick=e=>{const b=e.target.closest("[data-yr]");if(!b)return;const y=b.dataset.yr;state.years.has(y)?state.years.delete(y):state.years.add(y);renderFacets();renderList(true);};
 $("#fSpeakers").onclick=e=>{const m=e.target.closest("[data-more]");if(m){state.facetSp=m.dataset.more==="1";renderFacets();return;}const b=e.target.closest("[data-sp]");if(!b)return;const s=b.dataset.sp;state.speakers.has(s)?state.speakers.delete(s):state.speakers.add(s);renderFacets();renderList(true);};
@@ -1354,7 +1370,7 @@ function computeSince(){const last=lsGet("st_lastvisit",null);
   if(last){const lt=new Date(last).getTime();state.sinceCount=DATA.filter(d=>d.erstellt_am&&new Date(d.erstellt_am).getTime()>lt).length;state.sinceLabel=new Date(last).toLocaleDateString("de-DE");}
   lsSet("st_lastvisit",new Date().toISOString());}
 (async function boot(){applyMobile(gp("st_mobile"));applySr(gp("st_sr"));if(gp("st_txtsize"))document.body.classList.add("tx-large");await refreshAuth();
-  DATA=await loadData();DATA_PUB=DATA;buildFacets();initCollapse();computeSince();renderFacets();renderList();renderNextMeet();
+  DATA=await loadData();DATA_PUB=DATA;buildFacets();initCollapse();computeSince();renderFacets();renderList();renderNextMeet();applyFilter();
   if(state.sinceCount>0)setTimeout(()=>announce(state.sinceCount+(state.sinceCount===1?" neuer Stammtisch":" neue Stammtische")+" seit deinem letzten Besuch."),500);
   const _hadHash=parseHash();
   if(!_hadHash)renderDetail();
