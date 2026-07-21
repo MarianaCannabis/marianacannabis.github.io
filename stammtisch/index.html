@@ -531,7 +531,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-28";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-29";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -925,9 +925,9 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
       </div>
       <div class="chapters" id="chapters"></div></div>`:`<div class="miniplayer"><div class="msg info">Für diesen Termin liegt keine Aufnahme vor.</div></div>`}
     <div class="tabs" role="tablist" id="tabs">
-      <button role="tab" data-tab="summary">✨ Zusammenfassung</button>
-      <button role="tab" data-tab="transcript">📝 Transkript${(d.transkript||[]).length?`<span class="badge">${d.transkript.length}</span>`:''}</button>
-      ${d.folien&&d.folien.length?`<button role="tab" data-tab="slides">📄 Folien<span class="badge">${d.folien.length}</span></button>`:`<span class="tab-missing">📄 Keine Folien</span>`}
+      <button role="tab" data-tab="summary" aria-selected="true" tabindex="0">✨ Zusammenfassung</button>
+      <button role="tab" data-tab="transcript" aria-selected="false" tabindex="-1">📝 Transkript${(d.transkript||[]).length?`<span class="badge">${d.transkript.length}</span>`:''}</button>
+      ${d.folien&&d.folien.length?`<button role="tab" data-tab="slides" aria-selected="false" tabindex="-1">📄 Folien<span class="badge">${d.folien.length}</span></button>`:`<span class="tab-missing">📄 Keine Folien</span>`}
     </div><div class="tabwrap" id="tabwrap"></div>`;
   setupPlayer(d);renderTabBar();renderTab(d);
   if(ebenePrivat()){
@@ -948,7 +948,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   if($("#dShare"))$("#dShare").onclick=()=>shareLink(d.id);
   if($("#shareAt"))$("#shareAt").onclick=()=>{const a=$("#aud");shareLink(d.id,a?Math.floor(a.currentTime):0);};
   if(focusIt){det.focus();announce(`${d.titel} geöffnet.`);}}
-function renderTabBar(){$("#tabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.tab===state.tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.onclick=()=>{state.tab=b.dataset.tab;state.txQ="";state.txSp=null;state.hits=[];state.hit=-1;renderTabBar();renderTab(DATA.find(x=>x.id===state.current));};});}
+function renderTabBar(){$("#tabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.tab===state.tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.tabIndex=on?0:-1;b.onclick=()=>{state.tab=b.dataset.tab;state.txQ="";state.txSp=null;state.hits=[];state.hit=-1;renderTabBar();renderTab(DATA.find(x=>x.id===state.current));};});}
 function setupPlayer(d){const a=$("#aud");if(!a)return;
   $("#spd").onchange=e=>a.playbackRate=parseFloat(e.target.value);
   const DUR=()=>a.duration||d.dauer||1e9;
@@ -1200,7 +1200,7 @@ $("#btnHelp").onclick=()=>{helpRender();openModal($("#ovHelp"));};
 function spName(d,i){return (d.sprecher&&d.sprecher[i])||("Sprecher "+(i!=null?i+1:"?"));}
 function rechTokens(raw){const ph=raw.match(/^"(.+)"$/);return ph?[ph[1].toLowerCase()]:raw.toLowerCase().split(/\s+/).filter(Boolean);}
 function rechSnip(text,tokens){text=""+text;const low=text.toLowerCase();let pos=-1;for(const tok of tokens){const p=low.indexOf(tok);if(p>=0&&(pos<0||p<pos))pos=p;}if(pos<0)pos=0;const start=Math.max(0,pos-60),end=Math.min(text.length,pos+150);let s=(start>0?"… ":"")+text.slice(start,end)+(end<text.length?" …":"");let out=esc(s);const re=new RegExp("("+tokens.map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")","gi");return out.replace(re,'<span class="hl">$1</span>');}
-document.querySelectorAll('#docTabs [data-dt]').forEach(b=>b.onclick=()=>{document.querySelectorAll('#docTabs [data-dt]').forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-selected",on);});const up=b.dataset.dt==="upload";$("#docUpload").hidden=!up;$("#docBrowse").hidden=up;});
+document.querySelectorAll('#docTabs [data-dt]').forEach(b=>b.onclick=()=>{document.querySelectorAll('#docTabs [data-dt]').forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-selected",on);x.tabIndex=on?0:-1;});const up=b.dataset.dt==="upload";$("#docUpload").hidden=!up;$("#docBrowse").hidden=up;});
 
 async function reportTypo(d,idx){const l=d.transkript[idx];const hint=window.prompt("Was ist an dieser Stelle falsch? (kurzer Hinweis, optional)","");if(hint===null)return;
   try{await supa.from("korrekturmeldungen").insert({stammtisch_id:d.id,zeile:idx,t:Math.round(l.t||0),original:(l.text||"").slice(0,300),hinweis:(hint||"").slice(0,500)});announce("Danke, deine Meldung wurde gesendet.");}
@@ -1246,6 +1246,27 @@ const EBENEN={pub:"Stammtische",int:"Interne Stammtische",mit:"Mitgliederabend",
 /* Alle fuenf Ebenen sind gebaut. Eine neue Ebene im Bau kommt hier rein,
    dann greift der Platzhalter in vbRender automatisch. */
 const EBENEN_BALD={};
+/* Generische WAI-ARIA-Tastatursteuerung fuer Tablists: Pfeile, Home, End wechseln den Reiter
+   und aktivieren ihn ueber den vorhandenen Klick-Handler. vbEbenen bringt eine eigene Behandlung
+   mit und wird ausgenommen, damit sich nichts doppelt. Roving-tabIndex wird nachgezogen. */
+document.addEventListener("keydown",e=>{
+  const k=e.key;
+  if(k!=="ArrowRight"&&k!=="ArrowLeft"&&k!=="ArrowUp"&&k!=="ArrowDown"&&k!=="Home"&&k!=="End")return;
+  const tab=e.target&&e.target.closest?e.target.closest('[role="tab"]'):null;
+  if(!tab)return;
+  const list=tab.closest('[role="tablist"]');
+  if(!list||list.id==="vbEbenen")return;
+  const tabs=[...list.querySelectorAll('[role="tab"]')].filter(t=>!t.hidden&&t.offsetParent!==null);
+  const idx=tabs.indexOf(tab);if(idx<0||!tabs.length)return;
+  let n=null;
+  if(k==="ArrowRight"||k==="ArrowDown")n=(idx+1)%tabs.length;
+  else if(k==="ArrowLeft"||k==="ArrowUp")n=(idx-1+tabs.length)%tabs.length;
+  else if(k==="Home")n=0; else if(k==="End")n=tabs.length-1;
+  if(n===null)return;
+  e.preventDefault();
+  const z=tabs[n];z.focus();z.click();
+  [...list.querySelectorAll('[role="tab"]')].forEach(x=>{x.tabIndex=(x.getAttribute("aria-selected")==="true")?0:-1;});
+});
 function logIntern(aktion,sid,detail){if(!supa||!state.email)return;
   try{supa.from("intern_zugriff_log").insert({email:state.email,aktion,stammtisch_id:sid,detail}).then(()=>{},()=>{});}catch(e){}}
 
