@@ -75,6 +75,14 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   .filter-toggle .fcaret{margin-left:auto;color:var(--muted-2);font-size:11px}
   .filter-toggle:hover .flabel,.filter-toggle[aria-expanded="true"] .flabel{color:var(--text)}
   #filterBody[hidden]{display:none}
+  .combo-wrap{position:relative}
+  .combo-native{display:none}
+  .combo-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:8;margin:0;padding:4px;list-style:none;background:var(--panel-solid);border:1px solid var(--green-dim);border-radius:10px;max-height:244px;overflow:auto;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+  .combo-list[hidden]{display:none}
+  .combo-group{padding:6px 8px 3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-2)}
+  .combo-opt{padding:8px 10px;border-radius:7px;font-size:15px;color:var(--text);cursor:pointer}
+  .combo-opt[aria-selected="true"],.combo-opt:hover{background:rgba(76,175,106,.16);color:var(--green)}
+  .combo-empty{padding:9px 10px;color:var(--muted);font-size:14px}
   .chip{border:1px solid var(--line);background:var(--bg-2);color:var(--muted);font-size:12px;padding:5px 10px;border-radius:999px}.chip:hover{border-color:var(--green-dim);color:var(--text)}.chip.on{background:rgba(76,175,106,.16);border-color:var(--green-dim);color:var(--green)}.chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
   .row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
   select.sel{background:var(--bg-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:16px}
@@ -156,6 +164,14 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   /* iOS Safari zoomt hinein, sobald ein Feld unter 16px Schrift fokussiert wird. 16px universell verhindert das, geraeteunabhaengig. */
   input,select,textarea{font-size:16px}
   .field input,.field textarea,.field select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:16px;outline:none}.field input[type=file]{padding:8px}.field input:focus,.field textarea:focus{border-color:var(--green-dim)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+  .ta-native{display:none}
+  .ta-wrap{position:relative}
+  .ta-pop{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;max-height:240px;overflow:auto;background:var(--panel-solid);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);padding:4px}
+  .ta-pop[hidden]{display:none}
+  .ta-grp{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted-2);padding:6px 9px 3px}
+  .ta-opt{padding:8px 10px;border-radius:6px;font-size:15px;color:var(--text);cursor:pointer}
+  .ta-opt:hover,.ta-opt.on{background:rgba(76,175,106,.16);color:var(--green)}
+  .ta-empty{padding:10px;color:var(--muted);font-size:14px}
   .msg{font-size:12.5px}.msg.ok{color:var(--green)}.msg.err{color:var(--red)}.msg.info{color:var(--muted)}
   .steps{display:flex;gap:6px;margin-bottom:16px}.steps div{flex:1;height:4px;border-radius:2px;background:var(--line)}.steps div.on{background:var(--green)}
   .punkt-row,.sp-row,.txedit-row,.kap-row{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start}.punkt-row input,.sp-row input{flex:1}.txedit-row .ts2{width:60px;flex:none;color:var(--muted-2);font-size:12px;padding-top:9px}.txedit-row select{width:130px;flex:none}.txedit-row textarea{flex:1;min-height:38px}.kap-row input.kt{width:90px;flex:none}.kap-row input.kn{flex:1}
@@ -503,7 +519,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-20";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-21";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -769,6 +785,49 @@ function filterOpen(){const v=localStorage.getItem(filterKey());return v==null?f
 function filterAktivZahl(){return state.years.size+state.speakers.size+state.themes.size+(state.onlySlides?1:0)+(state.onlyBookmarks?1:0);}
 function filterMetaUpdate(){const m=$("#filterMeta");if(!m)return;const n=filterAktivZahl();m.textContent=n?(n+" aktiv"):"";}
 function applyFilter(){const open=filterOpen();const body=$("#filterBody"),btn=$("#filterToggle");if(body)body.hidden=!open;if(btn){btn.setAttribute("aria-expanded",open?"true":"false");const c=btn.querySelector(".fcaret");if(c)c.textContent=open?"▾":"▸";}filterMetaUpdate();}
+/* ---- Typeahead-Aufsatz fuer native <select> (Vereinssuche). Der Select bleibt Quelle der Wahrheit:
+       gepickt wird per sel.value + change-Event, alle bestehenden onchange-Handler laufen unveraendert. ---- */
+const TA_REG=new WeakMap();
+function taReadOptions(sel){const out=[];Array.from(sel.children).forEach(ch=>{
+  if(ch.tagName==="OPTGROUP"){const g=ch.label||"";Array.from(ch.children).forEach(o=>{if(o.tagName==="OPTION")out.push({value:o.value,label:o.textContent,group:g});});}
+  else if(ch.tagName==="OPTION"){out.push({value:ch.value,label:ch.textContent,group:""});}});return out;}
+function taCurrentLabel(sel){const o=sel.selectedOptions&&sel.selectedOptions[0];return o?o.textContent:"";}
+function taSync(sel){const t=TA_REG.get(sel);if(t)t.input.value=taCurrentLabel(sel);}
+function taEnhance(sel,opts){opts=opts||{};if(!sel||TA_REG.has(sel))return;
+  const ph=opts.placeholder||"Verein suchen…";
+  const wrap=document.createElement("div");wrap.className="ta-wrap";
+  const input=document.createElement("input");input.type="text";input.className="ta-input";input.autocomplete="off";input.placeholder=ph;
+  input.setAttribute("role","combobox");input.setAttribute("aria-autocomplete","list");input.setAttribute("aria-expanded","false");
+  const pop=document.createElement("div");pop.className="ta-pop";pop.setAttribute("role","listbox");pop.hidden=true;
+  const lid=(sel.id||("ta"+Math.random().toString(36).slice(2)))+"_list";pop.id=lid;input.setAttribute("aria-controls",lid);
+  if(sel.id){const lab=document.querySelector('label[for="'+sel.id+'"]');if(lab){const iid=sel.id+"_ta";input.id=iid;lab.setAttribute("for",iid);}}
+  sel.parentNode.insertBefore(wrap,sel);wrap.appendChild(input);wrap.appendChild(pop);wrap.appendChild(sel);
+  sel.classList.add("ta-native");sel.setAttribute("tabindex","-1");sel.setAttribute("aria-hidden","true");
+  let items=[],active=-1,open=false;
+  TA_REG.set(sel,{input,pop,sel});
+  input.value=taCurrentLabel(sel);
+  function build(filter){const all=taReadOptions(sel);const q=(filter||"").trim().toLowerCase();
+    const list=q?all.filter(o=>o.label.toLowerCase().includes(q)):all;items=list;active=-1;
+    if(!list.length){pop.innerHTML='<div class="ta-empty">Kein Treffer</div>';return;}
+    let html="",lastG=null;list.forEach((o,i)=>{if(o.group&&o.group!==lastG){html+='<div class="ta-grp">'+esc(o.group)+'</div>';lastG=o.group;}
+      html+='<div class="ta-opt" role="option" id="'+lid+'_'+i+'" data-i="'+i+'">'+esc(o.label)+'</div>';});pop.innerHTML=html;}
+  function openPop(showAll){build(showAll?"":input.value);pop.hidden=false;open=true;input.setAttribute("aria-expanded","true");}
+  function closePop(){pop.hidden=true;open=false;active=-1;input.setAttribute("aria-expanded","false");input.removeAttribute("aria-activedescendant");}
+  function markActive(){Array.from(pop.querySelectorAll(".ta-opt")).forEach((el,i)=>{const on=i===active;el.classList.toggle("on",on);el.setAttribute("aria-selected",on?"true":"false");});
+    if(active>=0){const el=pop.querySelector('.ta-opt[data-i="'+active+'"]');if(el){input.setAttribute("aria-activedescendant",el.id);el.scrollIntoView({block:"nearest"});}}}
+  function pick(i){const o=items[i];if(!o)return;sel.value=o.value;input.value=o.label;sel.dispatchEvent(new Event("change",{bubbles:true}));closePop();}
+  input.addEventListener("focus",()=>{input.value="";openPop(true);});
+  input.addEventListener("input",()=>{openPop(false);});
+  input.addEventListener("keydown",ev=>{
+    if(ev.key==="ArrowDown"){if(!open)openPop(true);else{active=Math.min(items.length-1,active+1);markActive();}ev.preventDefault();}
+    else if(ev.key==="ArrowUp"){if(open){active=Math.max(0,active-1);markActive();}ev.preventDefault();}
+    else if(ev.key==="Enter"){if(open&&active>=0){pick(active);ev.preventDefault();}}
+    else if(ev.key==="Escape"){if(open){closePop();input.value=taCurrentLabel(sel);ev.preventDefault();}}
+    else if(ev.key==="Tab"){closePop();input.value=taCurrentLabel(sel);}});
+  input.addEventListener("blur",()=>setTimeout(()=>{if(!open)input.value=taCurrentLabel(sel);},0));
+  pop.addEventListener("mousedown",ev=>{const el=ev.target.closest(".ta-opt");if(!el)return;ev.preventDefault();pick(+el.dataset.i);});
+  document.addEventListener("mousedown",ev=>{if(open&&!wrap.contains(ev.target)){input.value=taCurrentLabel(sel);closePop();}});
+  new MutationObserver(()=>taSync(sel)).observe(sel,{childList:true,subtree:true});}
 function renderFacets(){const spk=ALL_SPK.filter(o=>!o.anon);
   $("#fYears").innerHTML=ALL_YEARS.map(y=>chip(y,state.years.has(y),`data-yr="${y}"`)).join("")||'<span class="msg info">–</span>';
   $("#fSpeakers").innerHTML=spk.length?facetList(spk,12,state.facetSp,o=>`<button class="chip ${state.speakers.has(o.name)?'on':''}" data-sp="${esc(o.name)}" aria-pressed="${state.speakers.has(o.name)}"><span class="dot" style="background:var(--green)"></span>${esc(o.name)} <span class="cnt">${o.count}</span></button>`):'<span class="msg info">Noch keine benannten Sprecher.</span>';
@@ -1369,7 +1428,9 @@ function initCollapse(){if(!DATA.length)return;const newest=[...DATA].sort((a,b)
 function computeSince(){const last=lsGet("st_lastvisit",null);
   if(last){const lt=new Date(last).getTime();state.sinceCount=DATA.filter(d=>d.erstellt_am&&new Date(d.erstellt_am).getTime()>lt).length;state.sinceLabel=new Date(last).toLocaleDateString("de-DE");}
   lsSet("st_lastvisit",new Date().toISOString());}
-(async function boot(){applyMobile(gp("st_mobile"));applySr(gp("st_sr"));if(gp("st_txtsize"))document.body.classList.add("tx-large");await refreshAuth();
+(async function boot(){applyMobile(gp("st_mobile"));applySr(gp("st_sr"));if(gp("st_txtsize"))document.body.classList.add("tx-large");
+  [["#datVerein","Verein suchen…"],["#dokUpV","Verein suchen…"],["#adrVerein","Verein suchen…"]].forEach(([s,p])=>taEnhance($(s),{placeholder:p}));
+  await refreshAuth();
   DATA=await loadData();DATA_PUB=DATA;buildFacets();initCollapse();computeSince();renderFacets();renderList();renderNextMeet();applyFilter();
   if(state.sinceCount>0)setTimeout(()=>announce(state.sinceCount+(state.sinceCount===1?" neuer Stammtisch":" neue Stammtische")+" seit deinem letzten Besuch."),500);
   const _hadHash=parseHash();
