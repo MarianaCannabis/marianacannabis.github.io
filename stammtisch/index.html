@@ -543,7 +543,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-32";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-33";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -804,7 +804,7 @@ function fgOpen(k){const v=localStorage.getItem("st_fg2_"+k);return v==null?(k==
 function applyFg(){[["year","fYears"],["spk","fSpeakers"],["th","fThemes"]].forEach(([k,id])=>{const open=fgOpen(k);const box=$("#"+id);const btn=document.querySelector(`.facet-h[data-fg="${k}"]`);if(box)box.hidden=!open;if(btn){btn.setAttribute("aria-expanded",open);const c=btn.querySelector(".fcaret");if(c)c.textContent=open?"▾":"▸";}});}
 /* ---- ganzen Filterblock ein und ausklappen, Zustand je Ebene ---- */
 function filterKey(){return "st_filt_"+(state.mode||"pub");}
-function filterDefaultOpen(){try{if(document.body.classList.contains("mobile"))return false;if(window.matchMedia&&window.matchMedia("(max-width:880px)").matches)return false;}catch(e){}return true;}
+function filterDefaultOpen(){return false;}  /* Filter standardmaessig zu (Desktop wie Mobile), damit die Liste sofort sichtbar ist; Nutzerwahl bleibt in localStorage erhalten */
 function filterOpen(){const v=localStorage.getItem(filterKey());return v==null?filterDefaultOpen():v==="1";}
 function filterAktivZahl(){return state.years.size+state.speakers.size+state.themes.size+(state.onlySlides?1:0)+(state.onlyBookmarks?1:0);}
 function filterMetaUpdate(){const m=$("#filterMeta");if(!m)return;const n=filterAktivZahl();m.textContent=n?(n+" aktiv"):"";}
