@@ -532,7 +532,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-23";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-24";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
@@ -1395,7 +1395,8 @@ function themeOverTime(){const years=[...new Set(DATA.map(d=>(d.datum||"").slice
   let h=`<table class="tot"><thead><tr><th></th>${years.map(y=>`<th>${y}</th>`).join("")}</tr></thead><tbody>`;
   top.forEach(([k,o])=>{h+=`<tr><td class="tot-name">${esc(o.display)}</td>${years.map(y=>{const v=cell[k+"|"+y]||0;return `<td><span class="tot-cell" style="opacity:${v?(0.25+v/maxc*0.7).toFixed(2):0}">${v||""}</span></td>`;}).join("")}</tr>`;});
   return h+"</tbody></table>";}
-$("#btnStats").onclick=()=>{const total=DATA.length,sec=DATA.reduce((s,d)=>s+(d.dauer||0),0),hrs=(sec/3600);
+$("#btnStats").onclick=()=>{
+  const total=DATA.length,sec=DATA.reduce((s,d)=>s+(d.dauer||0),0),hrs=(sec/3600);
   const perYear={},perMonth={},themes={},spk={};let withSlides=0;
   DATA.forEach(d=>{const y=(d.datum||"").slice(0,4)||"?";perYear[y]=(perYear[y]||0)+1;const mk=(d.datum||"").slice(0,7);if(mk.length===7)perMonth[mk]=(perMonth[mk]||0)+1;if(d.folien&&d.folien.length)withSlides++;
     const seen=new Set();(d.themen||[]).forEach(t=>{const k=thKey(t);if(!k||seen.has(k))return;seen.add(k);if(!themes[k])themes[k]={display:t.trim(),n:0};themes[k].n++;});
