@@ -360,6 +360,11 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   @media(max-width:880px){.vb-dok{padding:14px}.dok-kopf{gap:10px}.dok-knoepfe{width:100%}}
   .dok-buehne{position:relative;display:inline-block;max-width:100%;touch-action:none}
   .dok-buehne canvas{max-width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .dok-vscroll{max-width:100%;max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:6px;background:#0b140e;padding:6px;text-align:left}
+  .dok-vscroll .dok-buehne{max-width:none;border:0}
+  .dok-vscroll canvas{max-width:none;height:auto;border:0;border-radius:2px}
+  .dok-zoomgrp{display:inline-flex;gap:4px;align-items:center}
+  .modal-doc{width:100%;max-width:min(1040px,96vw)}
   .dok-marke{position:absolute;border:2px dashed var(--gold);border-radius:4px;pointer-events:none}
   #sigPad{width:100%;max-width:460px;height:150px;border:1px dashed var(--line);border-radius:8px;background:#fff;touch-action:none;display:block}
   /* Ebene Vereinsdaten */
@@ -519,7 +524,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-21";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-22";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische",int:"stammtische_intern",mit:"mitgliederabende"};
 const EBENE_AUDIO={pub:"audio",int:"audio-intern",mit:"audio-mitglieder"};
 const EBENE_FOLIEN={pub:"folien",int:"folien-intern",mit:"folien-intern"};
