@@ -47,6 +47,11 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
   .wrap{max-width:var(--maxw);margin:0 auto;padding:22px;display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
   /* Desktop-Dichte OHNE zoom: echte kleinere Groessen. Layout fuellt die Hoehe und reflowt beim Browser-Zoom. Mobile/Touch (unter 1100px) bleiben gross. */
+  /* Touch-Ziele auf schmalen Geraeten mindestens 44 Pixel hoch */
+  @media (max-width:1099px){
+    .filter-toggle{min-height:44px}
+    .mit-vorstand-hinweis a{display:inline-block;min-height:44px;line-height:44px;padding:0 12px}
+  }
   @media (min-width:1100px){
     body{line-height:1.5}
     .topbar-in{padding:10px 22px}
@@ -543,7 +548,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-33";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-34";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -786,8 +791,18 @@ function audioDuration(file){return new Promise((res,rej)=>{const a=document.cre
 
 /* ---- data ---- */
 function normalizeRow(r){return {...r,dauer:r.dauer_sek||0,verarbeitung:r.verarbeitung||"fertig",zusammenfassung:r.zusammenfassung||{lead:"",punkte:[]},transkript:r.transkript||[],sprecher:r.sprecher||[],themen:r.themen||[],kapitel:r.kapitel||[],folientext:r.folientext||""};}
-async function loadData(){if(!supa)return [];const {data,error}=await supa.from("stammtische").select("*").order("datum",{ascending:false});if(error){console.error(error);return [];}
-  return data.map(normalizeRow);}
+/* Nur die Spalten holen, die das Frontend wirklich braucht. volltext, embedding, fts, suche und
+   quelldatei werden nie gelesen und blaehten die Antwort auf rund 10 MB auf, was unter Last in den
+   Anweisungs-Zeitfehler (57014) lief und die Liste leer erscheinen liess. Dazu zwei Wiederholversuche. */
+const LISTE_SPALTEN="id,datum,titel,ort,dauer_sek,sprecher,themen,status,zusammenfassung,transkript,folien,audio_pfad,erstellt_am,kapitel,verarbeitung,folientext,nachverfolgung,wellenform,freigabe_status,freigegeben_von,freigegeben_am,aufbewahrung_markiert,markiert_am,markiert_grund";
+async function loadData(){if(!supa)return [];
+  for(let versuch=1;versuch<=3;versuch++){
+    const {data,error}=await supa.from("stammtische").select(LISTE_SPALTEN).order("datum",{ascending:false});
+    if(!error)return (data||[]).map(normalizeRow);
+    console.error("Liste laden fehlgeschlagen, Versuch "+versuch,error);
+    if(versuch<3)await new Promise(r=>setTimeout(r,600*versuch));
+  }
+  return [];}
 function thKey(t){return (t||"").trim().toLowerCase();}
 function buildFacets(){ALL_YEARS=[...new Set(DATA.map(d=>(d.datum||"").slice(0,4)).filter(Boolean))].sort().reverse();
   const sp={};DATA.forEach(d=>(d.sprecher||[]).forEach(s=>{const n=(s||"").trim();if(n)sp[n]=(sp[n]||0)+1;}));
@@ -930,7 +945,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
         <button class="btn small" id="plFwd" title="15 Sekunden vor">15s ⟳</button>
         <label>Tempo <select id="spd"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>1.75</option><option>2</option></select></label>
         <button class="btn small" id="plAB" title="Passage in Schleife wiederholen">🔁 A setzen</button><span id="plABlbl" class="pl-ablbl"></span>
-        <label class="pl-follow"><input type="checkbox" id="plFollow"> Transkript folgt der Aufnahme</label>
+        <label class="pl-follow"><input type="checkbox" id="plFollow" aria-label="Transkript folgt der Aufnahme"> Transkript folgt der Aufnahme</label>
         <button class="btn small ghost" id="plToLine">↧ Aktuelle Stelle</button>
         <span id="curChap"></span>
         ${state.authed?'<button class="btn small ghost" id="shareAt">🔗 Stelle teilen</button>':''}${state.authed&&src?`<a class="btn small" href="${src}" download>Audio herunterladen</a>`:""}
@@ -1489,7 +1504,20 @@ function computeSince(){const last=lsGet("st_lastvisit",null);
   if(!_hadHash&&state.authed&&state.internOk&&!state.vb&&typeof setEbene==="function"){const _z=["dat","int","mit","pub"].find(x=>darfEbene(x))||"pub";await setEbene(_z,true);}
   window.addEventListener("hashchange",parseHash);
   introPruefen();
-  refreshBanner();statusTimer=setInterval(()=>{refreshBanner();const _q=$("#ovQueue");if(_q&&!_q.hidden&&typeof renderStatusPanel==="function")renderStatusPanel();},20000);})();
+  refreshBanner();
+  /* Status-Abfrage sparsam: Hintergrund-Tabs fragen gar nicht, im Ruhezustand nur alle zwei Minuten,
+     waehrend einer laufenden Verarbeitung weiter alle 20 Sekunden. Beim Zurueckkehren sofort auffrischen. */
+  let _statusTick=0;
+  statusTimer=setInterval(()=>{
+    if(document.hidden)return;
+    const _q=$("#ovQueue");const _qOffen=!!(_q&&!_q.hidden);
+    const _aktiv=!!(LIVE_STATUS&&LIVE_STATUS.active)||_qOffen;
+    _statusTick++;
+    if(!_aktiv&&(_statusTick%6)!==0)return;
+    refreshBanner();
+    if(_qOffen&&typeof renderStatusPanel==="function")renderStatusPanel();
+  },20000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshBanner();});})();
 </script>
 </body>
 </html>
