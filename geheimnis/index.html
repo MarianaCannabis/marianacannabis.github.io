@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Einmaliger Abruf, Mariana Cannabis</title>
+<style>
+  :root{--bg:#08100b;--panel:#0e1a12;--line:#1d3324;--green:#4caf6a;--gelb:#f9c74f;--text:#e8f0ea;--grau:#9db3a4}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.55;
+       display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .karte{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:640px;width:100%;padding:26px}
+  h1{font-size:20px;margin:0 0 4px}
+  .marke{color:var(--grau);font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+  .warn{background:rgba(249,199,79,.12);border:1px solid rgba(249,199,79,.45);border-radius:10px;padding:12px 14px;margin:16px 0;font-size:14px}
+  .fehler{background:rgba(229,115,75,.12);border:1px solid #e5734b;border-radius:10px;padding:12px 14px;color:#f0a488}
+  .geheim{background:#06110a;border:1px solid var(--green);border-radius:10px;padding:16px;margin:14px 0;
+          font-family:ui-monospace,Consolas,monospace;font-size:19px;word-break:break-all;user-select:all}
+  button{background:var(--green);color:#06110a;border:0;border-radius:9px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;min-height:44px}
+  button:hover{filter:brightness(1.08)}
+  .neben{background:transparent;color:var(--text);border:1px solid var(--line)}
+  .klein{color:var(--grau);font-size:13px}
+  .lade{color:var(--grau)}
+</style>
+</head>
+<body>
+<main class="karte" role="main">
+  <div class="marke">Mariana Cannabis</div>
+  <h1 id="titel">Einmaliger Abruf</h1>
+  <div id="inhalt" class="lade" aria-live="polite">Einen Moment, der Abruf wird vorbereitet.</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0/dist/umd/supabase.js"></script>
+<script>
+const SUPA_URL="https://odggiivgoaficsyekfmd.supabase.co";
+const SUPA_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ2dpaXZnb2FmaWNzeWVrZm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NDA5MjQsImV4cCI6MjA5ODMxNjkyNH0.RRla1o7_oXA1emq_dBJoZGwwSg38kitCxmdfeIuANCk";
+const supa=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_ANON):null;
+const $=s=>document.querySelector(s);
+function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function token(){
+  const h=new URLSearchParams(location.hash.replace(/^#/,""));
+  if(h.get("t"))return h.get("t");
+  return new URLSearchParams(location.search).get("t")||"";
+}
+function zeigeFehler(txt){$("#inhalt").className="";$("#inhalt").innerHTML='<div class="fehler">'+esc(txt)+'</div>';}
+function start(){
+  const t=token();
+  if(!supa){zeigeFehler("Die Verbindung konnte nicht aufgebaut werden. Bitte die Seite neu laden.");return;}
+  if(!t){zeigeFehler("Dieser Link ist unvollstaendig. Bitte den vollstaendigen Link aus dem Dokument verwenden.");return;}
+  $("#inhalt").className="";
+  $("#inhalt").innerHTML=
+    '<p>Hinter diesem Link liegt eine vertrauliche Angabe. Sie laesst sich <b>genau ein einziges Mal</b> anzeigen '+
+    'und wird danach unwiederbringlich geloescht. Bitte sorge dafuer, dass niemand mitliest, und halte einen '+
+    'Passwortspeicher bereit, bevor du fortfaehrst.</p>'+
+    '<div class="warn">Nach dem Anzeigen ist der Inhalt weg. Ein zweiter Aufruf dieses Links zeigt nichts mehr an.</div>'+
+    '<button id="los" type="button">Jetzt anzeigen und damit verbrauchen</button>';
+  $("#los").onclick=abrufen;
+}
+async function abrufen(){
+  $("#los").disabled=true;$("#los").textContent="Wird abgerufen ...";
+  try{
+    const {data,error}=await supa.rpc("geheimnis_abrufen",{p_token:token()});
+    if(error)throw error;
+    if(!data||!data.ok){
+      const g=data?data.grund:"unbekannt";
+      const txt=g==="bereits_abgerufen"?"Dieser Link wurde bereits verwendet. Der Inhalt ist geloescht. Bitte wende dich an Andre fuer einen neuen Link."
+        :g==="abgelaufen"?"Dieser Link ist abgelaufen. Bitte wende dich an Andre fuer einen neuen Link."
+        :"Dieser Link ist unbekannt. Bitte pruefe, ob du ihn vollstaendig kopiert hast.";
+      zeigeFehler(txt);return;
+    }
+    $("#titel").textContent=data.zweck||"Vertrauliche Angabe";
+    $("#inhalt").innerHTML=
+      '<p class="klein">Einmalig angezeigt am '+esc(new Date().toLocaleString("de-DE"))+'. Ab jetzt ist der Inhalt geloescht.</p>'+
+      '<div class="geheim" id="wert">'+esc(data.geheimnis)+'</div>'+
+      (data.hinweis?'<div class="warn">'+esc(data.hinweis)+'</div>':'')+
+      '<button id="kopieren" type="button">In die Zwischenablage kopieren</button> '+
+      '<button class="neben" id="drucken" type="button">Seite drucken</button>'+
+      '<p class="klein">Bitte jetzt sofort in einem Passwortspeicher sichern. Diese Seite laesst sich nicht erneut aufrufen.</p>';
+    $("#kopieren").onclick=async()=>{
+      try{await navigator.clipboard.writeText(data.geheimnis);$("#kopieren").textContent="Kopiert";}
+      catch(e){$("#kopieren").textContent="Kopieren nicht moeglich, bitte markieren";}
+    };
+    $("#drucken").onclick=()=>window.print();
+  }catch(e){
+    zeigeFehler("Der Abruf ist fehlgeschlagen: "+(e.message||e)+". Bitte spaeter erneut versuchen, der Inhalt ist noch vorhanden.");
+    $("#los").disabled=false;$("#los").textContent="Jetzt anzeigen und damit verbrauchen";
+  }
+}
+start();
+</script>
+</body>
+</html>
