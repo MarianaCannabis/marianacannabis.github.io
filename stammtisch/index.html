@@ -495,6 +495,7 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   <a href="https://vereinsarchiv-vorstand.pages.dev" style="color:inherit">Vorstandszugang</a>
 </footer>
 
+
 <div class="overlay" id="ovStats" hidden role="dialog" aria-modal="true" aria-label="Statistik"><div class="modal">
   <div class="modal-head"><h3>Statistik</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body" id="statsBody"></div>
@@ -548,7 +549,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-37";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-38";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -1258,6 +1259,8 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnAufgaben"))$("#btnAufgaben").hidden=!(berechtigt&&hatRecht("aufgaben"));
   if($("#btnOffenePunkte"))$("#btnOffenePunkte").hidden=!isAdmin();
   if($("#btnAgenda"))$("#btnAgenda").hidden=!(berechtigt&&hatRecht("agenda"));
+  if($("#btnFreigaben")&&typeof darfFreigeben==="function"&&typeof freigabenBadge==="function"){const _df=darfFreigeben();$("#btnFreigaben").hidden=!(berechtigt&&_df);
+    if(berechtigt&&_df){supa.rpc("freigabe_offen").then(({data})=>{if(data&&data.pub)freigabenBadge(data.pub.length);}).catch(()=>{});}}
   if(!berechtigt){if(state.vb&&typeof setEbene==="function")setEbene("pub",false);{const _dc=$("#btnDocs");if(_dc)_dc.hidden=true;}{const _lg=$("#btnLog");if(_lg)_lg.hidden=true;}closeMenus();}
   renderDetail();if(berechtigt&&typeof introPruefen==="function")introPruefen();}
 
