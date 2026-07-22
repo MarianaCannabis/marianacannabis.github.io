@@ -548,7 +548,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-36";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-37";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -606,8 +606,11 @@ function summaryToSpeech(d){const z=d.zusammenfassung||{};const p=[];
   if(sach.length)p.push("Sachstand und besprochene Punkte. "+sach.join(". "));
   if((z.fragen||[]).length)p.push("Fragen und Reaktionen aus der Mitgliedschaft. "+z.fragen.join(". "));
   if((z.offene_fragen||[]).length)p.push("Offen geblieben. "+z.offene_fragen.join(". "));
-  if((z.beschluesse||[]).length)p.push("Beschlüsse. "+z.beschluesse.join(". "));
-  if((z.aufgaben||[]).length)p.push("Aufgaben. "+z.aufgaben.join(". "));
+  /* Aufgaben und Beschluesse liegen je nach Herkunft als Text oder als Objekt {wer,text} vor.
+     Ohne diese Umwandlung liest die Sprachausgabe "[object Object]" vor. */
+  const alsText=xs=>(xs||[]).map(a=>(a&&a.text!=null)?a.text:a).filter(Boolean);
+  if((z.beschluesse||[]).length)p.push("Beschlüsse. "+alsText(z.beschluesse).join(". "));
+  if((z.aufgaben||[]).length)p.push("Aufgaben. "+alsText(z.aufgaben).join(". "));
   return p.join(" ");}
 function hasSummary(d){const z=d.zusammenfassung||{};return !!(z.lead||(z.sachstand&&z.sachstand.length)||(z.punkte&&z.punkte.length)||(z.beschluesse&&z.beschluesse.length));}
 function speakSummary(d){
