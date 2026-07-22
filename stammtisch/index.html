@@ -548,7 +548,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-34";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-36";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -935,6 +935,7 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
     <div id="noteBox" hidden style="margin-top:8px"><textarea id="dNote" aria-label="Persönliche Notiz zu dieser Sitzung" placeholder="Persönliche Notiz (nur auf diesem Gerät gespeichert)" style="width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:13px">${esc(NOTES[d.id]||"")}</textarea></div>
     ${isAdmin()&&d.aufbewahrung_markiert?`<div class="msg info" style="margin-top:8px;color:var(--gold)">🗄 Zur Aufbewahrungsprüfung markiert${d.markiert_grund?': '+esc(d.markiert_grund):''}</div>`:''}
     ${isAdmin()&&d.verarbeitung!=="offen"&&((hatAudio&&!(d.wellenform&&d.wellenform.length))||!(((d.zusammenfassung||{}).sachstand||[]).length||((d.zusammenfassung||{}).punkte||[]).length))?`<div class="msg" role="alert" style="margin-top:8px;padding:10px 12px;border:1px solid #e5734b;border-radius:9px;background:rgba(229,115,75,.12);color:#f0a488"><b>⚠ Verarbeitung unvollständig.</b> Als fertig markiert, aber ${[(hatAudio&&!(d.wellenform&&d.wellenform.length))?"die Wellenform fehlt":"",!(((d.zusammenfassung||{}).sachstand||[]).length||((d.zusammenfassung||{}).punkte||[]).length)?"der Sachstand ist leer":""].filter(Boolean).join(" und ")}. Nur für Admins sichtbar, bitte im Verarbeiter prüfen und neu einlesen.</div>`:""}
+    ${typeof freigabeBlock==="function"?freigabeBlock(d):""}
     ${state.authed?`<div class="admin-actions"><button class="btn small" id="dEdit">Bearbeiten</button><button class="btn small" id="dExport">Export</button><button class="btn small" id="dPrint">Drucken / PDF</button>${isAdmin()?'<button class="btn small" id="dProtokoll">🖨 Protokoll</button>':''}<button class="btn small" id="dResum">Neu zusammenfassen</button><button class="btn small" id="dRetr">Neu transkribieren</button><button class="btn small danger" id="dDel">Löschen</button></div>`:""}</div>
     ${hatAudio?`<div class="miniplayer" id="player">
       <div class="pl-label">🎧 Original-Aufnahme <span>die verlässliche Quelle. Das Transkript hilft nur beim Finden und Einordnen.</span></div>
@@ -1298,7 +1299,7 @@ function logIntern(aktion,sid,detail){if(!supa||!state.email)return;
   try{supa.from("intern_zugriff_log").insert({email:state.email,aktion,stammtisch_id:sid,detail}).then(()=>{},()=>{});}catch(e){}}
 
 /* ---- Phase 1: Rechte-Verwaltung + Allowlist (Admin) ---- */
-const RECHTE_DEF=[["aufgaben","Aufgaben"],["freigabe","Freigabe"],["agenda","Agenda"],["dat_eigene","Zusammenfassung eigene Vereine"],["adressen","Vereins-Adressen"],["termine","Termine"],["vorschlaege","Vorschläge"],["dokumente","Dokumente (Bereichsleitung)"]];
+const RECHTE_DEF=[["aufgaben","Aufgaben"],["freigabe","Freigabe für Mitglieder"],["agenda","Agenda"],["dat_eigene","Zusammenfassung eigene Vereine"],["adressen","Vereins-Adressen"],["termine","Termine"],["vorschlaege","Vorschläge"],["dokumente","Dokumente (Bereichsleitung)"]];
 let RECHTE_ALLOW=[],RECHTE_MAP={};
 function openVorschlag(mode){VORSCHLAG_MODE=(mode==="vorstand"?"vorstand":"mitglied");
   $("#vorschlagTitle").textContent=VORSCHLAG_MODE==="vorstand"?"Vorschlag einreichen (Vorstand)":"Punkt oder Frage einreichen";
