@@ -549,7 +549,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-41";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-42";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -946,8 +946,8 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
       <canvas id="wave" class="wave" height="64" title="Klicken zum Springen" aria-hidden="true"></canvas>
       <audio id="aud" controls preload="metadata" ${src?`src="${src}"`:""} aria-label="Audioaufnahme des Stammtischs" ${noDL}></audio>
       <div class="mp-row">
-        <button class="btn small" id="plBack" title="15 Sekunden zurück">⟲ 15s</button>
-        <button class="btn small" id="plFwd" title="15 Sekunden vor">15s ⟳</button>
+        <button class="btn small" id="plBack" title="15 Sekunden zurück" aria-label="15 Sekunden zurückspringen">⟲ 15s</button>
+        <button class="btn small" id="plFwd" title="15 Sekunden vor" aria-label="15 Sekunden vorspringen">15s ⟳</button>
         <label>Tempo <select id="spd"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>1.75</option><option>2</option></select></label>
         <button class="btn small" id="plAB" title="Passage in Schleife wiederholen">🔁 A setzen</button><span id="plABlbl" class="pl-ablbl"></span>
         <label class="pl-follow"><input type="checkbox" id="plFollow" aria-label="Transkript folgt der Aufnahme"> Transkript folgt der Aufnahme</label>
@@ -1088,7 +1088,7 @@ function renderTab(d){const w=$("#tabwrap");
       <div class="tx-tools"><div class="tx-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="txq" placeholder="Im Transkript suchen…" aria-label="Im Transkript suchen" value="${esc(state.txQ)}"></div>
       <span class="hitnav" id="hitnav" hidden><button id="hitPrev" aria-label="Vorheriger Treffer">‹</button><span id="hitCount"></span><button id="hitNext" aria-label="Nächster Treffer">›</button><button id="hitAudio" aria-label="An die Stelle im Audio springen">▶ Audio</button></span>
       <div class="tx-filter" id="txf">${(d.sprecher||[]).map((s,i)=>`<button data-i="${i}" class="${state.txSp===i?'on':''}" aria-pressed="${state.txSp===i}"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</button>`).join("")}</div>
-      <button class="btn small ${gp('st_txtsize')?'on':''}" id="txSize" title="Größere Schrift" aria-pressed="${gp('st_txtsize')}">A+</button>
+      <button class="btn small ${gp('st_txtsize')?'on':''}" id="txSize" title="Größere Schrift" aria-pressed="${gp('st_txtsize')}" aria-label="Schrift vergrößern">A+</button>
       <button class="btn small ${gp('st_glossar')?'on':''}" id="txGloss" title="Fachbegriffe hervorheben und erklären" aria-pressed="${gp('st_glossar')}">ⓘ Begriffe</button>
       <button class="btn small ${gp('st_txlight')?'on':''}" id="txLight" title="Helle Lesevariante" aria-pressed="${gp('st_txlight')}">☀ Hell</button></div><div id="txlines"${gp('st_txlight')?' class="lightread"':''}></div>`;
     $("#txSize").onclick=()=>{const on=!document.body.classList.contains("tx-large");document.body.classList.toggle("tx-large",on);sp_("st_txtsize",on);$("#txSize").classList.toggle("on",on);$("#txSize").setAttribute("aria-pressed",on);};
@@ -1104,7 +1104,7 @@ function renderTab(d){const w=$("#tabwrap");
     if(state.autohit!=null){const pos=state.hits.indexOf(state.autohit);state.autohit=null;if(pos>=0){state.hit=pos-1;gotoHit(d,1);}}}
   else if(state.tab==="slides"){
     const grid=d.folien&&d.folien.length?`<div class="slides-grid">${d.folien.map((f,fi)=>{const href=f.pfad?pubUrl("folien",f.pfad):null;const inner=`<div class="canvas">${href?'PDF öffnen':'Folie '+f.n}</div><div class="cap">${esc(f.titel)}<small>${esc(f.note)}</small></div>`;
-      const jump=(f.t!=null&&d.audio_pfad)?`<button class="btn small" data-folaudio="${f.t}">▶ ${fmt(f.t)}</button>`:"";const setb=state.authed&&d.audio_pfad?`<button class="btn small ghost" data-foltime="${fi}">Zeit setzen</button>`:"";
+      const jump=(f.t!=null&&d.audio_pfad)?`<button class="btn small" data-folaudio="${f.t}" aria-label="Aufnahme ab ${fmt(f.t)} abspielen">▶ ${fmt(f.t)}</button>`:"";const setb=state.authed&&d.audio_pfad?`<button class="btn small ghost" data-foltime="${fi}">Zeit setzen</button>`:"";
       return `<div class="slide">${href?`<a href="${href}" target="_blank" rel="noopener">${inner}</a>`:inner}${(jump||setb)?`<div class="slide-foot">${jump}${setb}</div>`:""}</div>`;}).join("")}</div>`:`<div class="nodata">Keine Folien hinterlegt.</div>`;
     const txt=d.folientext?`<details class="folientext"${state.q?" open":""}><summary>Textinhalt der Folien / PDF (durchsuchbar)</summary><div class="ftxt">${hl(d.folientext,state.q).replace(/\n/g,"<br>")}</div></details>`:"";
     w.innerHTML=grid+txt;
