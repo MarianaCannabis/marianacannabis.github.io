@@ -549,7 +549,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-42";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-43";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -1090,7 +1090,7 @@ function renderTab(d){const w=$("#tabwrap");
       <div class="tx-filter" id="txf">${(d.sprecher||[]).map((s,i)=>`<button data-i="${i}" class="${state.txSp===i?'on':''}" aria-pressed="${state.txSp===i}"><span class="dot" style="background:${spc(i)}"></span>${esc(s)}</button>`).join("")}</div>
       <button class="btn small ${gp('st_txtsize')?'on':''}" id="txSize" title="Größere Schrift" aria-pressed="${gp('st_txtsize')}" aria-label="Schrift vergrößern">A+</button>
       <button class="btn small ${gp('st_glossar')?'on':''}" id="txGloss" title="Fachbegriffe hervorheben und erklären" aria-pressed="${gp('st_glossar')}">ⓘ Begriffe</button>
-      <button class="btn small ${gp('st_txlight')?'on':''}" id="txLight" title="Helle Lesevariante" aria-pressed="${gp('st_txlight')}">☀ Hell</button></div><div id="txlines"${gp('st_txlight')?' class="lightread"':''}></div>`;
+      <button class="btn small ${gp('st_txlight')?'on':''}" id="txLight" title="Helle Lesevariante" aria-pressed="${gp('st_txlight')}">☀ Hell</button></div><div id="txlines" role="list" aria-label="Wortprotokoll"${gp('st_txlight')?' class="lightread"':''}></div>`;
     $("#txSize").onclick=()=>{const on=!document.body.classList.contains("tx-large");document.body.classList.toggle("tx-large",on);sp_("st_txtsize",on);$("#txSize").classList.toggle("on",on);$("#txSize").setAttribute("aria-pressed",on);};
     $("#txGloss").onclick=()=>{const on=!gp("st_glossar");sp_("st_glossar",on);$("#txGloss").classList.toggle("on",on);$("#txGloss").setAttribute("aria-pressed",on);renderLines(d);};
     $("#txLight").onclick=()=>{const on=!gp("st_txlight");sp_("st_txlight",on);$("#txLight").classList.toggle("on",on);$("#txLight").setAttribute("aria-pressed",on);$("#txlines").classList.toggle("lightread",on);};
@@ -1121,17 +1121,21 @@ function gotoHit(d,dir){if(!state.hits.length)return;state.hit=(state.hit+dir+st
   const el=$("#txlines").querySelector(".line.curhit");if(el)el.scrollIntoView({behavior:"smooth",block:"center"});announce(`Treffer ${state.hit+1} von ${state.hits.length}`);}
 function renderLines(d){const box=$("#txlines"),q=state.txQ.trim().toLowerCase();const curIdx=state.hit>=0?state.hits[state.hit]:-1;
   box.innerHTML=(d.transkript||[]).map((l,idx)=>{if(state.txSp!=null&&l.sp!==state.txSp)return "";
-    if(l.red&&!state.authed)return `<div class="line redacted"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="said" style="color:var(--muted-2);font-style:italic">[redigiert]</div></div></div>`;
+    if(l.red&&!state.authed)return `<div class="line redacted" role="listitem"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="said" style="color:var(--muted-2);font-style:italic">[redigiert]</div></div></div>`;
     const m=!q||l.text.toLowerCase().includes(q);
     const who=esc((d.sprecher||[])[l.sp]||"?");
     const tools=state.authed?`<div class="lntools"><button data-edit="${idx}" title="Text korrigieren" aria-label="Text korrigieren">✎</button><button data-red="${idx}" title="${l.red?'Redaktion aufheben':'Redigieren (Inhalt für Mitglieder ausblenden)'}" aria-label="${l.red?'Redaktion aufheben':'Redigieren, Inhalt für Mitglieder ausblenden'}">${l.red?'⦿':'⊘'}</button></div>`:`<div class="lntools"><button data-report="${idx}" title="Tippfehler melden" aria-label="Tippfehler melden">⚠</button></div>`;
-    return `<div class="line ${m?'':'dim'} ${idx===curIdx?'curhit':''} ${l.red?'red':''}" data-idx="${idx}"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="who ${state.authed?'editable':''}" style="color:${spc(l.sp)}" ${state.authed?`data-sp="${l.sp}"`:''}>${who}${l.red?' <span class="redbadge">redigiert</span>':''}</div><div class="said" data-said="${idx}">${txHtml(l.text,state.txQ.trim(),idx===curIdx)}</div></div>${tools}</div>`;}).join("")||`<div class="tx-empty">Keine Zeilen.</div>`;
+    return `<div class="line ${m?'':'dim'} ${idx===curIdx?'curhit':''} ${l.red?'red':''}" role="listitem" data-idx="${idx}"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="who ${state.authed?'editable':''}" style="color:${spc(l.sp)}" ${state.authed?`data-sp="${l.sp}"`:''}>${who}${l.red?' <span class="redbadge">redigiert</span>':''}</div><div class="said" data-said="${idx}">${txHtml(l.text,state.txQ.trim(),idx===curIdx)}</div></div>${tools}</div>`;}).join("")||`<div class="tx-empty">Keine Zeilen.</div>`;
   box.querySelectorAll(".ts").forEach(b=>b.onclick=()=>{seekAudio(+b.dataset.t);b.closest(".line").scrollIntoView({behavior:"smooth",block:"center"});});
   if(state.authed){
     box.querySelectorAll(".who.editable").forEach(el=>el.onclick=()=>renameSpeaker(d,+el.dataset.sp));
     box.querySelectorAll("[data-red]").forEach(b=>b.onclick=()=>toggleRedact(d,+b.dataset.red));
     box.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editLine(d,+b.dataset.edit));
   } else box.querySelectorAll("[data-report]").forEach(b=>b.onclick=()=>reportTypo(d,+b.dataset.report));
+  /* Zeilenzahl ansagen, damit Screenreader-Nutzer den Umfang kennen und eine Filterung bemerken. */
+  {const n=box.querySelectorAll(".line").length;
+   box.setAttribute("aria-label", n===1?"Wortprotokoll, 1 Zeile":`Wortprotokoll, ${n} Zeilen`);
+   if(state.txQ.trim()||state.txSp!=null)announce(n===0?"Keine Zeile gefunden.":(n===1?"1 Zeile gefunden.":n+" Zeilen gefunden."));}
   highlightCurrentLine(d);}
 async function saveTranskript(d){try{await supa.from(aufbTable()).update({transkript:d.transkript,volltext:volltext(d),embedding:null}).eq("id",d.id);d.embedding=null;semEmbCache={pub:null,int:null,mit:null};}catch(e){alert("Speichern fehlgeschlagen: "+(e.message||e));}}
 function editLine(d,idx){const said=$(`[data-said="${idx}"]`);if(!said)return;const cur=d.transkript[idx].text;
