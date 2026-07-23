@@ -549,7 +549,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-44";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-45";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -631,7 +631,12 @@ function updateReadBtn(){const b=$("#dRead");if(!b)return;const on=SPEAKING===st
   b.setAttribute("aria-pressed",on?"true":"false");}
 if("speechSynthesis" in window){window.addEventListener("beforeunload",()=>{try{window.speechSynthesis.cancel();}catch(e){}});}
 function applyMobile(on){document.body.classList.toggle("mobile",on);$("#btnMobile").classList.toggle("on",on);$("#btnMobile").setAttribute("aria-pressed",on);sp_("st_mobile",on);}
-function applySr(on){document.body.classList.toggle("sr-mode",on);$("#btnSr").classList.toggle("on",on);$("#btnSr").setAttribute("aria-pressed",on);sp_("st_sr",on);if(on)announce("Screenreader-Modus ein.");}
+function srAnsichtNeu(){}
+function applySr(on){document.body.classList.toggle("sr-mode",on);$("#btnSr").classList.toggle("on",on);$("#btnSr").setAttribute("aria-pressed",on);sp_("st_sr",on);
+  /* Manche Ansichten haben eine eigene Lesefassung. Der Haken wird nur in der Vorstands-Fassung
+     mit Leben gefuellt, hier bleibt er wirkungslos. */
+  try{srAnsichtNeu();}catch(e){}
+  announce(on?"Screenreader-Modus ein. Die Vereinsdaten werden als Tabelle dargestellt und das zusätzliche Vorlesen ist aus.":"Screenreader-Modus aus.");}
 $("#btnMobile").onclick=()=>applyMobile(!document.body.classList.contains("mobile"));
 $("#btnSr").onclick=()=>applySr(!document.body.classList.contains("sr-mode"));
 
