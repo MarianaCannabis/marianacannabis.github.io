@@ -549,7 +549,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-47";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-48";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -557,7 +557,7 @@ const EBENE_PFX={pub:"st",int:"sti",mit:"ma"};
 const EBENE_IMODE={pub:"fill",int:"fill_intern",mit:"fill_mitglieder"};
 const EBENE_WORT={pub:"Stammtisch",int:"Stammtisch",mit:"Mitgliederabend"};
 /* Wer darf welche Ebene sehen. Neue Ebene HIER eintragen, nicht verstreuen.
-   Massgeblich ist die Backend-Funktion darf_ebene(), das hier ist nur die Anzeige. */
+   Massgeblich ist die Pruefung in der Datenbank, das hier ist nur die Anzeige. */
 const EBENE_ROLLEN={pub:["admin","vorstand","ap","bereichsleitung"]};
 function darfEbene(e){const r=state.rolle;if(!r)return false;
   if(r==="bereichsleitung"){if(e==="dat")return hatRecht("dat_eigene");if(e==="dok")return hatRecht("dokumente");}
@@ -1319,8 +1319,9 @@ document.addEventListener("keydown",e=>{
   const z=tabs[n];z.focus();z.click();
   [...list.querySelectorAll('[role="tab"]')].forEach(x=>{x.tabIndex=(x.getAttribute("aria-selected")==="true")?0:-1;});
 });
-function logIntern(aktion,sid,detail){if(!supa||!state.email)return;
-  try{supa.from("intern_zugriff_log").insert({email:state.email,aktion,stammtisch_id:sid,detail}).then(()=>{},()=>{});}catch(e){}}
+/* Neutraler Haken: in der Mitgliederfassung wirkungslos, dort gibt es keine Anmeldung und
+   nichts zu protokollieren. Die echte Umsetzung steht im Vorstandsblock darunter. */
+function logIntern(){}
 
 /* ---- Phase 1: Rechte-Verwaltung + Allowlist (Admin) ---- */
 const RECHTE_DEF=[["aufgaben","Aufgaben"],["freigabe","Freigabe für Mitglieder"],["agenda","Agenda"],["dat_eigene","Zusammenfassung eigene Vereine"],["adressen","Vereins-Adressen"],["termine","Termine"],["vorschlaege","Vorschläge"],["dokumente","Dokumente (Bereichsleitung)"]];
