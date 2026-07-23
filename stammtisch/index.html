@@ -549,7 +549,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-43";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-44";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -957,10 +957,10 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
       </div>
       <div class="chapters" id="chapters"></div></div>`:`<div class="miniplayer"><div class="msg info">Für diesen Termin liegt keine Aufnahme vor.</div></div>`}
     <div class="tabs" role="tablist" id="tabs">
-      <button role="tab" data-tab="summary" aria-selected="true" tabindex="0">✨ Zusammenfassung</button>
-      <button role="tab" data-tab="transcript" aria-selected="false" tabindex="-1">📝 Transkript${(d.transkript||[]).length?`<span class="badge">${d.transkript.length}</span>`:''}</button>
-      ${d.folien&&d.folien.length?`<button role="tab" data-tab="slides" aria-selected="false" tabindex="-1">📄 Folien<span class="badge">${d.folien.length}</span></button>`:`<span class="tab-missing">📄 Keine Folien</span>`}
-    </div><div class="tabwrap" id="tabwrap"></div>`;
+      <button role="tab" aria-controls="tabwrap" data-tab="summary" aria-selected="true" tabindex="0">✨ Zusammenfassung</button>
+      <button role="tab" aria-controls="tabwrap" data-tab="transcript" aria-selected="false" tabindex="-1">📝 Transkript${(d.transkript||[]).length?`<span class="badge">${d.transkript.length}</span>`:''}</button>
+      ${d.folien&&d.folien.length?`<button role="tab" aria-controls="tabwrap" data-tab="slides" aria-selected="false" tabindex="-1">📄 Folien<span class="badge">${d.folien.length}</span></button>`:`<span class="tab-missing">📄 Keine Folien</span>`}
+    </div><div class="tabwrap" id="tabwrap" role="tabpanel" tabindex="0" aria-label="Zusammenfassung"></div>`;
   setupPlayer(d);renderTabBar();renderTab(d);
   if(ebenePrivat()){
     logIntern("sitzung_geoeffnet",d.id,d.titel||null);
@@ -980,7 +980,10 @@ function renderDetail(focusIt){const d=DATA.find(x=>x.id===state.current),det=$(
   if($("#dShare"))$("#dShare").onclick=()=>shareLink(d.id);
   if($("#shareAt"))$("#shareAt").onclick=()=>{const a=$("#aud");shareLink(d.id,a?Math.floor(a.currentTime):0);};
   if(focusIt){det.focus();announce(`${d.titel} geöffnet.`);}}
-function renderTabBar(){$("#tabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.tab===state.tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.tabIndex=on?0:-1;b.onclick=()=>{state.tab=b.dataset.tab;state.txQ="";state.txSp=null;state.hits=[];state.hit=-1;renderTabBar();renderTab(DATA.find(x=>x.id===state.current));};});}
+function renderTabBar(){
+  /* Der Inhaltsbereich traegt den Namen des aktiven Reiters, damit die Ansage beim Hineinspringen stimmt. */
+  {const w=$("#tabwrap");if(w)w.setAttribute("aria-label",{summary:"Zusammenfassung",transcript:"Wortprotokoll",slides:"Folien"}[state.tab]||"Inhalt");}
+  $("#tabs").querySelectorAll("button").forEach(b=>{const on=b.dataset.tab===state.tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",on);b.tabIndex=on?0:-1;b.onclick=()=>{state.tab=b.dataset.tab;state.txQ="";state.txSp=null;state.hits=[];state.hit=-1;renderTabBar();renderTab(DATA.find(x=>x.id===state.current));};});}
 function setupPlayer(d){const a=$("#aud");if(!a)return;
   $("#spd").onchange=e=>a.playbackRate=parseFloat(e.target.value);
   const DUR=()=>a.duration||d.dauer||1e9;
@@ -1490,10 +1493,22 @@ $("#fSlides").onchange=e=>{state.onlySlides=e.target.checked;renderList(true);fi
 $("#fBookmarks").onchange=e=>{state.onlyBookmarks=e.target.checked;renderList(true);filterMetaUpdate();};
 $("#filterToggle").onclick=()=>{localStorage.setItem(filterKey(),filterOpen()?"0":"1");applyFilter();};
 $("#reset").onclick=()=>{state.q="";state.years.clear();state.speakers.clear();state.themes.clear();state.onlySlides=false;state.onlyBookmarks=false;state.sort="new";$("#q").value="";$("#sort").value="new";$("#fSlides").checked=false;$("#fBookmarks").checked=false;renderFacets();renderList(true);};
-$("#fYears").onclick=e=>{const b=e.target.closest("[data-yr]");if(!b)return;const y=b.dataset.yr;state.years.has(y)?state.years.delete(y):state.years.add(y);renderFacets();renderList(true);};
-$("#fSpeakers").onclick=e=>{const m=e.target.closest("[data-more]");if(m){state.facetSp=m.dataset.more==="1";renderFacets();return;}const b=e.target.closest("[data-sp]");if(!b)return;const s=b.dataset.sp;state.speakers.has(s)?state.speakers.delete(s):state.speakers.add(s);renderFacets();renderList(true);};
-$("#fThemes").onclick=e=>{const m=e.target.closest("[data-more]");if(m){state.facetTh=m.dataset.more==="1";renderFacets();return;}const b=e.target.closest("[data-th]");if(!b)return;const t=b.dataset.th;state.themes.has(t)?state.themes.delete(t):state.themes.add(t);renderFacets();renderList(true);};
-$("#list").onclick=e=>{const yt=e.target.closest("[data-yeartoggle]");if(yt){const y=yt.dataset.yeartoggle;state.collapsedYears.has(y)?state.collapsedYears.delete(y):state.collapsedYears.add(y);renderList();return;}
+$("#fYears").onclick=e=>{const b=e.target.closest("[data-yr]");if(!b)return;const y=b.dataset.yr;state.years.has(y)?state.years.delete(y):state.years.add(y);renderFacets();renderList(true);
+  {const z=$("#fYears").querySelector(`[data-yr="${y.replace(/"/g,'\\"')}"]`);if(z)z.focus();}};
+$("#fSpeakers").onclick=e=>{const m=e.target.closest("[data-more]");if(m){state.facetSp=m.dataset.more==="1";renderFacets();const z=$("#fSpeakers").querySelector("[data-more]");if(z)z.focus();return;}const b=e.target.closest("[data-sp]");if(!b)return;const s=b.dataset.sp;state.speakers.has(s)?state.speakers.delete(s):state.speakers.add(s);renderFacets();renderList(true);
+  {const z=$("#fSpeakers").querySelector(`[data-sp="${s.replace(/"/g,'\\"')}"]`);if(z)z.focus();}};
+$("#fThemes").onclick=e=>{const m=e.target.closest("[data-more]");if(m){state.facetTh=m.dataset.more==="1";renderFacets();const z=$("#fThemes").querySelector("[data-more]");if(z)z.focus();return;}const b=e.target.closest("[data-th]");if(!b)return;const t=b.dataset.th;state.themes.has(t)?state.themes.delete(t):state.themes.add(t);renderFacets();renderList(true);
+  {const z=$("#fThemes").querySelector(`[data-th="${t.replace(/"/g,'\\"')}"]`);if(z)z.focus();}};
+$("#list").onclick=e=>{const yt=e.target.closest("[data-yeartoggle]");if(yt){const y=yt.dataset.yeartoggle;
+    state.collapsedYears.has(y)?state.collapsedYears.delete(y):state.collapsedYears.add(y);
+    renderList();
+    /* renderList baut die Liste neu auf, dabei ginge der Fokus verloren und man stuende wieder ganz oben.
+       Deshalb denselben Schalter erneut anspringen und den neuen Zustand ansagen. */
+    {const neu=$("#list").querySelector(`[data-yeartoggle="${y.replace(/"/g,'\\"')}"]`);
+     if(neu){neu.focus();const auf=neu.getAttribute("aria-expanded")==="true";
+       const anz=neu.querySelector(".grp-count");
+       announce(`${y} ${auf?"aufgeklappt":"zugeklappt"}${anz?(", "+anz.textContent+" Einträge"):""}.`);}}
+    return;}
   const b=e.target.closest("[data-id]");if(!b)return;const snip=e.target.closest(".snippet");
   state.current=b.dataset.id;state.txSp=null;state.hits=[];state.hit=-1;
   if(snip){state.tab="transcript";state.txQ=state.q;state.autohit=parseInt(snip.dataset.hit);}
