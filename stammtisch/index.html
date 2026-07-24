@@ -254,6 +254,21 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   body.mobile .menu-trigger{width:100%;justify-content:space-between}
   body.mobile .menu-panel{position:static;width:100%;min-width:0;margin-top:6px;box-shadow:none}
   body.mobile .btn.small{padding:9px 12px;font-size:13px}
+  /* --- Durchgaengiger Handy-Modus, greift in beiden Fassungen ---
+     Ziel: jede antippbare Flaeche mindestens 44px, mehr Zeilenluft, nichts laeuft aus dem Rand. */
+  body.mobile .btn{min-height:44px}
+  body.mobile .menu-item{min-height:44px;display:flex;align-items:center;width:100%;padding:12px 14px;font-size:15px}
+  body.mobile [role=tab]{min-height:44px;font-size:14.5px}
+  body.mobile #tabs button,body.mobile #docTabs button,body.mobile #protTabs button,body.mobile #vsTabs button,body.mobile #pflegeTabs button{min-height:46px;padding:12px 14px}
+  body.mobile .vb-ebene{min-height:46px;font-size:14.5px}
+  body.mobile input,body.mobile select,body.mobile textarea{min-height:44px;font-size:16px}
+  body.mobile .x,body.mobile [data-close]{min-height:44px;min-width:44px}
+  body.mobile table,body.mobile .dat-tab{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  body.mobile .modal{padding:15px 13px}
+  body.mobile pre,body.mobile code,body.mobile .said,body.mobile p{overflow-wrap:anywhere;word-break:break-word}
+  body.mobile .dat-gitter{grid-template-columns:1fr}
+  body.mobile .qrow{flex-direction:column;align-items:stretch;gap:8px}
+  body.mobile .keyrow{grid-template-columns:1fr}
   @media(max-width:880px){
     .topbar-in{padding:12px 14px;gap:8px}
     .menu-trigger{width:100%;justify-content:space-between}
@@ -551,7 +566,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-61";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-62";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -632,14 +647,25 @@ function updateReadBtn(){const b=$("#dRead");if(!b)return;const on=SPEAKING===st
   b.setAttribute("aria-label",on?"Vorlesen stoppen":"Zusammenfassung vorlesen");
   b.setAttribute("aria-pressed",on?"true":"false");}
 if("speechSynthesis" in window){window.addEventListener("beforeunload",()=>{try{window.speechSynthesis.cancel();}catch(e){}});}
-function applyMobile(on){document.body.classList.toggle("mobile",on);$("#btnMobile").classList.toggle("on",on);$("#btnMobile").setAttribute("aria-pressed",on);sp_("st_mobile",on);}
+function applyMobile(on,merken){document.body.classList.toggle("mobile",on);$("#btnMobile").classList.toggle("on",on);$("#btnMobile").setAttribute("aria-pressed",on);if(merken){try{sessionStorage.setItem("st_mobile_sess",on?"1":"0");}catch(e){}}}
+/* Erkennt ein Handy an Breite, Touch und grob am User-Agent. Absichtlich pro Sitzung:
+   greift die Erkennung, wird nichts gespeichert, beim naechsten Besuch entscheidet wieder
+   das Geraet. Nur wenn jemand den Knopf drueckt, wird die Wahl fuer die Sitzung gemerkt. */
+function istHandy(){
+  try{
+    const schmal=Math.min(window.innerWidth||999,window.screen&&window.screen.width||999)<=820;
+    const touch=("ontouchstart" in window)||(navigator.maxTouchPoints||0)>0;
+    const ua=/Android|iPhone|iPod|Mobile|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent||"");
+    return (schmal&&touch)||ua;
+  }catch(e){return false;}
+}
 function srAnsichtNeu(){}
 function applySr(on){document.body.classList.toggle("sr-mode",on);$("#btnSr").classList.toggle("on",on);$("#btnSr").setAttribute("aria-pressed",on);sp_("st_sr",on);
   /* Manche Ansichten haben eine eigene Lesefassung. Der Haken wird nur in der Vorstands-Fassung
      mit Leben gefuellt, hier bleibt er wirkungslos. */
   try{srAnsichtNeu();}catch(e){}
   announce(on?"Screenreader-Modus ein. Die Vereinsdaten werden als Tabelle dargestellt und das zusätzliche Vorlesen ist aus.":"Screenreader-Modus aus.");}
-$("#btnMobile").onclick=()=>applyMobile(!document.body.classList.contains("mobile"));
+$("#btnMobile").onclick=()=>applyMobile(!document.body.classList.contains("mobile"),true);
 $("#btnSr").onclick=()=>applySr(!document.body.classList.contains("sr-mode"));
 
 /* ---- helpers ---- */
@@ -1548,7 +1574,19 @@ function initCollapse(){if(!DATA.length)return;const newest=[...DATA].sort((a,b)
 function computeSince(){const last=lsGet("st_lastvisit",null);
   if(last){const lt=new Date(last).getTime();state.sinceCount=DATA.filter(d=>d.erstellt_am&&new Date(d.erstellt_am).getTime()>lt).length;state.sinceLabel=new Date(last).toLocaleDateString("de-DE");}
   lsSet("st_lastvisit",new Date().toISOString());}
-(async function boot(){applyMobile(gp("st_mobile"));applySr(gp("st_sr"));if(gp("st_txtsize"))document.body.classList.add("tx-large");
+(async function boot(){
+  /* Handy-Ansicht: eine bewusste Wahl aus DIESER Sitzung (sessionStorage) hat Vorrang.
+     Gibt es keine, entscheidet die Geraeteerkennung, ohne etwas zu speichern. So bekommt
+     Florian am Handy sofort die passende Ansicht, kann sie aber jederzeit umschalten. */
+  let mob;
+  try{const s=sessionStorage.getItem("st_mobile_sess");mob=(s===null)?istHandy():(s==="1");}catch(e){mob=istHandy();}
+  applyMobile(mob,false);
+  applySr(gp("st_sr"));if(gp("st_txtsize"))document.body.classList.add("tx-large");
+  /* Nur fuer Screenreader-Nutzer und nur einmal je Geraet: der Hinweis auf den
+     Barrierefreiheits-Knopf. Sichtbar bleibt nichts, wer keinen Screenreader nutzt,
+     merkt nichts. Der Modus-Knopf schaltet das doppelte Vorlesen ab. */
+  if(mob&&!gp("st_sr")){try{if(!localStorage.getItem("st_a11y_hint")){localStorage.setItem("st_a11y_hint","1");
+    setTimeout(()=>announce("Hinweis für Screenreader: Über den Knopf Barrierefreiheit oben lässt sich das zusätzliche Vorlesen abschalten, damit es sich nicht mit deinem Screenreader überlagert."),1400);}}catch(e){}}
   [["#datVerein","Verein suchen…"],["#dokUpV","Verein suchen…"],["#adrVerein","Verein suchen…"]].forEach(([s,p])=>taEnhance($(s),{placeholder:p}));
   await refreshAuth();
   DATA=await loadData();DATA_PUB=DATA;buildFacets();initCollapse();computeSince();renderFacets();renderList();renderNextMeet();applyFilter();
