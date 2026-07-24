@@ -466,7 +466,7 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
 
 <div class="banner" id="statusBanner" hidden><div><span class="pulse"></span><span id="statusBannerText"></span></div></div>
 
-<main class="wrap">
+<main class="wrap" id="hauptbereich" aria-label="Archiv">
   <aside class="rail" aria-label="Suche und Filter">
     <div class="nextmeet" id="nextMeet" hidden></div>
     <div class="nextmeet nextmeet-int" id="nextMeetIntern" hidden></div>
@@ -549,7 +549,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-57";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-58";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
