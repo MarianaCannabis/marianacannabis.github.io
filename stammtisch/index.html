@@ -38,7 +38,7 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
     .topbar-controls .menu-panel{position:static;width:100%;min-width:0;margin-top:6px;box-shadow:none}
   }
   .btn{border:1px solid var(--line);background:var(--bg-2);color:var(--text);padding:8px 13px;border-radius:9px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px}
-  .btn:hover{border-color:var(--green-dim)}.btn.primary{background:var(--green);color:#04150b;border-color:var(--green)}.btn.gold{background:var(--gold);color:#1c1606;border-color:var(--gold)}.btn.danger{color:var(--red);border-color:#5a2f24}.btn.danger:hover{background:rgba(217,105,78,.12)}.btn[hidden]{display:none}.btn.small{padding:5px 10px;font-size:12px}.btn.icon{padding:8px 11px}.btn.on{background:rgba(76,175,106,.18);border-color:var(--green-dim);color:var(--green)}
+  .btn:hover{border-color:var(--green-dim)}.btn.primary{background:var(--green);color:#04150b;border-color:var(--green)}.btn.gold{background:var(--gold);color:#1c1606;border-color:var(--gold)}.btn.danger{color:var(--red);border-color:#5a2f24}.btn.danger:hover{background:rgba(217,105,78,.12)}.btn[hidden]{display:none}.btn.small{padding:5px 10px;font-size:12px}.btn.icon{padding:8px 11px}.btn.on{background:rgba(76,175,106,.18);border-color:var(--green-dim);color:var(--green)}.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted);font-weight:500}.btn.ghost:hover{background:var(--bg-2);color:var(--text)}
   .kbd-help{display:none;max-width:var(--maxw);margin:10px auto 0;padding:0 22px}body.sr-mode .kbd-help{display:block}
   .kbd-help div{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-size:12.5px;color:var(--muted)}.kbd-help kbd{background:var(--panel-solid);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--text);font-size:11px}
   .banner{max-width:var(--maxw);margin:12px auto 0;padding:0 22px}.banner[hidden]{display:none}
@@ -499,7 +499,7 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
 <div class="overlay" id="ovStats" hidden role="dialog" aria-modal="true" aria-label="Statistik"><div class="modal">
   <div class="modal-head"><h3>Statistik</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body" id="statsBody"></div>
-  <div class="modal-foot"><span></span><button class="btn" data-close>Schließen</button></div></div></div>
+  <div class="modal-foot"><span></span><button class="btn ghost" data-close>Schließen</button></div></div></div>
 
 <div class="overlay" id="ovVorschlag" hidden role="dialog" aria-modal="true" aria-labelledby="vorschlagTitle"><div class="modal">
   <div class="modal-head"><h3 id="vorschlagTitle">Punkt oder Frage einreichen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -512,7 +512,7 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
 <div class="overlay" id="ovHits" hidden role="dialog" aria-modal="true" aria-label="Fundstellen"><div class="modal">
   <div class="modal-head"><h3>Fundstellen</h3><button class="x" data-close aria-label="Schließen">×</button></div>
   <div class="modal-body" id="hitsBody"></div>
-  <div class="modal-foot"><span class="msg info" id="hitsMsg"></span><button class="btn" data-close>Schließen</button></div></div></div>
+  <div class="modal-foot"><span class="msg info" id="hitsMsg"></span><button class="btn ghost" data-close>Schließen</button></div></div></div>
 
 <div class="overlay" id="ovHelp" hidden role="dialog" aria-modal="true" aria-label="Hilfe"><div class="modal">
   <div class="modal-head"><h3>Kurzanleitung</h3><button class="x" data-close aria-label="Schließen">×</button></div>
@@ -529,13 +529,13 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
     <p>Transkripte und Zusammenfassungen werden automatisch erstellt und können Fehler enthalten. Einen Tippfehler im Transkript kannst du über „Fehler melden" an die Verwaltung schicken.</p>
     <div id="helpRolle"></div>
   </div>
-  <div class="modal-foot"><button class="btn" id="helpIntro">Einführung erneut ansehen</button><button class="btn" data-close>Schließen</button></div></div></div>
+  <div class="modal-foot"><button class="btn" id="helpIntro">Einführung erneut ansehen</button><button class="btn ghost" data-close>Schließen</button></div></div></div>
 
 <div class="overlay noquit" id="ovIntro" hidden role="dialog" aria-modal="true" aria-labelledby="introTitle"><div class="modal">
   <div class="modal-head"><h3 id="introTitle">Kurz vorab</h3></div>
   <div class="modal-body" id="introBody" tabindex="-1"></div>
   <div class="modal-foot"><span class="msg info" id="introZaehler" role="status"></span>
-    <span><button class="btn" id="introBack" hidden>Zurück</button> <button class="btn primary" id="introOk">Verstanden, los geht's</button></span></div></div></div>
+    <span><button class="btn ghost" id="introBack" hidden>Zurück</button> <button class="btn primary" id="introOk">Verstanden, los geht's</button></span></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.0/dist/umd/supabase.js" integrity="sha384-3wY11tldQ5+yWqAvmTN4XtQvnjoTva0cV15O/O/O5NTtp0ivVopSzLOzsVXWZse9" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
@@ -549,7 +549,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-53";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-54";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -1165,7 +1165,7 @@ function editSummary(d){const w=$("#tabwrap");const z=d.zusammenfassung||{};cons
     <label class="fld">Sachstand und besprochene Punkte (eine Zeile je Punkt)<textarea id="esSach" style="min-height:140px">${esc(sach.join("\n"))}</textarea></label>
     <label class="fld">Fragen und Reaktionen aus der Mitgliedschaft (eine Zeile je Punkt)<textarea id="esFrag" style="min-height:90px">${esc((z.fragen||[]).join("\n"))}</textarea></label>
     <label class="fld">Offen geblieben (eine Zeile je Punkt)<textarea id="esOffen" style="min-height:80px">${esc((z.offene_fragen||[]).join("\n"))}</textarea></label>
-    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="esSave">Speichern</button><button class="btn ghost" id="esCancel">Abbrechen</button><span class="msg" id="esMsg"></span></div></div>`;
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary" id="esSave">Speichern</button><button class="btn ghost" id="esCancel">Abbrechen</button><span class="msg" id="esMsg"></span></div></div>`;
   const lines=v=>v.split("\n").map(s=>s.trim()).filter(Boolean);
   $("#esCancel").onclick=()=>renderTab(d);
   $("#esSave").onclick=async()=>{
