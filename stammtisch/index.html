@@ -549,7 +549,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-56";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-57";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -1264,6 +1264,21 @@ function darfFreigeben(){return isAdmin()||hatRecht("freigabe");}
 /* freigabenBadge wird im Vorstand-Block mit echter Logik ueberschrieben. Dieser Stub sorgt dafuer,
    dass ein Aufruf in der Mitglieder-Fassung (wo btnFreigaben ohnehin fehlt) nicht scheitert. */
 function freigabenBadge(n){const b=$("#freigabenZahl"),mi=$("#btnFreigaben");if(mi)mi.hidden=!darfFreigeben();if(!b)return;if(n>0){b.textContent=String(n);b.hidden=false;}else{b.hidden=true;}}
+/* Eine einzige Stelle, die zaehlt. Vorher rechneten der Start und die Auffrischung nach
+   einer Freigabe nur die Stammtische, das Fenster selbst aber beide Ebenen. Wartete nur
+   ein Mitgliederabend, blieb der Zaehler leer, bis man das Fenster einmal geoeffnet hatte. */
+function freigabenZaehlen(){
+  if(typeof darfFreigeben!=="function"||!darfFreigeben())return;
+  supa.rpc("freigabe_offen").then(({data})=>{
+    const p=(data&&data.pub&&data.pub.length)||0,m=(data&&data.mit&&data.mit.length)||0;
+    freigabenBadge(p+m);}).catch(()=>{});}
+/* Die Verarbeitung legt waehrend der Sitzung neue Eintraege nach. Beim Zurueckkehren auf den
+   Reiter einmal nachzaehlen, hoechstens alle 60 Sekunden, damit es keine Last erzeugt. */
+let FRG_ZULETZT=0;
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden)return;
+  const jetzt=Date.now();if(jetzt-FRG_ZULETZT<60000)return;FRG_ZULETZT=jetzt;
+  freigabenZaehlen();});
 function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechtigt;
   {const _a=$("#btnAdmin");if(_a)_a.hidden=on;}{const _l=$("#btnLogout");if(_l)_l.hidden=!on;}{const _w=$("#btnWizard");if(_w)_w.hidden=!isAdmin();}
   if($("#btnVorstandLogin"))$("#btnVorstandLogin").hidden=berechtigt;
@@ -1279,7 +1294,7 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnOffenePunkte"))$("#btnOffenePunkte").hidden=!isAdmin();
   if($("#btnAgenda"))$("#btnAgenda").hidden=!(berechtigt&&hatRecht("agenda"));
   if($("#btnFreigaben"))$("#btnFreigaben").hidden=!(berechtigt&&darfFreigeben());
-  if(berechtigt&&darfFreigeben()){supa.rpc("freigabe_offen").then(({data})=>{freigabenBadge(data&&data.pub?data.pub.length:null);}).catch(()=>{});}
+  if(berechtigt&&darfFreigeben()){freigabenZaehlen();}
   if(!berechtigt){if(state.vb&&typeof setEbene==="function")setEbene("pub",false);{const _dc=$("#btnDocs");if(_dc)_dc.hidden=true;}{const _lg=$("#btnLog");if(_lg)_lg.hidden=true;}closeMenus();}
   renderDetail();if(berechtigt&&typeof introPruefen==="function")introPruefen();}
 
