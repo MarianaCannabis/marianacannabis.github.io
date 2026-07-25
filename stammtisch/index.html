@@ -152,6 +152,7 @@ if(self===top){var _ac=document.getElementById("antiClickjack");if(_ac&&_ac.pare
   .tabs{display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--line);overflow-x:auto}
   .tabs button{border:0;background:transparent;color:var(--muted);padding:13px 14px;font-size:13px;font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}.tabs button.active{color:var(--text);border-bottom-color:var(--green)}
   .tabs button .badge{font-size:10px;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:5px;color:var(--muted-2)}
+  .menu-item .badge{font-size:11px;background:var(--gold);color:#1c1606;border-radius:8px;padding:1px 7px;margin-left:6px;font-weight:700}
   .tabs .tab-missing{padding:13px 14px;font-size:13px;color:var(--muted-2);font-style:italic;white-space:nowrap;align-self:center}
   .tabwrap{padding:22px 24px}@media(max-width:880px){.tabwrap{padding:18px 16px}}
   .summary p{margin:0 0 12px;font-size:15px;color:#dcebe1}.summary .lead{font-size:16px;color:var(--text)}
@@ -570,7 +571,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-66";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-67";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -1320,6 +1321,8 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnRechte"))$("#btnRechte").hidden=!isAdmin();
   if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
   if($("#btnAuskunft"))$("#btnAuskunft").hidden=!isAdmin();
+  if($("#btnNamen"))$("#btnNamen").hidden=!(berechtigt&&(isAdmin()||hatRecht("freigabe")));
+  if(berechtigt&&isAdmin()&&typeof namenBadgePruef==="function")namenBadgePruef();
   if($("#btnZugaenge"))$("#btnZugaenge").hidden=!(berechtigt&&hatRecht("adressen"));
   if($("#btnTermine"))$("#btnTermine").hidden=!(berechtigt&&hatRecht("termine"));
   if($("#btnVorschlaegeAdmin"))$("#btnVorschlaegeAdmin").hidden=!(berechtigt&&hatRecht("vorschlaege"));
