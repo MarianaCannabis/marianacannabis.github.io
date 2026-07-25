@@ -570,7 +570,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-64";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-65";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -1289,7 +1289,9 @@ async function refreshAuth(){if(!supa)return;const {data:{session}}=await supa.a
   state.internOk=false;state.rechte=[];state.isAdmin=false;state.rolle=null;state.vereinId=null;state.verein=null;
   setAuthed(!!session);}
 function isAdmin(){return state.authed&&!!state.isAdmin;}
-function hatRecht(r){return isAdmin()||(state.rechte||[]).includes(r);}
+function hatRecht(r){return isAdmin()||(state.rolle==="bereichsleitung"&&(state.rechte||[]).includes(r));}
+/* Einzelrechte zaehlen im Frontend nur fuer Bereichsleitungen, genau wie serverseitig in
+   hat_recht(). Ein Vorstand bekommt seine Sicht ueber die Rolle, nicht ueber Einzelrechte. */
 /* Ausserhalb der VORSTAND-Marker, damit beide Fassungen die Funktion kennen. In der
    Mitglieder-Fassung ist niemand angemeldet, isAdmin/hatRecht liefern false, also darfFreigeben=false. */
 function darfFreigeben(){return isAdmin()||hatRecht("freigabe");}
