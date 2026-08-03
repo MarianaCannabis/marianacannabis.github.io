@@ -571,7 +571,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-71";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-72";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -823,6 +823,8 @@ function dateFromName(n){
   function mk(y,a,b){y=+y;if(y<100)y=2000+y;let mo=+a,d=+b;if(!(mo>=1&&mo<=12&&d>=1&&d<=31)){[mo,d]=[d,mo];}if(mo>=1&&mo<=12&&d>=1&&d<=31)return `${String(y).padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;return "";}
   let m=n.match(/(20\d{2})[-_.](\d{1,2})[-_.](\d{1,2})/);if(m){let r=mk(m[1],m[2],m[3]);if(r)return r;}      // YYYY.MM.DD oder YYYY.DD.MM
   m=n.match(/(\d{1,2})[-_.](\d{1,2})[-_.](\d{2,4})/);if(m){let r=mk(m[3],m[2],m[1]);if(r)return r;}          // DD.MM.YYYY / DD.MM.YY
+  m=n.match(/(?<!\d)(20\d{2})(\d{2})(\d{2})(?!\d)/);if(m){let r=mk(m[1],m[2],m[3]);if(r)return r;}            // JJJJMMTT (8-stellig)
+  m=n.match(/(?<!\d)(\d{2})(\d{2})(20\d{2})(?!\d)/);if(m){let r=mk(m[3],m[2],m[1]);if(r)return r;}            // TTMMJJJJ (8-stellig)
   m=n.match(/(?<!\d)(\d{2})(\d{2})(\d{2})(?!\d)/);if(m){let r=mk(m[1],m[2],m[3]);if(r)return r;}              // YYMMDD
   return "";}
 function pubUrl(b,p){return supa?supa.storage.from(b).getPublicUrl(p).data.publicUrl:null;}
@@ -1124,7 +1126,8 @@ function renderTab(d){const w=$("#tabwrap");
     w.querySelectorAll(".kp-jump[data-jt]").forEach(b=>b.onclick=()=>seekAudio(+b.dataset.jt));
     if(state.authed&&$("#sumEdit"))$("#sumEdit").onclick=()=>editSummary(d);}
   else if(state.tab==="transcript"){
-    if(d.verarbeitung==="offen"||!(d.transkript||[]).length){w.innerHTML=`<div class="nodata">Das Transkript wird noch erstellt und erscheint hier automatisch, sobald es fertig ist. Audio und Folien sind bereits verfügbar.</div>`;return;}
+    if(d.verarbeitung==="offen"){w.innerHTML=`<div class="nodata">Das Transkript wird noch erstellt und erscheint hier automatisch, sobald es fertig ist. Audio und Folien sind bereits verfügbar.</div>`;return;}
+    if(!(d.transkript||[]).length){w.innerHTML=`<div class="nodata">Für diese Aufnahme liegt kein Transkript vor${d.audio_pfad?"":" (nur Folien/PDF, kein Audio)"}.</div>`;return;}
     w.innerHTML=`<div style="background:rgba(249,199,79,.08);border:1px solid #4a4222;border-radius:9px;padding:9px 12px;font-size:12.5px;color:#e7d6a3;margin-bottom:14px">Hinweis: Das Transkript wurde automatisch erstellt und kann Fehler enthalten, etwa bei Namen, Fachbegriffen oder undeutlichen Stellen.</div>
       <div class="tx-tools"><div class="tx-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="txq" placeholder="Im Transkript suchen…" aria-label="Im Transkript suchen" value="${esc(state.txQ)}"></div>
       <span class="hitnav" id="hitnav" hidden><button id="hitPrev" aria-label="Vorheriger Treffer">‹</button><span id="hitCount"></span><button id="hitNext" aria-label="Nächster Treffer">›</button><button id="hitAudio" aria-label="An die Stelle im Audio springen">▶ Audio</button></span>
