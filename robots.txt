@@ -1,0 +1,3 @@
+# Diese Seiten sind nur fuer Mitglieder gedacht und sollen nicht in Suchmaschinen erscheinen.
+User-agent: *
+Disallow: /
