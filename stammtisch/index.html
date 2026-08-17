@@ -571,7 +571,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-76";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-07-18-77";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -1168,13 +1168,14 @@ function renderLines(d){const box=$("#txlines"),q=state.txQ.trim().toLowerCase()
     if(l.red&&!state.authed)return `<div class="line redacted" role="listitem"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="said" style="color:var(--muted-2);font-style:italic">[redigiert]</div></div></div>`;
     const m=!q||l.text.toLowerCase().includes(q);
     const who=esc((d.sprecher||[])[l.sp]||"?");
-    const tools=state.authed?`<div class="lntools"><button data-edit="${idx}" title="Text korrigieren" aria-label="Text korrigieren">✎</button><button data-red="${idx}" title="${l.red?'Redaktion aufheben':'Redigieren (Inhalt für Mitglieder ausblenden)'}" aria-label="${l.red?'Redaktion aufheben':'Redigieren, Inhalt für Mitglieder ausblenden'}">${l.red?'⦿':'⊘'}</button></div>`:`<div class="lntools"><button data-report="${idx}" title="Tippfehler melden" aria-label="Tippfehler melden">⚠</button></div>`;
+    const tools=state.authed?`<div class="lntools"><button data-edit="${idx}" title="Text korrigieren" aria-label="Text korrigieren">✎</button><button data-red="${idx}" title="${l.red?'Redaktion aufheben':'Redigieren (Inhalt für Mitglieder ausblenden)'}" aria-label="${l.red?'Redaktion aufheben':'Redigieren, Inhalt für Mitglieder ausblenden'}">${l.red?'⦿':'⊘'}</button>${d.ebene==="int"?`<button data-widerspruch="${idx}" title="Person möchte nicht aufgezeichnet werden" aria-label="Widerspruch gegen Aufzeichnung fuer diese Person melden">🚫</button>`:""}</div>`:`<div class="lntools"><button data-report="${idx}" title="Tippfehler melden" aria-label="Tippfehler melden">⚠</button></div>`;
     return `<div class="line ${m?'':'dim'} ${idx===curIdx?'curhit':''} ${l.red?'red':''}" role="listitem" data-idx="${idx}"><button class="ts" data-t="${l.t}" aria-label="Springe zu ${fmt(l.t)}">${fmt(l.t)}</button><div class="body"><div class="who ${state.authed?'editable':''}" style="color:${spc(l.sp)}" ${state.authed?`data-sp="${l.sp}"`:''}>${who}${l.red?' <span class="redbadge">redigiert</span>':''}</div><div class="said" data-said="${idx}">${txHtml(l.text,state.txQ.trim(),idx===curIdx)}</div></div>${tools}</div>`;}).join("")||`<div class="tx-empty">Keine Zeilen.</div>`;
   box.querySelectorAll(".ts").forEach(b=>b.onclick=()=>{seekAudio(+b.dataset.t);b.closest(".line").scrollIntoView({behavior:"smooth",block:"center"});});
   if(state.authed){
     box.querySelectorAll(".who.editable").forEach(el=>el.onclick=()=>renameSpeaker(d,+el.dataset.sp));
     box.querySelectorAll("[data-red]").forEach(b=>b.onclick=()=>toggleRedact(d,+b.dataset.red));
     box.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editLine(d,+b.dataset.edit));
+    box.querySelectorAll("[data-widerspruch]").forEach(b=>b.onclick=()=>meldeAusschluss(d,+b.dataset.widerspruch));
   } else box.querySelectorAll("[data-report]").forEach(b=>b.onclick=()=>reportTypo(d,+b.dataset.report));
   /* Zeilenzahl ansagen, damit Screenreader-Nutzer den Umfang kennen und eine Filterung bemerken. */
   {const n=box.querySelectorAll(".line").length;
@@ -1285,6 +1286,13 @@ document.querySelectorAll('#docTabs [data-dt]').forEach(b=>b.onclick=()=>{docume
 async function reportTypo(d,idx){const l=d.transkript[idx];const hint=window.prompt("Was ist an dieser Stelle falsch? (kurzer Hinweis, optional)","");if(hint===null)return;
   try{await supa.from("korrekturmeldungen").insert({stammtisch_id:d.id,zeile:idx,t:Math.round(l.t||0),original:(l.text||"").slice(0,300),hinweis:(hint||"").slice(0,500)});announce("Danke, deine Meldung wurde gesendet.");}
   catch(e){alert("Melden ist gerade nicht möglich. "+(e.message||e));}}
+async function meldeAusschluss(d,idx){const l=d.transkript[idx];const name=(d.sprecher||[])[l.sp];
+  if(!name){alert("Sprecher konnte nicht zugeordnet werden.");return;}
+  if(!confirm(`„${name}" möchte für diese Sitzung nicht aufgezeichnet werden.\n\nDas meldet den Widerspruch. Ein Admin entfernt die Beiträge anschließend, das Original bleibt gesichert. Melden?`))return;
+  const grund=window.prompt("Kurze Notiz dazu (optional):","");
+  try{await supa.rpc("teilnehmer_ausschluss_beantragen",{p_ebene:d.ebene,p_aufnahme_id:d.id,p_sprecher_name:name,p_grund:grund||null});
+    announce(`Widerspruch für „${name}" gemeldet. Ein Admin bearbeitet das.`);}
+  catch(e){alert("Melden ist gerade nicht möglich. "+(e.message||e));}}
 
 
 /* ---- auth ---- */
@@ -1329,6 +1337,8 @@ function setAuthed(on){const berechtigt=on&&state.internOk;state.authed=berechti
   if($("#btnAufbewahrung"))$("#btnAufbewahrung").hidden=!isAdmin();
   if($("#btnAuskunft"))$("#btnAuskunft").hidden=!isAdmin();
   if($("#btnNamen"))$("#btnNamen").hidden=!(berechtigt&&(isAdmin()||hatRecht("freigabe")));
+  if($("#btnTeilnehmerAusschluss"))$("#btnTeilnehmerAusschluss").hidden=!(berechtigt&&(isAdmin()||state.rolle==="bereichsleitung"));
+  if(berechtigt&&(isAdmin()||state.rolle==="bereichsleitung")&&typeof taBadgePruef==="function")taBadgePruef();
   if(berechtigt&&isAdmin()&&typeof namenBadgePruef==="function")namenBadgePruef();
   if($("#btnZugaenge"))$("#btnZugaenge").hidden=!(berechtigt&&hatRecht("adressen"));
   if($("#btnTermine"))$("#btnTermine").hidden=!(berechtigt&&hatRecht("termine"));
