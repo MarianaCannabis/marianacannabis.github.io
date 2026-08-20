@@ -1,21 +1,4 @@
 <!DOCTYPE html>
-<!--
-  ============================================================================
-  VORLAGE - NICHT LAUFFAEHIG. Diese Datei direkt im Browser zu oeffnen bringt
-  nichts: Sie enthaelt beide Fassungen gleichzeitig, getrennt durch die
-  Abschnittsmarker fuer Vorstand und Mitglieder. Dadurch steht z. B.
-  "const _aktiv" ZWEIMAL im selben Bereich - der ganze Skriptblock stirbt an
-  einem Syntaxfehler, die Seite bleibt leer oder halb tot.
-
-  Zum Ansehen und Pruefen immer eine der ausgelieferten Fassungen nehmen:
-      vereinsarchiv-vorstand.html     (alles)
-      vereinsarchiv-mitglieder.html   (ohne die Vorstands-Abschnitte)
-  Beide entstehen aus dieser Datei ueber build_split.py.
-
-  Festgehalten am 21.08.2026, nachdem eine Vorschau versehentlich aus dieser
-  Vorlage gebaut wurde und im Browser nichts angezeigt haette.
-  ============================================================================
--->
 <html lang="de">
 <head>
 <script>
@@ -656,7 +639,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-07-18-83";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-08-21-84";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
