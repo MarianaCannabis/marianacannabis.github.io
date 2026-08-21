@@ -642,7 +642,7 @@ const SPV=["var(--sp1)","var(--sp2)","var(--sp3)","var(--sp4)","var(--sp5)","var
 const $=s=>document.querySelector(s);
 let DATA=[],ALL_YEARS=[],ALL_SPK=[],ALL_TH=[];
 let DATA_PUB=[],DATA_INT=null,DATA_MIT=null;   // DATA zeigt auf den aktiven Datensatz; DATA_INT=null = noch nicht geladen
-const APP_VERSION="2026-08-21-84.ec29661d";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
+const APP_VERSION="2026-08-21-85.5b160bcd";  /* bei JEDER Auslieferung hochzaehlen, sonst merkt niemand die neue Fassung */
 const EBENE_TABLE={pub:"stammtische"};
 const EBENE_AUDIO={pub:"audio"};
 const EBENE_FOLIEN={pub:"folien"};
@@ -1774,12 +1774,35 @@ function computeSince(){const last=lsGet("st_lastvisit",null);
   }
   var b=document.createElement('button');
   b.id='modusKnopf';
-  b.style.cssText='position:fixed;top:10px;right:12px;z-index:2147483000;padding:8px 12px;border-radius:10px;'
-    +'border:1px solid var(--line);background:var(--panel-solid);color:var(--text);font:600 13px system-ui;cursor:pointer';
+  b.className='btn';                 /* dieselbe Gestalt wie Hilfe/Abmelden */
   function zeichnen(){ b.textContent = an() ? '\u{1F319} Dunkel' : '\u2600\uFE0F Hell'; b.setAttribute('aria-pressed', an()?'true':'false'); }
   b.setAttribute('aria-label','Zwischen hellem und dunklem Modus umschalten');
   b.onclick=function(){ setzen(!an()); };
-  function rein(){ if(!document.getElementById('modusKnopf')){ document.body.appendChild(b); zeichnen(); } }
+  /* IN die Kopfzeile einhaengen, nicht darueber legen.
+     Vorher stand hier position:fixed oben rechts. Gemessen an der
+     ausgelieferten Fassung: bei 1280 px verdeckte der Knopf die rechten 18 von
+     64 px von "Admin", bei 760 und 375 px das Menue "\u2630" zu 100 % - und ein
+     Klick in den verdeckten Streifen schaltete das Thema um, statt den Knopf
+     darunter zu bedienen. Auf dem Handy war das Hauptmenue damit unerreichbar.
+     Kein z-index und kein Abstand nach rechts als Flicken: was nur verschoben
+     ist, liegt bei der naechsten Fensterbreite wieder darauf. */
+  function rein(){
+    if(document.getElementById('modusKnopf')) return;
+    var reihe=document.getElementById('topbarControls');
+    if(reihe){
+      var nach=document.getElementById('btnSr');       /* neben \u267f, gleiche Familie */
+      if(nach && nach.parentNode===reihe && nach.nextSibling) reihe.insertBefore(b, nach.nextSibling);
+      else reihe.appendChild(b);
+    } else {
+      /* Rueckfall nur, wenn es die Kopfzeile nicht gibt (z. B. in einer
+         Vorschau ohne Rahmen). Dann sichtbar, aber unten links, wo nichts
+         liegt - nicht oben rechts ueber den Bedienelementen. */
+      b.style.cssText='position:fixed;bottom:10px;left:12px;padding:8px 12px;border-radius:10px;'
+        +'border:1px solid var(--line);background:var(--panel-solid);color:var(--text);font:600 13px system-ui;cursor:pointer';
+      document.body.appendChild(b);
+    }
+    zeichnen();
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',rein); else rein();
   window.modusSetzen=setzen;
 })();
